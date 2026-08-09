@@ -1479,8 +1479,24 @@ struct fixed_overmap_special_data : overmap_special_data {
 
             if( ( oter->get_type_id() == oter_type_str_id( con.terrain.str() ) ) ) {
                 ++score; // Found another one satisfied connection.
-            } else if( !oter || con.existing || !con.connection->pick_subtype_for( oter ) ) {
-                return -1;
+            } else {
+                if( !oter || con.existing ) {
+                    return -1;
+                }
+
+                const overmap_connection::subtype *subtype =
+                    con.connection->pick_subtype_for( oter );
+                if( !subtype ) {
+                    return -1;
+                }
+
+                // A special connection may cross water on its way to the special, but its
+                // endpoint must not itself become a straight bridge/bridgehead segment.
+                // Otherwise the later bridgehead pass can create a ramp directly against
+                // a non-road special OMT, leaving an apparently isolated bridgehead.
+                if( subtype->is_orthogonal() && !subtype->allows_turns() ) {
+                    return -1;
+                }
             }
         }
         return score;
