@@ -382,6 +382,15 @@ void mutation_branch::load( const JsonObject &jo, const std::string & )
         variants.emplace( var.id, var );
     }
 
+    if( jo.has_object( "override_look" ) ) {
+        JsonObject look = jo.get_object( "override_look" );
+        std::string id;
+        std::string tile_category;
+        mandatory( look, was_loaded, "id", id );
+        mandatory( look, was_loaded, "tile_category", tile_category );
+        override_look.emplace( id, tile_category );
+    }
+
     if( jo.has_object( "spawn_item" ) ) {
         JsonObject si = jo.get_object( "spawn_item" );
         optional( si, was_loaded, "type", spawn_item );

@@ -1,0 +1,65 @@
+[
+  {
+    "type": "item_action",
+    "id": "CHANGE_OUTFIT",
+    "name": {
+      "str": "Manage outfit"
+    }
+  },
+  {
+    "id": "outfit_storage",
+    "type": "TOOL",
+    "category": "container",
+    "name": {
+      "str": "outfit bundle"
+    },
+    "description": "A simple bundle for keeping a complete change of clothes together.  Activate it to store your current outfit, change into the clothes inside, or rename the bundle.",
+    "weight": "1 kg",
+    "volume": "1 L",
+    "longest_side": "150 cm",
+    "price": 0,
+    "price_postapoc": 0,
+    "to_hit": -3,
+    "use_action": [
+      "CHANGE_OUTFIT"
+    ],
+    "material": [
+      "plastic"
+    ],
+    "pocket_data": [
+      {
+        "pocket_type": "CONTAINER",
+        "max_contains_volume": "100 L",
+        "max_contains_weight": "100 kg",
+        "rigid": false,
+        "moves": 1000
+      }
+    ],
+    "symbol": "#",
+    "color": "black",
+    "flags": [
+      "NO_SALVAGE",
+      "NO_RELOAD"
+    ]
+  },
+  {
+    "result": "outfit_storage",
+    "type": "recipe",
+    "activity_level": "NO_EXERCISE",
+    "category": "CC_OTHER",
+    "subcategory": "CSC_OTHER_TOOLS",
+    "skill_used": "fabrication",
+    "time": "1 s",
+    "autolearn": true,
+    "reversible": true,
+    "components": [
+      [
+        [
+          "cordage",
+          10,
+          "LIST"
+        ]
+      ]
+    ]
+  }
+]

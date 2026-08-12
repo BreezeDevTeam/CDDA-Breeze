@@ -360,6 +360,15 @@ struct mutation_branch {
         std::vector<effect_on_condition_id> deactivated_eocs;
         /** mutation enchantments */
         std::vector<enchantment_id> enchantments;
+        struct OverrideLook {
+            std::string id;
+            std::string tile_category;
+
+            OverrideLook( std::string new_id, std::string new_category )
+                : id( std::move( new_id ) ), tile_category( std::move( new_category ) ) {}
+        };
+        /** Optional complete replacement for the character tile while this mutation is present. */
+        std::optional<OverrideLook> override_look;
     private:
         translation raw_spawn_item_message;
     public:

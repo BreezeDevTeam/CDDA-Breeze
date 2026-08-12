@@ -2875,6 +2875,135 @@ std::optional<int> iuse::crowbar( Character *p, item *it, bool, const tripoint &
     return std::nullopt;
 }
 
+std::optional<int> iuse::change_outfit( Character *p, item *it, bool t, const tripoint & )
+{
+    if( t ) {
+        return std::nullopt;
+    }
+    if( !p->is_avatar() ) {
+        debugmsg( "CHANGE_OUTFIT is only implemented for the avatar" );
+        return std::nullopt;
+    }
+
+    enum outfit_menu_option : int {
+        OUTFIT_STORE_OR_SWAP = 0,
+        OUTFIT_RENAME = 1
+    };
+
+    const bool capture_only = it->empty();
+    uilist menu;
+    menu.title = _( "Manage outfit" );
+    if( capture_only ) {
+        menu.text = _( "This outfit bundle is empty.  You can store your current worn equipment in it." );
+        menu.addentry( OUTFIT_STORE_OR_SWAP, true, MENU_AUTOASSIGN, _( "Store current outfit" ) );
+    } else {
+        menu.text = string_format( _( "This outfit bundle contains %d items." ),
+                                   static_cast<int>( it->all_items_top().size() ) );
+        menu.addentry( OUTFIT_STORE_OR_SWAP, true, MENU_AUTOASSIGN, _( "Wear this outfit" ) );
+    }
+    menu.addentry( OUTFIT_RENAME, true, MENU_AUTOASSIGN, _( "Rename outfit" ) );
+    menu.query();
+
+    if( menu.ret == OUTFIT_RENAME ) {
+        const std::string old_name = it->has_label() ? it->get_var( "item_label" ) : std::string();
+        string_input_popup popup;
+        popup.title( _( "Outfit name" ) ).text( old_name ).width( 32 ).max_length( 48 );
+        const std::string new_name = popup.query_string();
+        if( popup.canceled() ) {
+            return std::nullopt;
+        }
+        if( new_name.empty() ) {
+            it->erase_var( "item_label" );
+        } else {
+            it->set_var( "item_label", new_name );
+        }
+        return std::nullopt;
+    }
+
+    if( menu.ret != OUTFIT_STORE_OR_SWAP ) {
+        return std::nullopt;
+    }
+
+    std::vector<item_location> worn_items = p->top_items_loc();
+    if( capture_only && worn_items.empty() ) {
+        p->add_msg_if_player( m_info, _( "You are not wearing anything to store." ) );
+        return std::nullopt;
+    }
+
+    int move_cost = 0;
+    item fake_storage( it->typeId() );
+    for( const item_location &worn_item : worn_items ) {
+        if( !worn_item ) {
+            continue;
+        }
+        move_cost += p->item_handling_cost( *worn_item );
+        move_cost += p->item_store_cost( *worn_item, fake_storage );
+    }
+    if( !capture_only ) {
+        for( const item *clothing : it->all_items_top() ) {
+            if( p->can_wear( *clothing, true ).success() ) {
+                move_cost += p->item_wear_cost( *clothing );
+            } else {
+                move_cost += p->item_retrieve_cost( *clothing, *it );
+            }
+        }
+    }
+
+    const int old_moves = p->get_moves();
+    const itype_id storage_type = it->typeId();
+    const std::string target_label = it->has_label() ? it->get_var( "item_label" ) : std::string();
+    const std::string active_label = p->get_value( "BREEZE_ACTIVE_OUTFIT_LABEL" );
+
+    // Remove the activated bundle before taking off worn containers.  The bundle may itself
+    // be inside a backpack that is about to be removed, so keeping a raw location to it is unsafe.
+    item target_outfit = p->i_rem( it );
+    if( target_outfit.is_null() ) {
+        debugmsg( "Failed to remove outfit bundle before changing clothes" );
+        return std::nullopt;
+    }
+
+    item stored_outfit = capture_only ? target_outfit : item( storage_type, calendar::turn );
+    if( !capture_only && !active_label.empty() ) {
+        stored_outfit.set_var( "item_label", active_label );
+    }
+
+    std::list<item> removed_items;
+    for( item_location &worn_item : worn_items ) {
+        if( worn_item ) {
+            p->takeoff( worn_item, &removed_items );
+        }
+    }
+    for( const item &removed : removed_items ) {
+        stored_outfit.force_insert_item( removed, item_pocket::pocket_type::CONTAINER );
+    }
+
+    if( capture_only ) {
+        p->set_value( "BREEZE_ACTIVE_OUTFIT_LABEL", "" );
+        p->i_add_or_drop( stored_outfit );
+        p->set_moves( old_moves - move_cost );
+        p->add_msg_if_player( m_info, _( "You store your current outfit in the bundle." ) );
+        return 0;
+    }
+
+    map &here = get_map();
+    for( const item *component : target_outfit.all_items_top() ) {
+        if( p->can_wear( *component ).success() && p->wear_item( *component, false, false ) ) {
+            continue;
+        }
+        here.add_item( p->pos(), *component );
+        p->add_msg_if_player( m_warning, _( "You cannot wear your %s, so you drop it." ),
+                              component->tname() );
+    }
+
+    p->calc_encumbrance();
+    p->calc_discomfort();
+    p->set_value( "BREEZE_ACTIVE_OUTFIT_LABEL", target_label );
+    p->i_add_or_drop( stored_outfit );
+    p->set_moves( old_moves - move_cost );
+    p->add_msg_if_player( m_info, _( "You change outfits." ) );
+    return 0;
+}
+
 std::optional<int> iuse::makemound( Character *p, item *it, bool t, const tripoint & )
 {
     if( !p || t ) {

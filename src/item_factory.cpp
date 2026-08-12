@@ -1643,6 +1643,7 @@ void Item_factory::init()
     add_iuse( "JET_INJECTOR", &iuse::jet_injector );
     add_iuse( "LUMBER", &iuse::lumber );
     add_iuse( "MAGIC_8_BALL", &iuse::magic_8_ball );
+    add_iuse( "CHANGE_OUTFIT", &iuse::change_outfit );
     add_iuse( "PLAY_GAME", &iuse::play_game );
     add_iuse( "MAKEMOUND", &iuse::makemound );
     add_iuse( "DIG_CHANNEL", &iuse::dig_channel );
