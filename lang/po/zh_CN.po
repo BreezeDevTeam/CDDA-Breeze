@@ -464740,3 +464740,60 @@ msgstr "其他处理已经开始"
 #, c-format
 msgid "%s takes aim at you."
 msgstr "%s正在瞄准你。"
+
+#. ~ Item action name of "CHANGE_OUTFIT"
+#: data/json/outfit_management.json src/iuse.cpp:2895
+msgid "Manage outfit"
+msgstr "管理套装"
+
+#. ~ Item name
+#: data/json/outfit_management.json
+msgid "outfit bundle"
+msgstr "套装收纳包"
+
+#. ~ Description of "outfit bundle"
+#: data/json/outfit_management.json
+msgid "A simple bundle for keeping a complete change of clothes together.  Activate it to store your current outfit, change into the clothes inside, or rename the bundle."
+msgstr "一个用于收纳整套换洗衣物的简易收纳包。激活它可以收纳当前套装、换上其中的衣物，或重命名这个收纳包。"
+
+#: src/iuse.cpp:2897
+msgid "This outfit bundle is empty.  You can store your current worn equipment in it."
+msgstr "这个套装收纳包是空的。你可以将当前穿戴的装备收纳其中。"
+
+#: src/iuse.cpp:2898
+msgid "Store current outfit"
+msgstr "收纳当前套装"
+
+#: src/iuse.cpp:2900
+#, c-format
+msgid "This outfit bundle contains %d items."
+msgstr "这个套装收纳包中有 %d 件物品。"
+
+#: src/iuse.cpp:2902
+msgid "Wear this outfit"
+msgstr "换上这套衣物"
+
+#: src/iuse.cpp:2904
+msgid "Rename outfit"
+msgstr "重命名套装"
+
+#: src/iuse.cpp:2910
+msgid "Outfit name"
+msgstr "套装名称"
+
+#: src/iuse.cpp:2929
+msgid "You are not wearing anything to store."
+msgstr "你没有穿戴任何可收纳的物品。"
+
+#: src/iuse.cpp:2994
+#, c-format
+msgid "You cannot wear your %s, so you drop it."
+msgstr "你无法穿上你的 %s，因此将其丢在地上。"
+
+#: src/iuse.cpp:2984
+msgid "You store your current outfit in the bundle."
+msgstr "你将当前套装收纳进了收纳包。"
+
+#: src/iuse.cpp:3003
+msgid "You change outfits."
+msgstr "你换上了另一套衣物。"
