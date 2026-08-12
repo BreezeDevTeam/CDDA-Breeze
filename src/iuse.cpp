@@ -2953,6 +2953,10 @@ std::optional<int> iuse::change_outfit( Character *p, item *it, bool t, const tr
     const itype_id storage_type = it->typeId();
     const std::string target_label = it->has_label() ? it->get_var( "item_label" ) : std::string();
     const std::string active_label = p->get_value( "BREEZE_ACTIVE_OUTFIT_LABEL" );
+    // On the first activation there is no active outfit label yet.  Keep the selected
+    // bundle's custom name on the replacement bundle instead of losing it with the
+    // consumed bundle.
+    const std::string stored_label = active_label.empty() ? target_label : active_label;
 
     // Remove the activated bundle before taking off worn containers.  The bundle may itself
     // be inside a backpack that is about to be removed, so keeping a raw location to it is unsafe.
@@ -2963,8 +2967,8 @@ std::optional<int> iuse::change_outfit( Character *p, item *it, bool t, const tr
     }
 
     item stored_outfit = capture_only ? target_outfit : item( storage_type, calendar::turn );
-    if( !capture_only && !active_label.empty() ) {
-        stored_outfit.set_var( "item_label", active_label );
+    if( !capture_only && !stored_label.empty() ) {
+        stored_outfit.set_var( "item_label", stored_label );
     }
 
     std::list<item> removed_items;
