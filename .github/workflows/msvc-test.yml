@@ -13,6 +13,9 @@ concurrency:
 env:
   ZSTD_CLEVEL: 17
   VCPKG_BINARY_SOURCES: clear
+  # Keep the vcpkg revision in one place so dependency resolution and caching
+  # cannot silently drift apart.  This revision is also used by upstream DDA.
+  VCPKG_COMMIT_ID: f6672d8e480ccdecddfad3fd1b838ba369ffe6cd
 
 jobs:
   msvc:
@@ -21,36 +24,36 @@ jobs:
 
     steps:
       - name: Checkout selected branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Install CMake
-        uses: lukka/get-cmake@latest
+        uses: lukka/get-cmake@f176ccd3f28bda569c43aae4894f06b2435a3375 # latest
         with:
           cmakeVersion: 3.31.6
 
       - name: Install MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
 
       - name: Configure vcpkg
-        uses: lukka/run-vcpkg@v11
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11.6
         id: runvcpkg
         with:
           vcpkgDirectory: '${{ runner.workspace }}/b/vcpkg'
-          vcpkgGitCommitId: "9dd12f8d791f6fa4e396adbebc714d51cbee2143"
+          vcpkgGitCommitId: '${{ env.VCPKG_COMMIT_ID }}'
 
       - name: Integrate vcpkg
         run: |
           vcpkg integrate install --vcpkg-root '${{ runner.workspace }}\b\vcpkg'
 
       - name: Cache vcpkg installed packages
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         id: cache-vcpkg
         with:
           path: msvc-full-features/vcpkg_installed/
-          key: vcpkg-${{ hashFiles('msvc-full-features/vcpkg.json') }}-${{ hashFiles('.github/vcpkg_triplets/x64-windows-static.cmake') }}-9dd12f8d791f6fa4e396adbebc714d51cbee2143
+          key: vcpkg-${{ hashFiles('msvc-full-features/vcpkg.json', '.github/vcpkg_triplets/x64-windows-static.cmake') }}-${{ env.VCPKG_COMMIT_ID }}
 
       - name: Install MSYS2
-        uses: msys2/setup-msys2@v2
+        uses: msys2/setup-msys2@4f806de0a5a7294ffabaff804b38a9b435a73bda # v2
         with:
           msystem: mingw64
           install: >-
@@ -81,6 +84,19 @@ jobs:
           msbuild -m -p:Configuration=Release -p:Platform=x64 "-target:Cataclysm-vcpkg-static;JsonFormatter-vcpkg-static" msvc-full-features\Cataclysm-vcpkg-static.sln
           .\build-scripts\windist.ps1
           Expand-Archive -LiteralPath cataclysmdda-0.G.zip -DestinationPath windows-test-build -Force
+
+      - name: Dump vcpkg logs if build fails
+        if: ${{ failure() }}
+        shell: pwsh
+        run: |
+          $buildtrees = Join-Path '${{ runner.workspace }}' 'b\vcpkg\buildtrees'
+          if ( Test-Path -LiteralPath $buildtrees ) {
+            Get-ChildItem -LiteralPath $buildtrees -Recurse -File -Filter '*.log' |
+              ForEach-Object {
+                Write-Host "===== $($_.FullName) ====="
+                Get-Content -LiteralPath $_.FullName
+              }
+          }
 
       - name: Validate embedded weapon workshop
         shell: pwsh
