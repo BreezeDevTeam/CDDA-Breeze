@@ -1776,10 +1776,18 @@ void cata_tiles::draw( const point &dest, const tripoint &center, int width, int
         else {
             // Multi z-level draw mode
 
-            
-
-            // Start drawing from the bottom-most z-level
-            int cur_zlevel = -OVERMAP_DEPTH;
+            // draw_min_z has already been calculated for every visible screen tile above.
+            // Starting every frame at -OVERMAP_DEPTH makes the cost of a redraw grow with
+            // altitude even when none of those lower z-levels can contribute a pixel.
+            // This is especially expensive for fast aircraft because vehicle movement may
+            // request several redraws during a single game turn.
+            int cur_zlevel = center.z;
+            for( int row = min_row; row < max_row; ++row ) {
+                for( const tile_render_info &p : draw_points[row] ) {
+                    cur_zlevel = std::min( cur_zlevel, p.draw_min_z );
+                }
+            }
+            cur_zlevel = std::max( cur_zlevel, -OVERMAP_DEPTH );
             do {
                 z_overlay_depth = std::max( 0, center.z - cur_zlevel );
                 //int cur_height_3d = ( cur_zlevel - center.z ) * height_3d_mult;
