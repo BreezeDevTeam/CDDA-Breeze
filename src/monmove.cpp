@@ -2015,7 +2015,7 @@ void monster::move()
     nursebot_operate( dragged_foe );
 
     // The monster can sometimes hang in air due to last fall being blocked
-    if( !flies() && here.has_flag( ter_furn_flag::TFLAG_NO_FLOOR, pos() ) ) {
+    if( !flies() && !here.has_floor_or_support( pos() ) ) {
         here.creature_on_trap( *this, false );
         if( is_dead() ) {
             return;
