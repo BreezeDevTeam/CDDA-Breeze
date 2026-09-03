@@ -278,6 +278,8 @@ jobs:
             }
           }
 
+      # Upload before the smoke test so developers can still download and inspect
+      # a successfully compiled package even when runtime data validation fails.
       - name: Upload temporary Windows build
         uses: actions/upload-artifact@v4
         with:
@@ -286,6 +288,43 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7
+
+      - name: Windows 数据加载烟雾测试
+        shell: pwsh
+        run: |
+          $buildDir = Resolve-Path "windows-test-build"
+          $exe = Join-Path $buildDir "cataclysm-tiles.exe"
+          if( -not ( Test-Path -LiteralPath $exe ) ) {
+            throw "Smoke test executable is missing: $exe"
+          }
+
+          $stdout = Join-Path $env:RUNNER_TEMP "breeze-jsonverify.stdout.log"
+          $stderr = Join-Path $env:RUNNER_TEMP "breeze-jsonverify.stderr.log"
+          $process = Start-Process \
+            -FilePath $exe \
+            -ArgumentList "--jsonverify" \
+            -WorkingDirectory $buildDir \
+            -NoNewWindow \
+            -PassThru \
+            -RedirectStandardOutput $stdout \
+            -RedirectStandardError $stderr
+
+          if( -not $process.WaitForExit(180000) ) {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+            throw "cataclysm-tiles.exe --jsonverify did not finish within 180 seconds."
+          }
+
+          $process.Refresh()
+          Write-Host "===== jsonverify stdout ====="
+          if( Test-Path -LiteralPath $stdout ) { Get-Content -LiteralPath $stdout }
+          Write-Host "===== jsonverify stderr ====="
+          if( Test-Path -LiteralPath $stderr ) { Get-Content -LiteralPath $stderr }
+
+          if( $process.ExitCode -ne 0 ) {
+            throw "cataclysm-tiles.exe --jsonverify failed with exit code $($process.ExitCode)."
+          }
+
+          Write-Host "Windows 可执行文件已成功启动并完成核心游戏数据加载验证。"
 
   android:
     name: Android arm64
