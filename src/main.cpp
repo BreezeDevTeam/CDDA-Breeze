@@ -263,6 +263,10 @@ int main( int argc, const char *argv[] )
 
     MAP_SHARING::setDefaults();
 
+    // Breeze currently keeps the legacy command-line documentation but no longer runs the
+    // original parser.  Keep --jsonverify working because CI and developers rely on it.
+    const bool json_verify = std::count( argv, argv + argc, std::string( "--jsonverify" ) ) > 0;
+
     if( !dir_exist( PATH_INFO::datadir() ) ) {
         printf( "Fatal: Can't find data directory \"%s\"\nPlease ensure the current working directory is correct or specify data directory with --datadir.  Perhaps you meant to start \"cataclysm-launcher\"?\n",
                 PATH_INFO::datadir().c_str() );
@@ -335,7 +339,7 @@ int main( int argc, const char *argv[] )
     method_id_isHardwareKeyboardAvailable = jni_env->GetMethodID(j_class, "isHardwareKeyboardAvailable", "()Z");
     method_id_vibrate = jni_env->GetMethodID(j_class, "vibrate", "(I)V");
     method_id_show_sdl_surface = jni_env->GetMethodID(j_class, "show_sdl_surface", "()V");
-    method_id_toast = jni_env->GetMethodID(j_class,"toast","(Ljava/lang/String;)V");
+    method_id_toast = jni_env->GetMethodID(j_class,"toast","(Ljava/lang/String;Z)V");
     method_id_showToastMessage = jni_env->GetMethodID(j_class, "showToastMessage", "(Ljava/lang/String;)V");
     method_id_getDefaultSetting = jni_env->GetMethodID(j_class, "getDefaultSetting", "(Ljava/lang/String;Z)Z");
     method_id_getSystemLang = jni_env->GetMethodID(j_class, "getSystemLang", "()Ljava/lang/String;");
@@ -370,6 +374,9 @@ int main( int argc, const char *argv[] )
     // depend on the mods.
     try {
         g->load_static_data();
+        if( json_verify ) {
+            exit_handler( 0 );
+        }
     } catch( const std::exception &err ) {
         debugmsg( "%s", err.what() );
         exit_handler( -999 );
