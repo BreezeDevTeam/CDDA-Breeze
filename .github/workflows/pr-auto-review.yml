@@ -70,11 +70,23 @@ jobs:
 
             const recommended = ['快速检查'];
             if (has('src/') || has('msvc-full-features/') || has('data/') || has('tools/') || has('build-scripts/')) {
-              recommended.push('Windows Tiles x64 MSVC');
+              recommended.push('Windows Tiles x64 MSVC', 'Windows 数据加载烟雾测试');
             }
             if (has('src/') || has('android/') || has('data/') || has('gfx/')) {
               recommended.push('Android Gradle 快速检查', 'Android arm64');
             }
+
+            const uniqueRecommended = [...new Set(recommended)];
+            const testDetails = {
+              '快速检查': '检查补丁空白、变更 JSON/Python/XML/Visual Studio 项目文件、未解决合并标记，以及内置穆尔卡武器工坊关键路径。',
+              'Windows Tiles x64 MSVC': '编译翻译，执行完整 Release x64 MSVC 构建和 windist 打包，并验证 Windows 构件中的内置武器工坊。',
+              'Windows 数据加载烟雾测试': '运行打包后的 cataclysm-tiles.exe --jsonverify，确认可执行文件能够真正启动并完成核心游戏数据加载；Windows 构件会先上传，烟雾测试失败时仍可下载人工排查。',
+              'Android Gradle 快速检查': '使用 JDK 11 解析 Gradle 配置和依赖，提前发现 Android 构建环境或脚本问题。',
+              'Android arm64': '编译翻译和 arm64 Release APK，并保留 APK 构件供设备实测。',
+            };
+            const testText = uniqueRecommended
+              .map((test) => `- **${test}：** ${testDetails[test]}`)
+              .join('\n');
 
             const riskText = risks.length > 0
               ? risks.map((risk) => `- ⚠️ ${risk}`).join('\n')
@@ -90,7 +102,8 @@ jobs:
             **自动风险提示：**
             ${riskText}
 
-            **建议至少通过：** ${[...new Set(recommended)].join('、')}
+            **建议测试内容：**
+            ${testText}
 
             这是免费的规则型自动审查，只负责快速发现范围、平台和集成风险，不替代人工代码审查。后续如果我们批量同步上游 PR，它会在每次推送后自动刷新这条摘要。`;
 
