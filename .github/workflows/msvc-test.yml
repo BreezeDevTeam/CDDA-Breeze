@@ -300,14 +300,7 @@ jobs:
 
           $stdout = Join-Path $env:RUNNER_TEMP "breeze-jsonverify.stdout.log"
           $stderr = Join-Path $env:RUNNER_TEMP "breeze-jsonverify.stderr.log"
-          $process = Start-Process \
-            -FilePath $exe \
-            -ArgumentList "--jsonverify" \
-            -WorkingDirectory $buildDir \
-            -NoNewWindow \
-            -PassThru \
-            -RedirectStandardOutput $stdout \
-            -RedirectStandardError $stderr
+          $process = Start-Process -FilePath $exe -ArgumentList "--jsonverify" -WorkingDirectory $buildDir -NoNewWindow -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
 
           if( -not $process.WaitForExit(180000) ) {
             Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
