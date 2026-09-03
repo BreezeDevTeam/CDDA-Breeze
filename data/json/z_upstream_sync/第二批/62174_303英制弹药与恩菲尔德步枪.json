@@ -1,0 +1,256 @@
+[
+  {
+    "type": "ammunition_type",
+    "id": "303",
+    "name": ".303 British",
+    "default": "303_bthp"
+  },
+  {
+    "id": "303_casing",
+    "copy-from": "casing",
+    "looks_like": "223_casing",
+    "type": "GENERIC",
+    "name": { "str": ".303 casing" },
+    "description": "An empty casing from a .303 round.",
+    "weight": "7 g",
+    "volume": "10ml"
+  },
+  {
+    "id": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British BTHP" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a 174gr boat-tailed hollo-point bullet, the projectile’s boat tail shaped design gives it greater stability with less aerial drag over long ranges, making it favorable for competition shooting.",
+    "weight": "25 g",
+    "volume": "287 ml",
+    "price": 160,
+    "price_postapoc": 250,
+    "flags": [ "IRREPLACEABLE_CONSUMABLE" ],
+    "material": [ "brass", "powder" ],
+    "symbol": "=",
+    "color": "yellow",
+    "count": 20,
+    "stack_size": 20,
+    "ammo_type": "303",
+    "casing": "303_casing",
+    "range": 42,
+    "damage": {
+      "damage_type": "bullet",
+      "amount": 51,
+      "armor_penetration": 6,
+      "barrels": [
+        { "barrel_length": "27 mm", "amount": 16 }, { "barrel_length": "30 mm", "amount": 17 },
+        { "barrel_length": "35 mm", "amount": 18 }, { "barrel_length": "38 mm", "amount": 19 },
+        { "barrel_length": "41 mm", "amount": 20 }, { "barrel_length": "46 mm", "amount": 22 },
+        { "barrel_length": "51 mm", "amount": 23 }, { "barrel_length": "56 mm", "amount": 24 },
+        { "barrel_length": "61 mm", "amount": 25 }, { "barrel_length": "68 mm", "amount": 27 },
+        { "barrel_length": "74 mm", "amount": 28 }, { "barrel_length": "82 mm", "amount": 29 },
+        { "barrel_length": "90 mm", "amount": 31 }, { "barrel_length": "99 mm", "amount": 32 },
+        { "barrel_length": "108 mm", "amount": 33 }, { "barrel_length": "119 mm", "amount": 35 },
+        { "barrel_length": "130 mm", "amount": 36 }, { "barrel_length": "142 mm", "amount": 37 },
+        { "barrel_length": "156 mm", "amount": 39 }, { "barrel_length": "170 mm", "amount": 40 },
+        { "barrel_length": "187 mm", "amount": 41 }, { "barrel_length": "204 mm", "amount": 43 },
+        { "barrel_length": "224 mm", "amount": 44 }, { "barrel_length": "246 mm", "amount": 45 },
+        { "barrel_length": "270 mm", "amount": 47 }, { "barrel_length": "297 mm", "amount": 48 },
+        { "barrel_length": "327 mm", "amount": 49 }, { "barrel_length": "360 mm", "amount": 51 },
+        { "barrel_length": "398 mm", "amount": 52 }, { "barrel_length": "441 mm", "amount": 53 },
+        { "barrel_length": "459 mm", "amount": 54 }
+      ]
+    },
+    "dispersion": 25,
+    "recoil": 3400,
+    "effects": [ "COOKOFF" ]
+  },
+  {
+    "id": "303_sp",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British SP" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a single core, 180gr soft-point bullet, the projectile features an open-tipped design manufactured from lead.  This loading allows the round to undergo greater expansion upon striking targets, leading to larger wound channels.",
+    "relative": { "damage": { "damage_type": "bullet", "amount": 5, "armor_penetration": -6 } }
+  },
+  {
+    "id": "303_fmjbt",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British FMJ" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a single core, 174gr full metal jacketed bullet, the projectile possesses a solid metal jacket that grants it the capability to punch through thicker material.  This comes at the cost of virtually non-existent expansion, leading to less overall damage.",
+    "relative": { "damage": { "damage_type": "bullet", "amount": -4, "armor_penetration": 8 } }
+  },
+  {
+    "id": "bp_303",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British BTHP, black powder" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a 174gr boat-tailed hollo-point bullet, the projectile’s boat tail shaped design gives it greater stability with less aerial drag over long ranges, making it favorable for competition shooting.  Similar to its early 19th century iteration, this cartridge has been loaded with black powder.  Expect lower velocities, muzzle smoke, and a dirtier barrel if you fire it.",
+    "proportional": { "price": 0.3, "damage": { "damage_type": "bullet", "amount": 0.76, "armor_penetration": 0.5 }, "recoil": 0.76, "dispersion": 1.2 },
+    "extend": { "effects": [ "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "bp_303sp",
+    "copy-from": "303_sp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British SP, black powder" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a single core, 180gr soft-point bullet, the projectile features an open-tipped design manufactured from lead.  This loading allows the round to undergo greater expansion upon striking targets, leading to larger wound channels.  Similar to its early 19th century iteration, this cartridge has been loaded with black powder.  Expect lower velocities, muzzle smoke, and a dirtier barrel if you fire it.",
+    "proportional": { "price": 0.3, "damage": { "damage_type": "bullet", "amount": 0.76, "armor_penetration": 0.5 }, "recoil": 0.76, "dispersion": 1.2 },
+    "extend": { "effects": [ "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "bp_303fmj",
+    "copy-from": "303_fmjbt",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British FMJ, black powder" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a single core, 174gr full metal jacketed bullet, the projectile possesses a solid metal jacket that grants it the capability to punch through thicker material.  This comes at the cost of virtually non-existent expansion, leading to less overall damage.  Similar to its early 19th century iteration, this cartridge has been loaded with black powder.  Expect lower velocities, muzzle smoke, and a dirtier barrel if you fire it.",
+    "proportional": { "price": 0.3, "damage": { "damage_type": "bullet", "amount": 0.76, "armor_penetration": 0.5 }, "recoil": 0.76, "dispersion": 1.2 },
+    "extend": { "effects": [ "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "reloaded_303",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British BTHP, reloaded" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a 174gr boat-tailed hollo-point bullet, the projectile’s boat tail shaped design gives it greater stability with less aerial drag over long ranges, making it favorable for competition shooting.  This one has been hand-reloaded by a survivor or perhaps a pre-Cataclysm hobbyist, leading to slightly inferior performance compared to factory-produced ammo.",
+    "proportional": { "price": 0.7, "damage": { "damage_type": "bullet", "amount": 0.9 }, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "reloaded_303sp",
+    "copy-from": "303_sp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British SP, reloaded" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a single core, 180gr soft-point bullet, the projectile features an open-tipped design manufactured from lead.  This loading allows the round to undergo greater expansion upon striking targets, leading to larger wound channels.  This one has been hand-reloaded by a survivor or perhaps a pre-Cataclysm hobbyist, leading to slightly inferior performance compared to factory-produced ammo.",
+    "proportional": { "price": 0.7, "damage": { "damage_type": "bullet", "amount": 0.9 }, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "reloaded_303fmj",
+    "copy-from": "303_fmjbt",
+    "type": "AMMO",
+    "name": { "str_sp": ".303 British FMJ, reloaded" },
+    "description": "The British empire's standard combat cartridge throughout the nineteenth and twentieth centuries, first as a bottlenecked black powder design before evolving into a spitzered, smokeless round, this is a modern produced .303 caliber cartridge.  Loaded with a single core, 174gr full metal jacketed bullet, the projectile possesses a solid metal jacket that grants it the capability to punch through thicker material.  This comes at the cost of virtually non-existent expansion, leading to less overall damage.  This one has been hand-reloaded by a survivor or perhaps a pre-Cataclysm hobbyist, leading to slightly inferior performance compared to factory-produced ammo.",
+    "proportional": { "price": 0.7, "damage": { "damage_type": "bullet", "amount": 0.9 }, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "smle_mk3",
+    "copy-from": "rifle_manual",
+    "looks_like": "ar15",
+    "type": "GUN",
+    "name": { "str": "Enfield battle rifle" },
+    "description": "An iconic weapon of both the First and Second World Wars, this bolt-action rifle has seen deployment in the hands of Commonwealth troops across Europe and beyond.  Firing the .303-caliber cartridge and making use of 10-round Enfield magazines, the firearm’s reputation precedes it.",
+    "variant_type": "gun",
+    "variants": [ { "id": "smle_mk3", "name": { "str": "SMLE No. 1 Mk III" }, "description": "An English darling and icon of the First World War, the Short Magazine Lee-Enfield Mk III was the standard issue battle rifle of the British commonwealth from 1907.  Chambered for .303 ammunition, the rifle makes use of ten-round detachable magazines.  With its full-length wooden handguard, brass buttplate, and smooth action, the Lee-Enfield cuts a recognizable profile in either the trenches of the Great War or the zombie-strewn wastelands.", "weight": 1 } ],
+    "weight": "3960 g", "volume": "3000 ml", "longest_side": "1132 mm", "barrel_length": "640 mm",
+    "price": 57375, "price_postapoc": 3000, "to_hit": -1, "melee_damage": { "bash": 12 },
+    "material": [ "steel", "wood" ], "color": "brown", "ammo": [ "303" ], "dispersion": 170,
+    "durability": 8, "blackpowder_tolerance": 40,
+    "valid_mod_locations": [ [ "accessories", 4 ], [ "barrel", 1 ], [ "bore", 1 ], [ "brass catcher", 1 ], [ "mechanism", 4 ], [ "muzzle", 1 ], [ "sights mount", 1 ], [ "sling", 1 ], [ "grip mount", 1 ], [ "rail mount", 1 ], [ "stock mount", 1 ], [ "stock accessory", 2 ], [ "underbarrel", 1 ] ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "enfield_303mag" ] } ]
+  },
+  {
+    "id": "number4_mki",
+    "copy-from": "rifle_manual",
+    "looks_like": "ar15",
+    "type": "GUN",
+    "name": { "str": "updated Enfield rifle" },
+    "description": "An evolution of Britten’s First World War battle rifle, this bolt-action firearm uses the same .303-caliber cartridge as its forerunner.  Much beloved across the globe by collectors, rifles like this served as England’s infantry rifle well into the 1950s, with a specialized sniper variant remaining in service until the early nineties.",
+    "variant_type": "gun",
+    "variants": [ { "id": "number4_mki", "name": { "str": "Lee-Enfield No. 4 Mk I" }, "description": "A Second World War progression of the British Commonwealth's Lee-Enfield battle rifle, the No. 4 began its decades-long service life in 1939.  Externally similar to its forefather, the rifle possesses a reinforced receiver, an adjusted nose cap, and a heavier barrel.  Still chambered for the same .303-caliber cartridge, the No. 4 represents one of the most populous firearm imports in U.S. history.", "weight": 1 } ],
+    "weight": "4110 g", "volume": "3000 ml", "longest_side": "1129 mm", "barrel_length": "640 mm",
+    "price": 57375, "price_postapoc": 3000, "to_hit": -1, "melee_damage": { "bash": 12 },
+    "material": [ "steel", "wood" ], "color": "brown", "ammo": [ "303" ], "dispersion": 150,
+    "durability": 8, "blackpowder_tolerance": 40,
+    "valid_mod_locations": [ [ "accessories", 4 ], [ "barrel", 1 ], [ "bore", 1 ], [ "brass catcher", 1 ], [ "mechanism", 4 ], [ "muzzle", 1 ], [ "sights mount", 1 ], [ "sling", 1 ], [ "grip mount", 1 ], [ "rail mount", 1 ], [ "stock mount", 1 ], [ "stock accessory", 2 ], [ "underbarrel", 1 ] ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "enfield_303mag" ] } ]
+  },
+  {
+    "id": "enfield_303mag", "looks_like": "stanag30", "type": "MAGAZINE",
+    "name": { "str": "10-round Enfield magazine" },
+    "description": "A steel 10-round magazine, for use in .303 calibre Enfield rifles.",
+    "weight": "157 g", "volume": "300 ml", "longest_side": "100 mm", "price": 6445, "price_postapoc": 500,
+    "material": [ "steel" ], "symbol": "#", "color": "light_gray", "ammo_type": [ "303" ], "flags": [ "MAG_COMPACT" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "allowed_speedloaders": [ "clip303_5rd" ], "ammo_restriction": { "303": 10 } } ]
+  },
+  {
+    "id": "clip303_5rd", "looks_like": "stanag30", "type": "MAGAZINE",
+    "name": { "str": ".303 5-round charger clip" },
+    "description": "A tiny piece of grooved metal designed to allow a shooter to quickly load five .303 calibre rounds into a magazine.",
+    "weight": "9 g", "volume": "10 ml", "longest_side": "10 cm", "material": [ "steel" ],
+    "symbol": "#", "color": "light_gray", "count": 5, "ammo_type": [ "303" ], "flags": [ "SPEEDLOADER" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "303": 5 } } ]
+  },
+  {
+    "id": "enfield_bayonet",
+    "type": "TOOL",
+    "category": "weapons",
+    "name": { "str": "Enfield No. 4 bayonet" },
+    "description": "This is a vintage spike bayonet for the British Lee Enfield No. 4 rifle, featuring a distinct cruciform blade and socket-based mounting system.",
+    "weight": "500 g", "volume": "300 ml", "longest_side": "25 cm", "price": 4281, "price_postapoc": 3000,
+    "melee_damage": { "bash": 7, "stab": 12 },
+    "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "good" },
+    "material": [ "steel" ], "symbol": "/", "color": "light_gray",
+    "gunmod_data": { "location": "underbarrel", "mod_targets": [ "number4_mki" ], "mode_modifier": [ [ "REACH", "bayonet", 2, [ "MELEE", "REACH_ATTACK" ] ] ], "install_time": "5 s" },
+    "min_skills": [ [ "weapon", 2 ], [ "melee", 1 ] ], "techniques": [ "WBLOCK_1", "RAPID" ],
+    "qualities": [ [ "CUT", 1 ], [ "COOK", 1 ], [ "BUTCHER", 7 ] ], "flags": [ "DURABLE_MELEE", "SHEATH_SWORD" ], "weapon_category": [ "KNIVES" ]
+  },
+  {
+    "id": "on_hand_303", "type": "item_group", "subtype": "distribution",
+    "entries": [
+      { "item": "303_bthp", "prob": 100, "charges": [ 1, 20 ] }, { "item": "303_bthp", "prob": 75, "charges": [ 22, 40 ] }, { "item": "303_bthp", "prob": 30, "charges": [ 44, 80 ] },
+      { "item": "303_sp", "prob": 100, "charges": [ 1, 20 ] }, { "item": "303_sp", "prob": 75, "charges": [ 22, 40 ] }, { "item": "303_sp", "prob": 30, "charges": [ 44, 80 ] },
+      { "item": "303_fmjbt", "prob": 100, "charges": [ 1, 20 ] }, { "item": "303_fmjbt", "prob": 75, "charges": [ 22, 40 ] }, { "item": "303_fmjbt", "prob": 30, "charges": [ 44, 80 ] }
+    ]
+  },
+  {
+    "id": "nested_mk3", "type": "item_group", "subtype": "collection", "ammo": 100,
+    "entries": [
+      { "distribution": [ { "item": "smle_mk3", "charges-min": 0, "charges-max": 10, "prob": 70 }, { "item": "smle_mk3", "charges-min": 0, "charges-max": 10, "contents-item": [ "sword_bayonet" ], "prob": 30 } ] },
+      { "item": "clip303_5rd" }, { "item": "clip303_5rd", "prob": 50 }, { "item": "enfield_303mag", "prob": 5 }, { "group": "on_hand_303" }
+    ]
+  },
+  {
+    "id": "nested_number4", "type": "item_group", "subtype": "collection", "ammo": 100,
+    "entries": [
+      { "distribution": [ { "item": "number4_mki", "charges-min": 0, "charges-max": 10, "prob": 70 }, { "item": "number4_mki", "charges-min": 0, "charges-max": 10, "contents-item": [ "enfield_bayonet" ], "prob": 30 } ] },
+      { "item": "clip303_5rd" }, { "item": "clip303_5rd", "prob": 50 }, { "item": "enfield_303mag", "prob": 5 }, { "group": "on_hand_303" }
+    ]
+  },
+  { "id": "ammo_rifle_rare", "type": "item_group", "subtype": "distribution", "copy-from": "ammo_rifle_rare", "extend": { "entries": [ { "item": "303_bthp", "prob": 30 }, { "item": "303_sp", "prob": 25 }, { "item": "303_fmjbt", "prob": 25 } ] } },
+  { "id": "ammo_rifle_rare_collection", "type": "item_group", "subtype": "collection", "copy-from": "ammo_rifle_rare_collection", "extend": { "entries": [ { "item": "303_bthp", "prob": 30 }, { "item": "303_sp", "prob": 25 }, { "item": "303_fmjbt", "prob": 25 } ] } },
+  { "id": "ammo_rifle_reloaded", "type": "item_group", "subtype": "distribution", "copy-from": "ammo_rifle_reloaded", "extend": { "entries": [ { "item": "reloaded_303", "prob": 20 }, { "item": "reloaded_303sp", "prob": 5 }, { "item": "reloaded_303fmj", "prob": 5 } ] } },
+  { "id": "guns_rifle_rare", "type": "item_group", "copy-from": "guns_rifle_rare", "extend": { "items": [ { "group": "nested_mk3", "prob": 10 }, { "group": "nested_number4", "prob": 10 } ] } },
+  { "id": "guns_rifle_rare_display", "type": "item_group", "subtype": "distribution", "copy-from": "guns_rifle_rare_display", "extend": { "items": [ { "item": "smle_mk3", "prob": 10, "charges-min": 0, "charges-max": 0 }, { "item": "number4_mki", "prob": 10, "charges-min": 0, "charges-max": 0 } ] } },
+  { "id": "mags_rifle_rare", "type": "item_group", "copy-from": "mags_rifle_rare", "extend": { "items": [ [ "clip303_5rd", 15 ], [ "enfield_303mag", 4 ] ] } },
+  {
+    "id": "ammo_pouch", "type": "ARMOR", "copy-from": "ammo_pouch",
+    "pocket_data": [ { "ammo_restriction": { "pebble": 60, "700nx": 60, "50": 60, "4570": 60, "BB": 60, "410shot": 60, "22": 60, "shot": 60, "9mm": 60, "357sig": 60, "9x18": 60, "380": 60, "38": 60, "40": 60, "10mm": 60, "44": 60, "45": 60, "460": 60, "454": 60, "45colt": 60, "500": 60, "57": 60, "46": 60, "762": 60, "545x39": 60, "223": 60, "3006": 60, "303": 60, "270win": 60, "308": 60, "12mm": 60, "8x40mm": 60, "20x66mm": 60, "5x50": 60, "stimpack_ammo": 60, "ampoule": 60, "300": 60, "32": 60, "762x25": 60, "flintlock": 60, "36paper": 60, "44paper": 60, "762R": 60, "paintball": 60 }, "moves": 35 } ]
+  },
+  {
+    "id": "bandolier_rifle", "type": "ARMOR", "copy-from": "bandolier_rifle",
+    "pocket_data": [ { "ammo_restriction": { "22": 16, "223": 16, "270win": 16, "300blk": 16, "5x50": 16, "545x39": 16, "3006": 16, "303": 16, "308": 16, "300": 16, "762": 16, "762R": 16, "8x40mm": 16, "4570": 16, "50": 16, "700nx": 16 }, "moves": 20 } ]
+  },
+  {
+    "id": "bandolier_wrist", "type": "ARMOR", "copy-from": "bandolier_wrist",
+    "pocket_data": [ { "ammo_restriction": { "22": 4, "223": 4, "270win": 4, "300blk": 4, "5x50": 4, "545x39": 4, "3006": 4, "303": 4, "308": 4, "300": 4, "762": 4, "762R": 4, "8x40mm": 4, "4570": 4, "50": 4, "700nx": 4 }, "moves": 20 } ]
+  },
+  {
+    "result": "reloaded_303", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 3 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder", 31 ], [ "gunpowder_rifle", 31 ], [ "gunpowder_large_rifle", 31 ] ], [ [ "copper", 2 ] ] ]
+  },
+  {
+    "result": "reloaded_303fmj", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 3 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder", 31 ], [ "gunpowder_rifle", 31 ], [ "gunpowder_large_rifle", 31 ] ], [ [ "copper", 2 ] ] ]
+  },
+  {
+    "result": "reloaded_303sp", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 3 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder", 31 ], [ "gunpowder_rifle", 31 ], [ "gunpowder_large_rifle", 31 ] ], [ [ "copper", 2 ] ] ]
+  },
+  { "result": "bp_303", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 4 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "chem_black_powder", 31 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "bp_303fmj", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 4 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "chem_black_powder", 31 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "bp_303sp", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 4 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "chem_black_powder", 31 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "303_bthp", "type": "uncraft", "activity_level": "MODERATE_EXERCISE", "skill_used": "gun", "difficulty": 5, "time": "5 s", "qualities": [ { "id": "PULL", "level": 1 } ], "components": [ [ [ "lead", 3 ] ], [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder_large_rifle", 32 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "303_sp", "type": "uncraft", "activity_level": "MODERATE_EXERCISE", "skill_used": "gun", "difficulty": 5, "time": "5 s", "qualities": [ { "id": "PULL", "level": 1 } ], "components": [ [ [ "lead", 3 ] ], [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder_large_rifle", 33 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "303_fmjbt", "type": "uncraft", "activity_level": "MODERATE_EXERCISE", "skill_used": "gun", "difficulty": 5, "time": "5 s", "qualities": [ { "id": "PULL", "level": 1 } ], "components": [ [ [ "lead", 4 ] ], [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder_large_rifle", 33 ] ], [ [ "copper", 2 ] ] ] }
+]
