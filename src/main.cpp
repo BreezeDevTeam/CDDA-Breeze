@@ -339,7 +339,7 @@ int main( int argc, const char *argv[] )
     method_id_isHardwareKeyboardAvailable = jni_env->GetMethodID(j_class, "isHardwareKeyboardAvailable", "()Z");
     method_id_vibrate = jni_env->GetMethodID(j_class, "vibrate", "(I)V");
     method_id_show_sdl_surface = jni_env->GetMethodID(j_class, "show_sdl_surface", "()V");
-    method_id_toast = jni_env->GetMethodID(j_class,"toast","(Ljava/lang/String;Z)V");
+    method_id_toast = jni_env->GetMethodID(j_class,"toast","(Ljava/lang/String;)V");
     method_id_showToastMessage = jni_env->GetMethodID(j_class, "showToastMessage", "(Ljava/lang/String;)V");
     method_id_getDefaultSetting = jni_env->GetMethodID(j_class, "getDefaultSetting", "(Ljava/lang/String;Z)Z");
     method_id_getSystemLang = jni_env->GetMethodID(j_class, "getSystemLang", "()Ljava/lang/String;");
