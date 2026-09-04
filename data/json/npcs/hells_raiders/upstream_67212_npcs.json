@@ -1,0 +1,52 @@
+[
+  {
+    "type": "npc",
+    "id": "hells_raiders_assassin",
+    "name_suffix": "刺客",
+    "class": "NC_BOUNTY_HUNTER",
+    "attitude": 10,
+    "mission": 0,
+    "chat": "TALK_DONE",
+    "faction": "hells_raiders"
+  },
+  {
+    "type": "npc",
+    "id": "hells_raiders_boss",
+    "name_suffix": "强盗头目",
+    "class": "NC_BANDIT_LEADER",
+    "attitude": 0,
+    "mission": 8,
+    "chat": "TALK_DONE",
+    "faction": "hells_raiders"
+  },
+  {
+    "type": "npc",
+    "id": "bandit_trader",
+    "name_suffix": "销赃商",
+    "class": "NC_BANDIT_TRADER",
+    "attitude": 0,
+    "mission": 3,
+    "chat": "TALK_DONE",
+    "faction": "hells_raiders"
+  },
+  {
+    "type": "npc",
+    "id": "bandit_quartermaster",
+    "name_suffix": "军需官",
+    "class": "NC_BANDIT_QUARTERMASTER",
+    "attitude": 0,
+    "mission": 3,
+    "chat": "TALK_DONE",
+    "faction": "hells_raiders"
+  },
+  {
+    "type": "npc",
+    "id": "bandit_mechanic",
+    "name_suffix": "机械师",
+    "class": "NC_SCAVENGER",
+    "attitude": 0,
+    "mission": 8,
+    "chat": "TALK_DONE",
+    "faction": "hells_raiders"
+  }
+]
