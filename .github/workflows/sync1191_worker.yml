@@ -8,174 +8,116 @@ on:
 permissions:
   contents: write
 jobs:
-  rewrite-gunstore:
+  rabbit-fixes:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          ref: a26448bfff17b2d6f70fd27bdaa75bcdd5b52731
-      - name: 重写 79285 为最小差异提交
+          ref: 741af88cea2f3e56864bd1aab5cac808da6b7916
+      - name: 修复中期 CodeRabbit 审查问题
         shell: bash
         run: |
           set -euo pipefail
           git checkout -B sync1191-staging-final
           git config user.name "ChatGPT Sync Bot"
           git config user.email "actions@users.noreply.github.com"
-          upstream=0ba3e95762478bea74669a3faee36c1526f2fb49
-          base="https://raw.githubusercontent.com/CleverRaven/Cataclysm-DDA/${upstream}"
-          curl -fsSL "$base/data/json/mapgen/s_gun.json" -o /tmp/up_s_gun.json
-          curl -fsSL "$base/data/json/mapgen/nested/gunstore_nested.json" -o /tmp/up_nested.json
-          curl -fsSL "$base/data/json/mapgen_palettes/gunstore.json" -o /tmp/up_palette.json
-          curl -fsSL "$base/data/json/overmap/multitile_city_buildings.json" -o /tmp/up_city.json
-          curl -fsSL "$base/data/json/overmap/overmap_terrain/overmap_terrain_commercial.json" -o /tmp/up_oter.json
           python3 - <<'PY'
           from pathlib import Path
-          import copy, json, re
+          import json, re
 
-          def load(path): return json.loads(Path(path).read_text(encoding='utf-8'))
-          def dump_new(path, obj):
-              p=Path(path); p.parent.mkdir(parents=True, exist_ok=True)
-              p.write_text(json.dumps(obj, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
-          def append_objects(path, objs):
-              p=Path(path); s=p.read_text(encoding='utf-8'); stripped=s.rstrip()
-              if not stripped.endswith(']'): raise SystemExit(f'{path} is not top-level array')
-              body=stripped[:-1].rstrip()
-              add=[]
-              for obj in objs:
-                  text=json.dumps(obj, ensure_ascii=False, indent=2)
-                  text='\n'.join('  '+line for line in text.splitlines())
-                  add.append(text)
-              sep=',\n' if body.endswith('}') else '\n'
-              p.write_text(body+sep+',\n'.join(add)+'\n]\n', encoding='utf-8')
+          def replace_once(path, old, new, label):
+              p=Path(path); s=p.read_text(encoding='utf-8')
+              n=s.count(old)
+              if n!=1: raise SystemExit(f'{label}: expected 1 match in {path}, got {n}')
+              p.write_text(s.replace(old,new,1),encoding='utf-8')
 
-          existing_ids=set()
-          for p in Path('data').rglob('*.json'):
-              try: obj=json.loads(p.read_text(encoding='utf-8'))
-              except Exception: continue
-              stack=[obj]
-              while stack:
-                  cur=stack.pop()
-                  if isinstance(cur,dict):
-                      val=cur.get('id')
-                      if isinstance(val,str): existing_ids.add(val)
-                      elif isinstance(val,list): existing_ids.update(x for x in val if isinstance(x,str))
-                      stack.extend(cur.values())
-                  elif isinstance(cur,list): stack.extend(cur)
+          # 1. 会展中心：补齐第三排屋顶 mapgen。
+          replace_once(
+              'data/json/mapgen/convention_center/convention_center.json',
+              '      [ "convention_0_1_2", "convention_1_1_2", "convention_2_1_2", "convention_3_1_2", "convention_4_1_2" ]\n',
+              '      [ "convention_0_1_2", "convention_1_1_2", "convention_2_1_2", "convention_3_1_2", "convention_4_1_2" ],\n'
+              '      [ "convention_0_2_2", "convention_1_2_2", "convention_2_2_2", "convention_3_2_2", "convention_4_2_2" ]\n',
+              'convention roof row'
+          )
 
-          replacements={
-              't_thconc_floor_no_roof':'t_thconc_floor','t_carpet_concrete_red':'t_thconc_floor',
-              't_window_bars_curtains':'t_window_bars_alarm','t_door_metal_interior_locked':'t_door_metal_locked',
-              'f_sandbag_half':'f_sandbag_wall','f_foot_locker_aluminum':'f_locker','f_rack_coat':'f_rack',
-              'f_metal_rack':'f_rack','f_counter_gate_c':'f_counter','f_cardboard_box':'f_crate_o',
-              'f_atm_off':'f_console_broken','f_shooting_target':'f_target'
-          }
-          param_map={'interior_walls':'t_brick_wall','windows':'t_window_bars_alarm','entrance':'t_door_metal_c','secondary_entrance':'t_door_metal_locked','floor':'t_thconc_floor'}
-          def compat(obj):
-              if isinstance(obj,dict):
-                  if set(obj)=={'param'}: return param_map.get(obj['param'],'t_thconc_floor')
-                  return {k:compat(v) for k,v in obj.items() if k!='parameters'}
-              if isinstance(obj,list): return [compat(x) for x in obj]
-              if isinstance(obj,str): return replacements.get(obj,obj)
-              return obj
+          # 2. 动物收容所：百分比刷新改用 place_monster，去除 place_monsters 的 density 语义。
+          p=Path('data/json/mapgen/upstream_62791_animalshelter_survivor.json'); s=p.read_text(encoding='utf-8')
+          start=s.find('      "place_monsters": [')
+          end=s.find('      "place_vehicles":',start)
+          if start<0 or end<0: raise SystemExit('animal shelter monster block not found')
+          block=s[start:end]
+          block=block.replace('"place_monsters": [','"place_monster": [',1)
+          block=block.replace('"monster": "GROUP_','"group": "GROUP_')
+          block=re.sub(r', "density": (?:0\.05|0\.5|1)(?=\s*})','',block)
+          if '"monster": "GROUP_' in block or '"density"' in block: raise SystemExit('animal shelter conversion incomplete')
+          p.write_text(s[:start]+block+s[end:],encoding='utf-8')
 
-          up_s_gun=compat(load('/tmp/up_s_gun.json'))
-          up_nested=compat(load('/tmp/up_nested.json'))
-          up_palettes=load('/tmp/up_palette.json')
-          old_palette=load('data/json/mapgen_palettes/gunstore.json')[0]
-          adapted=[]
-          for raw in up_palettes:
-              src=compat(raw); dst=copy.deepcopy(old_palette); dst['id']=src['id']; dst['type']='palette'
-              for key in ('terrain','furniture','item','items','toilets','traps','nested'):
-                  if key in src:
-                      if isinstance(src[key],dict) and isinstance(dst.get(key),dict): dst[key].update(src[key])
-                      else: dst[key]=src[key]
-              if 'items' in dst and 'X' in old_palette.get('items',{}): dst['items']['X']=copy.deepcopy(old_palette['items']['X'])
-              adapted.append(dst)
-          dump_new('data/json/mapgen/upstream_79285_s_gun.json',up_s_gun)
-          dump_new('data/json/mapgen/nested/upstream_79285_gunstore_nested.json',up_nested)
-          dump_new('data/json/mapgen_palettes/upstream_79285_gunstore.json',adapted)
+          # 3. 首次对话：在玩家选定首次回应之后再记录 knows_u。
+          path='data/json/npcs/other/TALK_ANIMAL_SHELTER_SURVIVOR.json'
+          p=Path(path); s=p.read_text(encoding='utf-8')
+          speaker='    "speaker_effect": { "effect": { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } },\n'
+          if s.count(speaker)!=1: raise SystemExit('animal shelter speaker_effect anchor mismatch')
+          s=s.replace(speaker,'',1)
+          var='{ "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" }'
+          old='        "success": { "topic": "TALK_WEAPON_DROPPED", "effect": "drop_weapon", "opinion": { "trust": -4, "fear": 3 } },\n        "failure": { "topic": "TALK_DONE", "effect": "hostile" },'
+          new=f'        "success": {{ "topic": "TALK_WEAPON_DROPPED", "effect": [ "drop_weapon", {var} ], "opinion": {{ "trust": -4, "fear": 3 }} }},\n        "failure": {{ "topic": "TALK_DONE", "effect": [ "hostile", {var} ] }},'
+          if s.count(old)!=1: raise SystemExit('animal shelter intimidate response anchor mismatch')
+          s=s.replace(old,new,1)
+          old='        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",\n        "condition": { "not": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } }'
+          new=f'        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",\n        "effect": {var},\n        "condition": {{ "not": {{ "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" }} }}'
+          if s.count(old)!=1: raise SystemExit('animal shelter friendly response anchor mismatch')
+          s=s.replace(old,new,1)
+          p.write_text(s,encoding='utf-8')
 
-          aliases={
-              'guns_common_boxed':['guns_common_display'],'guns_rifle_common_display':['guns_common_display'],
-              'guns_pistol_common_display':['guns_common_display'],'guns_shotgun_common_display':['guns_common_display'],
-              'mags_common_restricted_packaged':['mags_common_gunstore','mags_common'],
-              'ammo_pistol_common':['ammo_pistol_common_collection','ammo_common_collection'],
-              'ammo_pistol_rare':['ammo_pistol_rare_collection','ammo_rare_collection'],
-              'ammo_rifle_common':['ammo_rifle_common_collection','ammo_common_collection'],
-              'ammo_rifle_rare':['ammo_rifle_rare_collection','ammo_rare_collection'],
-              'ammo_shotgun_common':['ammo_shotgun_common_collection','ammo_common_collection'],
-              'SUS_gunstore_hearing':['ear_protection'],'SUS_gunstore_optics_packaged':['gunmod_common'],
-              'SUS_gunstore_optics_display':['gunmod_common'],'SUS_gunstore_carry_gear':['SUS_gunstore_gear']
-          }
-          groups=[]
-          for new_id,candidates in aliases.items():
-              if new_id in existing_ids: continue
-              target=next((x for x in candidates if x in existing_ids),None)
-              if target is None: raise SystemExit(f'No compatibility target for {new_id}: {candidates}')
-              groups.append({'type':'item_group','id':new_id,'subtype':'collection','items':[{'group':target}]})
-          dump_new('data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json',groups)
+          # 4. 重装军人丧尸：瞄具组本身已带 ACOG，只额外挂肩带。
+          replace_once(
+              'data/json/z_upstream_sync/第二批/64161_军人丧尸装备.json',
+              '{ "group": "military_standard_assault_rifles_sighted", "contents-item": [ "shoulder_strap", "acog_scope" ], "prob": 40,',
+              '{ "group": "military_standard_assault_rifles_sighted", "contents-item": "shoulder_strap", "prob": 40,',
+              'duplicate ACOG'
+          )
 
-          up_city=load('/tmp/up_city.json')
-          city_objs=[o for o in up_city if isinstance(o,dict) and o.get('id') in {'s_gun_a','s_gun_b'}]
-          if len(city_objs)!=2: raise SystemExit(f'Expected 2 city objects, got {len(city_objs)}')
-          append_objects('data/json/overmap/multitile_city_buildings.json',city_objs)
+          # 5. 穆尔卡弹药袋覆盖定义保留原版 700nx 限制。
+          replace_once(
+              'data/mods/穆尔卡的武器工坊/物品/原版护具调整/z_上游兼容/62174_303英制弹药袋.json',
+              '          "pebble": 60,\n          "50": 60,',
+              '          "pebble": 60,\n          "700nx": 60,\n          "50": 60,',
+              '700nx ammo pouch restriction'
+          )
 
-          up_oter=load('/tmp/up_oter.json'); wanted={'s_gun_a','s_gun_b_range','s_gun_b_store','s_gun_a_roof','s_gun_b_roof','s_gun_b_range_roof'}
-          def ids(o):
-              v=o.get('id') if isinstance(o,dict) else None
-              return {v} if isinstance(v,str) else set(v) if isinstance(v,list) else set()
-          oter_objs=[o for o in up_oter if ids(o)&wanted]
-          if not oter_objs: raise SystemExit('No gunstore overmap terrain objects found')
-          append_objects('data/json/overmap/overmap_terrain/overmap_terrain_commercial.json',oter_objs)
+          # 6. 地点幻觉使用实际生成格 p 所在的 OMT，而不是玩家所在 OMT。
+          replace_once(
+              'src/game.cpp',
+              '    const oter_id &terrain_type = overmap_buffer.ter( get_player_character().global_omt_location() );',
+              '    const oter_id &terrain_type = overmap_buffer.ter(\n'
+              '        tripoint_abs_omt( ms_to_omt_copy( get_map().getabs( p ) ) ) );',
+              'hallucination spawn OMT'
+          )
 
-          old_keys=['s_gun','s_gun_looted','s_gun_1','s_gun_2','s_gun_3','s_gun_3_looted','s_gun_4','s_gun_4_looted','s_gunstore','s_gunstore_looted']
-          def patch_weights(path):
-              p=Path(path)
-              if not p.exists(): return False
-              s=p.read_text(encoding='utf-8')
-              lines=s.splitlines(True); out=[]; removed=0; insert_indent=None
-              for line in lines:
-                  m=re.match(r'^(\s*)"('+'|'.join(re.escape(k) for k in old_keys)+r')"\s*:\s*\d+\s*,\s*$', line.rstrip('\n'))
-                  if m:
-                      removed+=1
-                      if insert_indent is None: insert_indent=m.group(1)
-                      continue
-                  out.append(line)
-              if removed:
-                  # insert before first s_clothes entry, matching upstream ordering
-                  text=''.join(out)
-                  anchor=re.search(r'^(\s*)"s_clothes"\s*:',text,re.M)
-                  if not anchor: raise SystemExit(f's_clothes anchor missing in {path}')
-                  ins=f'{anchor.group(1)}"s_gun_a": 1200,\n{anchor.group(1)}"s_gun_b": 300,\n'
-                  text=text[:anchor.start()]+ins+text[anchor.start():]
-                  p.write_text(text,encoding='utf-8')
-                  print(path,'removed old gunstore weights',removed)
-                  return True
-              return False
-          if not patch_weights('data/json/regional_map_settings.json'): raise SystemExit('base regional gunstore weights not found')
-          patch_weights('data/mods/TropiCataclysm/tropical_regional_map_settings.json')
-
-          p=Path('data/json/mapgen/store/upstream_62791_gunstore_survivor.json'); s=p.read_text(encoding='utf-8')
-          old='"om_terrain": [ "s_gunstore" ]'; new='"om_terrain": [ "s_gun_a" ]'
-          if old not in s: raise SystemExit('62791 gunstore survivor hook not found')
-          p.write_text(s.replace(old,new,1),encoding='utf-8')
-
-          for f in ['data/json/mapgen/upstream_79285_s_gun.json','data/json/mapgen/nested/upstream_79285_gunstore_nested.json','data/json/mapgen_palettes/upstream_79285_gunstore.json','data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json','data/json/overmap/multitile_city_buildings.json','data/json/overmap/overmap_terrain/overmap_terrain_commercial.json','data/json/regional_map_settings.json','data/json/mapgen/store/upstream_62791_gunstore_survivor.json']:
+          # JSON 语法检查。
+          for f in [
+              'data/json/mapgen/convention_center/convention_center.json',
+              'data/json/mapgen/upstream_62791_animalshelter_survivor.json',
+              'data/json/npcs/other/TALK_ANIMAL_SHELTER_SURVIVOR.json',
+              'data/json/z_upstream_sync/第二批/64161_军人丧尸装备.json',
+              'data/mods/穆尔卡的武器工坊/物品/原版护具调整/z_上游兼容/62174_303英制弹药袋.json'
+          ]:
               json.loads(Path(f).read_text(encoding='utf-8'))
           PY
           git diff --check
-          git add data/json/mapgen/upstream_79285_s_gun.json data/json/mapgen/nested/upstream_79285_gunstore_nested.json data/json/mapgen_palettes/upstream_79285_gunstore.json data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json data/json/overmap/multitile_city_buildings.json data/json/overmap/overmap_terrain/overmap_terrain_commercial.json data/json/regional_map_settings.json data/json/mapgen/store/upstream_62791_gunstore_survivor.json
-          if ! git diff --quiet -- data/mods/TropiCataclysm/tropical_regional_map_settings.json; then git add data/mods/TropiCataclysm/tropical_regional_map_settings.json; fi
+          git add data/json/mapgen/convention_center/convention_center.json \
+                  data/json/mapgen/upstream_62791_animalshelter_survivor.json \
+                  data/json/npcs/other/TALK_ANIMAL_SHELTER_SURVIVOR.json \
+                  data/json/z_upstream_sync/第二批/64161_军人丧尸装备.json \
+                  data/mods/穆尔卡的武器工坊/物品/原版护具调整/z_上游兼容/62174_303英制弹药袋.json \
+                  src/game.cpp
           git commit -F - <<'MSG'
-          同步上游 #79285：重制枪店布局与状态
+          修复中期 CodeRabbit 审查发现的同步适配问题
 
-          枪店现在采用新版布局体系，并会在完整设防、有人占据、遭到洗劫和被彻底翻空等状态之间变化。新版地图增加了更像现实枪店的展示区、储物区、射击场和防御痕迹，让不同枪店的探索风险与收获差异更明显。
+          补齐会展中心第三排屋顶地图，修正动物收容所怪物刷新概率和首次见面对话状态记录，避免军人丧尸重复生成 ACOG，并保留穆尔卡弹药袋原有的 700nx 兼容范围。
 
-          微风适配：保留微风旧基线现有枪械、弹匣和物品组生态，用兼容物品组承接新版地图的分类需求，不引入上游 2025 年后续枪械依赖；旧枪店 overmap 与地图定义保留给旧存档使用，自然生成切换到 s_gun_a / s_gun_b。此前 #62791 的幸存者枪店改接到新版 s_gun_a 稀有变体，穆尔卡武器工坊继续通过 SUS_gunstore_safe 等既有物品组向新版枪店注入内容。
-
-          Upstream-PR: CleverRaven/Cataclysm-DDA#79285
-          Original-Author: Holli-Git
+          同时让地点相关幻觉按实际幻觉生成格所在的 overmap terrain 选取当地怪物群，避免玩家站在区域边界时取错相邻地点的刷新表。
           MSG
           git show --stat --oneline HEAD
           git push --force origin HEAD:sync1191-staging-final
