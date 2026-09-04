@@ -15,13 +15,20 @@ jobs:
         with:
           fetch-depth: 1
           ref: 132463fafc5d62e6f0eaca5af878b561d98dd916
-      - name: 诊断 62685 冲突
+      - name: 检查 66402 与 67058 可直接回移性
         shell: bash
         run: |
           set -u
-          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/62685.diff -o /tmp/62685.diff
-          git apply --reject --whitespace=nowarn /tmp/62685.diff || true
-          echo '=== 状态 ==='
-          git status --short
-          echo '=== Rejects ==='
-          find data -name '*.rej' -print -exec sh -c 'echo "----- $1"; cat "$1"' _ {} \;
+          for pr in 66402 67058; do
+            git reset --hard 132463fafc5d62e6f0eaca5af878b561d98dd916
+            git clean -fd
+            curl -fsSL "https://github.com/CleverRaven/Cataclysm-DDA/pull/${pr}.diff" -o "/tmp/${pr}.diff"
+            echo "=== PR ${pr} ==="
+            if git apply --check "/tmp/${pr}.diff"; then
+              echo "DIRECT_APPLY_OK"
+            else
+              echo "DIRECT_APPLY_FAIL"
+              git apply --reject --whitespace=nowarn "/tmp/${pr}.diff" || true
+              find . -name '*.rej' -print -exec sh -c 'echo "----- $1"; cat "$1"' _ {} \;
+            fi
+          done
