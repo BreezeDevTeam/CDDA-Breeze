@@ -8,232 +8,242 @@ on:
 permissions:
   contents: write
 jobs:
-  build-stack:
+  gunstore:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          ref: 132463fafc5d62e6f0eaca5af878b561d98dd916
-      - name: 回移 62685、66402、67058 到候选分支
+          ref: sync1191-staging-final
+      - name: 兼容回移 79285 枪店重制
         shell: bash
         run: |
           set -euo pipefail
           git checkout -B sync1191-staging-final
           git config user.name "ChatGPT Sync Bot"
           git config user.email "actions@users.noreply.github.com"
+          upstream=0ba3e95762478bea74669a3faee36c1526f2fb49
+          base="https://raw.githubusercontent.com/CleverRaven/Cataclysm-DDA/${upstream}"
+          curl -fsSL "$base/data/json/mapgen/s_gun.json" -o /tmp/up_s_gun.json
+          curl -fsSL "$base/data/json/mapgen/nested/gunstore_nested.json" -o /tmp/up_nested.json
+          curl -fsSL "$base/data/json/mapgen_palettes/gunstore.json" -o /tmp/up_palette.json
+          curl -fsSL "$base/data/json/overmap/multitile_city_buildings.json" -o /tmp/up_city.json
+          curl -fsSL "$base/data/json/overmap/overmap_terrain/overmap_terrain_commercial.json" -o /tmp/up_oter.json
 
-          echo '=== 62685 ==='
-          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/62685.diff -o /tmp/62685.diff
-          git apply --reject --whitespace=nowarn /tmp/62685.diff || true
           python3 - <<'PY'
           from pathlib import Path
-          import json
+          import copy, json, re
 
-          def edit_obj(path, obj_id, func):
-              p = Path(path)
-              s = p.read_text(encoding='utf-8')
-              needle = f'"id": "{obj_id}"'
-              start = s.find(needle)
-              if start < 0:
-                  raise SystemExit(f'missing object {obj_id} in {path}')
-              end = s.find('\n  },\n  {', start)
-              if end < 0:
-                  end = s.rfind('\n  }\n]')
-              chunk = s[start:end]
-              new = func(chunk)
-              if new == chunk:
-                  print(f'no textual change needed for {obj_id}')
-              p.write_text(s[:start] + new + s[end:], encoding='utf-8')
+          def load(path):
+              return json.loads(Path(path).read_text(encoding='utf-8'))
+          def dump(path, obj):
+              Path(path).parent.mkdir(parents=True, exist_ok=True)
+              Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
-          def remove_flag(flag):
-              def f(c):
-                  c = c.replace(f'      "{flag}",\n', '')
-                  c = c.replace(f', "{flag}"', '')
-                  c = c.replace(f'"{flag}", ', '')
-                  return c
-              return f
+          # 收集旧基线已经存在的 ID，用于兼容映射。
+          existing_ids = set()
+          for p in Path('data').rglob('*.json'):
+              try:
+                  obj = json.loads(p.read_text(encoding='utf-8'))
+              except Exception:
+                  continue
+              stack = [obj]
+              while stack:
+                  cur = stack.pop()
+                  if isinstance(cur, dict):
+                      val = cur.get('id')
+                      if isinstance(val, str): existing_ids.add(val)
+                      elif isinstance(val, list): existing_ids.update(x for x in val if isinstance(x, str))
+                      stack.extend(cur.values())
+                  elif isinstance(cur, list):
+                      stack.extend(cur)
 
-          def add_scents_after_color(color, scents):
-              def f(c):
-                  if '"scents_tracked"' in c:
-                      return c
-                  old = f'"color": "{color}",\n'
-                  if old not in c:
-                      raise SystemExit(f'color anchor {color} missing')
-                  return c.replace(old, old + f'    "scents_tracked": {json.dumps(scents)},\n', 1)
-              return f
-
-          edit_obj('data/json/monsters/zed-classic.json', 'mon_zombie', remove_flag('SMELLS'))
-          edit_obj('data/json/monsters/zed-winged.json', 'mon_spawn_raptor', add_scents_after_color('white', ['sc_human','sc_fetid']))
-          edit_obj('data/json/monsters/zed_fusion.json', 'mon_devourer_lab_sec', add_scents_after_color('blue', ['sc_human','sc_fetid']))
-          edit_obj('data/json/monsters/zed_misc.json', 'mon_zombie_hunter', remove_flag('GROUP_BASH'))
-          edit_obj('data/json/monsters/zed_misc.json', 'mon_zombie_runner', remove_flag('SMELLS'))
-          edit_obj('data/json/monsters/zed_soldiers.json', 'mon_zombie_military_pilot', remove_flag('SMELLS'))
-
-          for rej in Path('data').rglob('*.rej'):
-              rej.unlink()
-          for p in Path('data/json/monsters').glob('*.json'):
-              if p.name in {
-                  'zanimal_upgrade.json','zed-animal.json','zed-classic.json','zed-pupating.json','zed-winged.json',
-                  'zed_acid.json','zed_amalgamation.json','zed_command.json','zed_ferrous.json','zed_fusion.json','zed_lab.json',
-                  'zed_misc.json','zed_soldiers.json','zed_survivor.json'
-              }:
-                  json.loads(p.read_text(encoding='utf-8'))
-          json.loads(Path('data/json/scent_types.json').read_text(encoding='utf-8'))
-          PY
-          git diff --check
-          git add data/json/monsters data/json/scent_types.json
-          git commit -F - <<'MSG'
-          同步上游 #62685：细化丧尸的气味追踪
-
-          不再让所有丧尸天生都像猎犬一样精确追踪气味，只给动物型、嗅觉明显强化或特定进化方向的丧尸保留或加入人类与腐臭气味追踪。这样夜间潜行和绕开普通尸群更有意义，同时僵尸犬等嗅觉型敌人仍会成为真正的追踪威胁。
-
-          微风适配：按上游气味分类规则回移到微风旧基线，并保留微风已有怪物以及此前同步的毛茸茸丧尸内容。
-
-          Upstream-PR: CleverRaven/Cataclysm-DDA#62685
-          Original-Author: Maleclypse
-          MSG
-
-          echo '=== 66402 ==='
-          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/66402.diff -o /tmp/66402.diff
-          git apply --check /tmp/66402.diff
-          git apply /tmp/66402.diff
-          git diff --check
-          git add data/json/mapgen/speedway.json data/json/overmap/overmap_special/specials.json data/json/overmap/overmap_terrain/overmap_terrain_speedway.json
-          git commit -F - <<'MSG'
-          同步上游 #66402：加入大型赛车场
-
-          加入一处大型椭圆赛车场，包含泥土地停车区、看台、热狗摊、厕所、维修车库、加油设施与完整赛道，可用于练习驾驶、测试车辆或搜刮机械工具与燃料。
-
-          微风适配：按旧基线地图 JSON 结构接入赛车场地图、专用 overmap terrain 与特殊地点定义，不改动微风其他地点生成规则。
-
-          Upstream-PR: CleverRaven/Cataclysm-DDA#66402
-          Original-Author: FarkasKBence
-          MSG
-
-          echo '=== 67058 ==='
-          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/67058.diff -o /tmp/67058.diff
-          git apply --reject --whitespace=nowarn /tmp/67058.diff || true
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('src/activity_item_handling.cpp')
-          s = p.read_text(encoding='utf-8')
-          start = s.find('int get_auto_consume_moves( Character &you, const bool food )')
-          end = s.find('\n// Try to add fuel', start)
-          if start < 0 or end < 0:
-              raise SystemExit('auto consume function anchors not found')
-          new = r'''int get_auto_consume_moves( Character &you, const bool food )
-          {
-              if( you.is_npc() ) {
-                  return 0;
-              }
-              const tripoint pos = you.pos();
-              zone_manager &mgr = zone_manager::get_manager();
-              const zone_type_id zone_type = food ? zone_type_LOOT_AUTO_EAT : zone_type_LOOT_AUTO_DRINK;
-              const std::unordered_set<tripoint_abs_ms> &dest_set =
-                  mgr.get_near( zone_type, here.getglobal( pos ), ACTIVITY_SEARCH_DISTANCE, nullptr,
-                                _fac_id( you ) );
-              if( dest_set.empty() ) {
-                  return 0;
-              }
-              item_location best_comestible;
-              for( const tripoint_abs_ms &loc : dest_set ) {
-                  if( loc.z() != you.pos().z ) {
-                      continue;
-                  }
-
-                  const auto visit = [&]( item_location & it ) -> VisitResponse {
-                      if( !you.can_consume_as_is( *it ) ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( it->has_flag( json_flag_NO_AUTO_CONSUME ) ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( it->is_null() || it->is_craft() || !it->is_food() || you.fun_for( *it ).first < -5 ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( food && you.compute_effective_nutrients( *it ).kcal() < 50 ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( !you.will_eat( *it, false ).success() ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( !it->is_owned_by( you, true ) ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( !food && it->get_comestible()->quench < 15 ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( !food && it->is_watertight_container() && it->made_of( phase_id::SOLID ) ) {
-                          return VisitResponse::NEXT;
-                      }
-                      const use_function *usef = it->type->get_use( "BLECH_BECAUSE_UNCLEAN" );
-                      if( usef ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( it->get_comestible()->add == STATIC( addiction_id( "alcohol" ) ) &&
-                          !you.has_addiction( it->get_comestible()->add ) ) {
-                          return VisitResponse::NEXT;
-                      }
-                      if( !best_comestible || comestible_sort_compare( you, it, best_comestible ) ) {
-                          best_comestible = it;
-                      }
-                      return VisitResponse::NEXT;
-                  };
-
-                  const optional_vpart_position vp = here.veh_at( here.getlocal( loc ) );
-                  if( vp ) {
-                      vehicle &veh = vp->vehicle();
-                      const int index = veh.part_with_feature( vp->part_index(), "CARGO", false );
-                      if( index >= 0 ) {
-                          vehicle_stack vehitems = veh.get_items( index );
-                          for( item &it : vehitems ) {
-                              item_location i_loc( vehicle_cursor( veh, index ), &it );
-                              visit_item_contents( i_loc, visit );
-                          }
-                      }
-                  } else {
-                      map_stack mapitems = here.i_at( here.getlocal( loc ) );
-                      for( item &it : mapitems ) {
-                          item_location i_loc( map_cursor( here.getlocal( loc ) ), &it );
-                          visit_item_contents( i_loc, visit );
-                      }
-                  }
-              }
-
-              if( best_comestible ) {
-                  int consume_moves = -Pickup::cost_to_move_item( you, *best_comestible ) *
-                                      std::max( rl_dist( you.pos(), here.getlocal( best_comestible.position() ) ), 1 );
-                  consume_moves += to_moves<int>( you.get_consume_time( *best_comestible ) );
-                  you.consume( best_comestible );
-                  if( best_comestible.get_item() && best_comestible->is_container() ) {
-                      best_comestible->on_contents_changed();
-                  }
-                  return consume_moves;
-              }
-              return 0;
+          replacements = {
+              't_thconc_floor_no_roof': 't_thconc_floor',
+              't_carpet_concrete_red': 't_thconc_floor',
+              't_window_bars_curtains': 't_window_bars_alarm',
+              't_door_metal_interior_locked': 't_door_metal_locked',
+              'f_sandbag_half': 'f_sandbag_wall',
+              'f_foot_locker_aluminum': 'f_locker',
+              'f_rack_coat': 'f_rack',
+              'f_metal_rack': 'f_rack',
+              'f_counter_gate_c': 'f_counter',
+              'f_cardboard_box': 'f_crate_o',
+              'f_atm_off': 'f_console_broken',
+              'f_shooting_target': 'f_target'
           }
-          '''
-          s = s[:start] + new + s[end:]
-          p.write_text(s, encoding='utf-8')
-          rej = Path('src/activity_item_handling.cpp.rej')
-          if rej.exists():
-              rej.unlink()
+          param_map = {
+              'interior_walls': 't_brick_wall',
+              'windows': 't_window_bars_alarm',
+              'entrance': 't_door_metal_c',
+              'secondary_entrance': 't_door_metal_locked',
+              'floor': 't_thconc_floor'
+          }
+
+          def compat(obj):
+              if isinstance(obj, dict):
+                  if set(obj.keys()) == {'param'}:
+                      return param_map.get(obj['param'], 't_thconc_floor')
+                  out = {}
+                  for k, v in obj.items():
+                      if k == 'parameters':
+                          continue
+                      out[k] = compat(v)
+                  return out
+              if isinstance(obj, list):
+                  return [compat(x) for x in obj]
+              if isinstance(obj, str):
+                  return replacements.get(obj, obj)
+              return obj
+
+          # 新枪店主体、四种状态嵌套地图与调色板使用独立文件，保留旧地图定义供旧存档兼容。
+          up_s_gun = compat(load('/tmp/up_s_gun.json'))
+          up_nested = compat(load('/tmp/up_nested.json'))
+          up_palettes = load('/tmp/up_palette.json')
+          old_palette = load('data/json/mapgen_palettes/gunstore.json')[0]
+          adapted_palettes = []
+          for src in up_palettes:
+              src = compat(src)
+              dst = copy.deepcopy(old_palette)
+              dst['id'] = src['id']
+              dst['type'] = 'palette'
+              for key in ('terrain','furniture','item','items','toilets','traps','nested'):
+                  if key in src:
+                      if isinstance(src[key], dict) and isinstance(dst.get(key), dict):
+                          dst[key].update(src[key])
+                      else:
+                          dst[key] = src[key]
+              # 确保所有新版枪店的保险柜仍走旧 SUS 组，穆尔卡武器工坊会继续扩展这里。
+              if 'items' in dst and 'X' in old_palette.get('items', {}):
+                  dst['items']['X'] = copy.deepcopy(old_palette['items']['X'])
+              adapted_palettes.append(dst)
+          dump('data/json/mapgen/upstream_79285_s_gun.json', up_s_gun)
+          dump('data/json/mapgen/nested/upstream_79285_gunstore_nested.json', up_nested)
+          dump('data/json/mapgen_palettes/upstream_79285_gunstore.json', adapted_palettes)
+
+          # 新版地图引用了 2025 年才细分出的枪械/弹匣组。这里用微风旧基线已有组做兼容别名，
+          # 不把整套 2025 枪械生态硬塞进旧版本。
+          aliases = {
+              'guns_common_boxed': ['guns_common_display'],
+              'guns_rifle_common_display': ['guns_common_display'],
+              'guns_pistol_common_display': ['guns_common_display'],
+              'guns_shotgun_common_display': ['guns_common_display'],
+              'mags_common_restricted_packaged': ['mags_common_gunstore','mags_common'],
+              'ammo_pistol_common': ['ammo_pistol_common_collection','ammo_common_collection'],
+              'ammo_pistol_rare': ['ammo_pistol_rare_collection','ammo_rare_collection'],
+              'ammo_rifle_common': ['ammo_rifle_common_collection','ammo_common_collection'],
+              'ammo_rifle_rare': ['ammo_rifle_rare_collection','ammo_rare_collection'],
+              'ammo_shotgun_common': ['ammo_shotgun_common_collection','ammo_common_collection'],
+              'SUS_gunstore_hearing': ['ear_protection'],
+              'SUS_gunstore_optics_packaged': ['gunmod_common'],
+              'SUS_gunstore_optics_display': ['gunmod_common'],
+              'SUS_gunstore_carry_gear': ['SUS_gunstore_gear']
+          }
+          compat_groups = []
+          for new_id, candidates in aliases.items():
+              if new_id in existing_ids:
+                  continue
+              target = next((x for x in candidates if x in existing_ids), None)
+              if target is None:
+                  raise SystemExit(f'No compatibility target for {new_id}: {candidates}')
+              compat_groups.append({
+                  'type': 'item_group', 'id': new_id, 'subtype': 'collection',
+                  'items': [ { 'group': target } ]
+              })
+              existing_ids.add(new_id)
+          dump('data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json', compat_groups)
+
+          # 保留旧 overmap 定义用于旧存档，同时追加新版 s_gun_a / s_gun_b 建筑。
+          city = load('data/json/overmap/multitile_city_buildings.json')
+          up_city = load('/tmp/up_city.json')
+          have_city = {x.get('id') for x in city if isinstance(x, dict)}
+          for obj in up_city:
+              if isinstance(obj, dict) and obj.get('id') in {'s_gun_a','s_gun_b'} and obj.get('id') not in have_city:
+                  city.append(obj)
+          dump('data/json/overmap/multitile_city_buildings.json', city)
+
+          oter = load('data/json/overmap/overmap_terrain/overmap_terrain_commercial.json')
+          up_oter = load('/tmp/up_oter.json')
+          def ids_of(obj):
+              v = obj.get('id') if isinstance(obj, dict) else None
+              if isinstance(v, str): return {v}
+              if isinstance(v, list): return {x for x in v if isinstance(x, str)}
+              return set()
+          have_oter = set().union(*(ids_of(x) for x in oter))
+          wanted = {'s_gun_a','s_gun_b_range','s_gun_b_store','s_gun_a_roof','s_gun_b_roof','s_gun_b_range_roof'}
+          for obj in up_oter:
+              ids = ids_of(obj)
+              if ids & wanted and not (ids & wanted) <= have_oter:
+                  oter.append(obj)
+                  have_oter |= ids
+          dump('data/json/overmap/overmap_terrain/overmap_terrain_commercial.json', oter)
+
+          # 自然生成权重切到新版枪店；旧定义仍存在，因此老存档和调试生成不会断。
+          old_keys = {'s_gun','s_gun_looted','s_gun_1','s_gun_2','s_gun_3','s_gun_3_looted','s_gun_4','s_gun_4_looted','s_gunstore','s_gunstore_looted'}
+          def switch_weights(obj):
+              if isinstance(obj, dict):
+                  if any(k in obj for k in old_keys):
+                      for k in old_keys:
+                          obj.pop(k, None)
+                      obj['s_gun_a'] = 1200
+                      obj['s_gun_b'] = 300
+                  for v in obj.values(): switch_weights(v)
+              elif isinstance(obj, list):
+                  for v in obj: switch_weights(v)
+          for filename in ['data/json/regional_map_settings.json', 'data/mods/TropiCataclysm/tropical_regional_map_settings.json']:
+              p = Path(filename)
+              if p.exists():
+                  obj = load(filename)
+                  switch_weights(obj)
+                  dump(filename, obj)
+
+          # #62791 的幸存者枪店不再依赖被移出自然生成池的 s_gunstore，改为作为 s_gun_a 的稀有变体。
+          survivor_path = Path('data/json/mapgen/store/upstream_62791_gunstore_survivor.json')
+          survivor = load(survivor_path)
+          changed = False
+          for obj in survivor:
+              if obj.get('type') == 'mapgen' and obj.get('om_terrain') == ['s_gunstore']:
+                  obj['om_terrain'] = ['s_gun_a']
+                  changed = True
+          if not changed:
+              raise SystemExit('62791 gunstore survivor hook not found')
+          dump(survivor_path, survivor)
+
+          # 基础 JSON 语法和引用结构的静态检查。
+          check_files = [
+              'data/json/mapgen/upstream_79285_s_gun.json',
+              'data/json/mapgen/nested/upstream_79285_gunstore_nested.json',
+              'data/json/mapgen_palettes/upstream_79285_gunstore.json',
+              'data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json',
+              'data/json/overmap/multitile_city_buildings.json',
+              'data/json/overmap/overmap_terrain/overmap_terrain_commercial.json',
+              'data/json/regional_map_settings.json',
+              str(survivor_path)
+          ]
+          for filename in check_files:
+              json.loads(Path(filename).read_text(encoding='utf-8'))
+          print('79285 adaptation files:', *check_files, sep='\n - ')
           PY
+
           git diff --check
-          git add src/activity_item_handling.cpp
+          git add data/json/mapgen/upstream_79285_s_gun.json \
+                  data/json/mapgen/nested/upstream_79285_gunstore_nested.json \
+                  data/json/mapgen_palettes/upstream_79285_gunstore.json \
+                  data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json \
+                  data/json/overmap/multitile_city_buildings.json \
+                  data/json/overmap/overmap_terrain/overmap_terrain_commercial.json \
+                  data/json/regional_map_settings.json \
+                  data/json/mapgen/store/upstream_62791_gunstore_survivor.json
+          if git diff --quiet -- data/mods/TropiCataclysm/tropical_regional_map_settings.json; then :; else git add data/mods/TropiCataclysm/tropical_regional_map_settings.json; fi
           git commit -F - <<'MSG'
-          同步上游 #67058：自动进食优先处理更快变质的食物
+          同步上游 #79285：重制枪店布局与状态
 
-          自动进食和自动饮水区域不再简单吃到扫描到的第一件东西，而会在可用食物中优先挑选更老、更接近变质的物品；噬腐相关角色则保持适合自身的腐败食物优先逻辑。这样长期基地库存更不容易因为自动进食顺序不合理而浪费。
+          枪店现在采用新版布局体系，并会在完整设防、有人占据、遭到洗劫和被彻底翻空等状态之间变化。新版地图增加了更像现实枪店的展示区、储物区、射击场和防御痕迹，让不同枪店的探索风险与收获差异更明显。
 
-          微风适配：沿用微风旧基线的自动区域、车辆货舱和 item_location 接口，仅回移候选遍历与新鲜度排序逻辑，不改动区域系统其余行为。
+          微风适配：保留微风旧基线现有枪械、弹匣和物品组生态，用兼容物品组承接新版地图的分类需求，不引入上游 2025 年后续枪械依赖；旧枪店 overmap 与地图定义保留给旧存档使用，自然生成切换到 s_gun_a / s_gun_b。此前 #62791 的幸存者枪店改接到新版 s_gun_a 稀有变体，穆尔卡武器工坊继续通过 SUS_gunstore_safe 等既有物品组向新版枪店注入内容。
 
-          Upstream-PR: CleverRaven/Cataclysm-DDA#67058
-          Original-Author: nornagon
+          Upstream-PR: CleverRaven/Cataclysm-DDA#79285
+          Original-Author: Holli-Git
           MSG
-
-          echo '=== 候选提交 ==='
-          git log --oneline -3
+          git log --oneline -4
           git push --force origin HEAD:sync1191-staging-final
