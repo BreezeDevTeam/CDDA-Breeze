@@ -2029,7 +2029,7 @@ void npc::on_attacked( const Creature &attacker )
     if( is_hallucination() ) {
         die( nullptr );
     }
-    if( attacker.is_avatar() && !is_enemy() && !is_dead() ) {
+    if( attacker.is_avatar() && !is_enemy() && !is_dead() && !guaranteed_hostile() ) {
         make_angry();
         hit_by_player = true;
     }
@@ -3273,7 +3273,7 @@ void npc::die( Creature *nkiller )
     }
 
     Character &player_character = get_player_character();
-    if( killer == &player_character && ( !guaranteed_hostile() || hit_by_player ) ) {
+    if( killer == &player_character && hit_by_player ) {
         bool cannibal = player_character.has_trait( trait_CANNIBAL );
         bool psycho = player_character.has_trait( trait_PSYCHOPATH );
         if( player_character.has_trait( trait_SAPIOVORE ) || psycho ) {
