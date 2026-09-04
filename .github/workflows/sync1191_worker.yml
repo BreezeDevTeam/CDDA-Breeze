@@ -8,14 +8,14 @@ on:
 permissions:
   contents: write
 jobs:
-  gunstore:
+  rewrite-gunstore:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-          ref: sync1191-staging-final
-      - name: 兼容回移 79285 枪店重制
+          ref: a26448bfff17b2d6f70fd27bdaa75bcdd5b52731
+      - name: 重写 79285 为最小差异提交
         shell: bash
         run: |
           set -euo pipefail
@@ -29,212 +29,144 @@ jobs:
           curl -fsSL "$base/data/json/mapgen_palettes/gunstore.json" -o /tmp/up_palette.json
           curl -fsSL "$base/data/json/overmap/multitile_city_buildings.json" -o /tmp/up_city.json
           curl -fsSL "$base/data/json/overmap/overmap_terrain/overmap_terrain_commercial.json" -o /tmp/up_oter.json
-
           python3 - <<'PY'
           from pathlib import Path
           import copy, json, re
 
-          def load(path):
-              return json.loads(Path(path).read_text(encoding='utf-8'))
-          def dump(path, obj):
-              Path(path).parent.mkdir(parents=True, exist_ok=True)
-              Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          def load(path): return json.loads(Path(path).read_text(encoding='utf-8'))
+          def dump_new(path, obj):
+              p=Path(path); p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(json.dumps(obj, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          def append_objects(path, objs):
+              p=Path(path); s=p.read_text(encoding='utf-8'); stripped=s.rstrip()
+              if not stripped.endswith(']'): raise SystemExit(f'{path} is not top-level array')
+              body=stripped[:-1].rstrip()
+              add=[]
+              for obj in objs:
+                  text=json.dumps(obj, ensure_ascii=False, indent=2)
+                  text='\n'.join('  '+line for line in text.splitlines())
+                  add.append(text)
+              sep=',\n' if body.endswith('}') else '\n'
+              p.write_text(body+sep+',\n'.join(add)+'\n]\n', encoding='utf-8')
 
-          # 收集旧基线已经存在的 ID，用于兼容映射。
-          existing_ids = set()
+          existing_ids=set()
           for p in Path('data').rglob('*.json'):
-              try:
-                  obj = json.loads(p.read_text(encoding='utf-8'))
-              except Exception:
-                  continue
-              stack = [obj]
+              try: obj=json.loads(p.read_text(encoding='utf-8'))
+              except Exception: continue
+              stack=[obj]
               while stack:
-                  cur = stack.pop()
-                  if isinstance(cur, dict):
-                      val = cur.get('id')
-                      if isinstance(val, str): existing_ids.add(val)
-                      elif isinstance(val, list): existing_ids.update(x for x in val if isinstance(x, str))
+                  cur=stack.pop()
+                  if isinstance(cur,dict):
+                      val=cur.get('id')
+                      if isinstance(val,str): existing_ids.add(val)
+                      elif isinstance(val,list): existing_ids.update(x for x in val if isinstance(x,str))
                       stack.extend(cur.values())
-                  elif isinstance(cur, list):
-                      stack.extend(cur)
+                  elif isinstance(cur,list): stack.extend(cur)
 
-          replacements = {
-              't_thconc_floor_no_roof': 't_thconc_floor',
-              't_carpet_concrete_red': 't_thconc_floor',
-              't_window_bars_curtains': 't_window_bars_alarm',
-              't_door_metal_interior_locked': 't_door_metal_locked',
-              'f_sandbag_half': 'f_sandbag_wall',
-              'f_foot_locker_aluminum': 'f_locker',
-              'f_rack_coat': 'f_rack',
-              'f_metal_rack': 'f_rack',
-              'f_counter_gate_c': 'f_counter',
-              'f_cardboard_box': 'f_crate_o',
-              'f_atm_off': 'f_console_broken',
-              'f_shooting_target': 'f_target'
+          replacements={
+              't_thconc_floor_no_roof':'t_thconc_floor','t_carpet_concrete_red':'t_thconc_floor',
+              't_window_bars_curtains':'t_window_bars_alarm','t_door_metal_interior_locked':'t_door_metal_locked',
+              'f_sandbag_half':'f_sandbag_wall','f_foot_locker_aluminum':'f_locker','f_rack_coat':'f_rack',
+              'f_metal_rack':'f_rack','f_counter_gate_c':'f_counter','f_cardboard_box':'f_crate_o',
+              'f_atm_off':'f_console_broken','f_shooting_target':'f_target'
           }
-          param_map = {
-              'interior_walls': 't_brick_wall',
-              'windows': 't_window_bars_alarm',
-              'entrance': 't_door_metal_c',
-              'secondary_entrance': 't_door_metal_locked',
-              'floor': 't_thconc_floor'
-          }
-
+          param_map={'interior_walls':'t_brick_wall','windows':'t_window_bars_alarm','entrance':'t_door_metal_c','secondary_entrance':'t_door_metal_locked','floor':'t_thconc_floor'}
           def compat(obj):
-              if isinstance(obj, dict):
-                  if set(obj.keys()) == {'param'}:
-                      return param_map.get(obj['param'], 't_thconc_floor')
-                  out = {}
-                  for k, v in obj.items():
-                      if k == 'parameters':
-                          continue
-                      out[k] = compat(v)
-                  return out
-              if isinstance(obj, list):
-                  return [compat(x) for x in obj]
-              if isinstance(obj, str):
-                  return replacements.get(obj, obj)
+              if isinstance(obj,dict):
+                  if set(obj)=={'param'}: return param_map.get(obj['param'],'t_thconc_floor')
+                  return {k:compat(v) for k,v in obj.items() if k!='parameters'}
+              if isinstance(obj,list): return [compat(x) for x in obj]
+              if isinstance(obj,str): return replacements.get(obj,obj)
               return obj
 
-          # 新枪店主体、四种状态嵌套地图与调色板使用独立文件，保留旧地图定义供旧存档兼容。
-          up_s_gun = compat(load('/tmp/up_s_gun.json'))
-          up_nested = compat(load('/tmp/up_nested.json'))
-          up_palettes = load('/tmp/up_palette.json')
-          old_palette = load('data/json/mapgen_palettes/gunstore.json')[0]
-          adapted_palettes = []
-          for src in up_palettes:
-              src = compat(src)
-              dst = copy.deepcopy(old_palette)
-              dst['id'] = src['id']
-              dst['type'] = 'palette'
+          up_s_gun=compat(load('/tmp/up_s_gun.json'))
+          up_nested=compat(load('/tmp/up_nested.json'))
+          up_palettes=load('/tmp/up_palette.json')
+          old_palette=load('data/json/mapgen_palettes/gunstore.json')[0]
+          adapted=[]
+          for raw in up_palettes:
+              src=compat(raw); dst=copy.deepcopy(old_palette); dst['id']=src['id']; dst['type']='palette'
               for key in ('terrain','furniture','item','items','toilets','traps','nested'):
                   if key in src:
-                      if isinstance(src[key], dict) and isinstance(dst.get(key), dict):
-                          dst[key].update(src[key])
-                      else:
-                          dst[key] = src[key]
-              # 确保所有新版枪店的保险柜仍走旧 SUS 组，穆尔卡武器工坊会继续扩展这里。
-              if 'items' in dst and 'X' in old_palette.get('items', {}):
-                  dst['items']['X'] = copy.deepcopy(old_palette['items']['X'])
-              adapted_palettes.append(dst)
-          dump('data/json/mapgen/upstream_79285_s_gun.json', up_s_gun)
-          dump('data/json/mapgen/nested/upstream_79285_gunstore_nested.json', up_nested)
-          dump('data/json/mapgen_palettes/upstream_79285_gunstore.json', adapted_palettes)
+                      if isinstance(src[key],dict) and isinstance(dst.get(key),dict): dst[key].update(src[key])
+                      else: dst[key]=src[key]
+              if 'items' in dst and 'X' in old_palette.get('items',{}): dst['items']['X']=copy.deepcopy(old_palette['items']['X'])
+              adapted.append(dst)
+          dump_new('data/json/mapgen/upstream_79285_s_gun.json',up_s_gun)
+          dump_new('data/json/mapgen/nested/upstream_79285_gunstore_nested.json',up_nested)
+          dump_new('data/json/mapgen_palettes/upstream_79285_gunstore.json',adapted)
 
-          # 新版地图引用了 2025 年才细分出的枪械/弹匣组。这里用微风旧基线已有组做兼容别名，
-          # 不把整套 2025 枪械生态硬塞进旧版本。
-          aliases = {
-              'guns_common_boxed': ['guns_common_display'],
-              'guns_rifle_common_display': ['guns_common_display'],
-              'guns_pistol_common_display': ['guns_common_display'],
-              'guns_shotgun_common_display': ['guns_common_display'],
-              'mags_common_restricted_packaged': ['mags_common_gunstore','mags_common'],
-              'ammo_pistol_common': ['ammo_pistol_common_collection','ammo_common_collection'],
-              'ammo_pistol_rare': ['ammo_pistol_rare_collection','ammo_rare_collection'],
-              'ammo_rifle_common': ['ammo_rifle_common_collection','ammo_common_collection'],
-              'ammo_rifle_rare': ['ammo_rifle_rare_collection','ammo_rare_collection'],
-              'ammo_shotgun_common': ['ammo_shotgun_common_collection','ammo_common_collection'],
-              'SUS_gunstore_hearing': ['ear_protection'],
-              'SUS_gunstore_optics_packaged': ['gunmod_common'],
-              'SUS_gunstore_optics_display': ['gunmod_common'],
-              'SUS_gunstore_carry_gear': ['SUS_gunstore_gear']
+          aliases={
+              'guns_common_boxed':['guns_common_display'],'guns_rifle_common_display':['guns_common_display'],
+              'guns_pistol_common_display':['guns_common_display'],'guns_shotgun_common_display':['guns_common_display'],
+              'mags_common_restricted_packaged':['mags_common_gunstore','mags_common'],
+              'ammo_pistol_common':['ammo_pistol_common_collection','ammo_common_collection'],
+              'ammo_pistol_rare':['ammo_pistol_rare_collection','ammo_rare_collection'],
+              'ammo_rifle_common':['ammo_rifle_common_collection','ammo_common_collection'],
+              'ammo_rifle_rare':['ammo_rifle_rare_collection','ammo_rare_collection'],
+              'ammo_shotgun_common':['ammo_shotgun_common_collection','ammo_common_collection'],
+              'SUS_gunstore_hearing':['ear_protection'],'SUS_gunstore_optics_packaged':['gunmod_common'],
+              'SUS_gunstore_optics_display':['gunmod_common'],'SUS_gunstore_carry_gear':['SUS_gunstore_gear']
           }
-          compat_groups = []
-          for new_id, candidates in aliases.items():
-              if new_id in existing_ids:
-                  continue
-              target = next((x for x in candidates if x in existing_ids), None)
-              if target is None:
-                  raise SystemExit(f'No compatibility target for {new_id}: {candidates}')
-              compat_groups.append({
-                  'type': 'item_group', 'id': new_id, 'subtype': 'collection',
-                  'items': [ { 'group': target } ]
-              })
-              existing_ids.add(new_id)
-          dump('data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json', compat_groups)
+          groups=[]
+          for new_id,candidates in aliases.items():
+              if new_id in existing_ids: continue
+              target=next((x for x in candidates if x in existing_ids),None)
+              if target is None: raise SystemExit(f'No compatibility target for {new_id}: {candidates}')
+              groups.append({'type':'item_group','id':new_id,'subtype':'collection','items':[{'group':target}]})
+          dump_new('data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json',groups)
 
-          # 保留旧 overmap 定义用于旧存档，同时追加新版 s_gun_a / s_gun_b 建筑。
-          city = load('data/json/overmap/multitile_city_buildings.json')
-          up_city = load('/tmp/up_city.json')
-          have_city = {x.get('id') for x in city if isinstance(x, dict)}
-          for obj in up_city:
-              if isinstance(obj, dict) and obj.get('id') in {'s_gun_a','s_gun_b'} and obj.get('id') not in have_city:
-                  city.append(obj)
-          dump('data/json/overmap/multitile_city_buildings.json', city)
+          up_city=load('/tmp/up_city.json')
+          city_objs=[o for o in up_city if isinstance(o,dict) and o.get('id') in {'s_gun_a','s_gun_b'}]
+          if len(city_objs)!=2: raise SystemExit(f'Expected 2 city objects, got {len(city_objs)}')
+          append_objects('data/json/overmap/multitile_city_buildings.json',city_objs)
 
-          oter = load('data/json/overmap/overmap_terrain/overmap_terrain_commercial.json')
-          up_oter = load('/tmp/up_oter.json')
-          def ids_of(obj):
-              v = obj.get('id') if isinstance(obj, dict) else None
-              if isinstance(v, str): return {v}
-              if isinstance(v, list): return {x for x in v if isinstance(x, str)}
-              return set()
-          have_oter = set().union(*(ids_of(x) for x in oter))
-          wanted = {'s_gun_a','s_gun_b_range','s_gun_b_store','s_gun_a_roof','s_gun_b_roof','s_gun_b_range_roof'}
-          for obj in up_oter:
-              ids = ids_of(obj)
-              if ids & wanted and not (ids & wanted) <= have_oter:
-                  oter.append(obj)
-                  have_oter |= ids
-          dump('data/json/overmap/overmap_terrain/overmap_terrain_commercial.json', oter)
+          up_oter=load('/tmp/up_oter.json'); wanted={'s_gun_a','s_gun_b_range','s_gun_b_store','s_gun_a_roof','s_gun_b_roof','s_gun_b_range_roof'}
+          def ids(o):
+              v=o.get('id') if isinstance(o,dict) else None
+              return {v} if isinstance(v,str) else set(v) if isinstance(v,list) else set()
+          oter_objs=[o for o in up_oter if ids(o)&wanted]
+          if not oter_objs: raise SystemExit('No gunstore overmap terrain objects found')
+          append_objects('data/json/overmap/overmap_terrain/overmap_terrain_commercial.json',oter_objs)
 
-          # 自然生成权重切到新版枪店；旧定义仍存在，因此老存档和调试生成不会断。
-          old_keys = {'s_gun','s_gun_looted','s_gun_1','s_gun_2','s_gun_3','s_gun_3_looted','s_gun_4','s_gun_4_looted','s_gunstore','s_gunstore_looted'}
-          def switch_weights(obj):
-              if isinstance(obj, dict):
-                  if any(k in obj for k in old_keys):
-                      for k in old_keys:
-                          obj.pop(k, None)
-                      obj['s_gun_a'] = 1200
-                      obj['s_gun_b'] = 300
-                  for v in obj.values(): switch_weights(v)
-              elif isinstance(obj, list):
-                  for v in obj: switch_weights(v)
-          for filename in ['data/json/regional_map_settings.json', 'data/mods/TropiCataclysm/tropical_regional_map_settings.json']:
-              p = Path(filename)
-              if p.exists():
-                  obj = load(filename)
-                  switch_weights(obj)
-                  dump(filename, obj)
+          old_keys=['s_gun','s_gun_looted','s_gun_1','s_gun_2','s_gun_3','s_gun_3_looted','s_gun_4','s_gun_4_looted','s_gunstore','s_gunstore_looted']
+          def patch_weights(path):
+              p=Path(path)
+              if not p.exists(): return False
+              s=p.read_text(encoding='utf-8')
+              lines=s.splitlines(True); out=[]; removed=0; insert_indent=None
+              for line in lines:
+                  m=re.match(r'^(\s*)"('+'|'.join(re.escape(k) for k in old_keys)+r')"\s*:\s*\d+\s*,\s*$', line.rstrip('\n'))
+                  if m:
+                      removed+=1
+                      if insert_indent is None: insert_indent=m.group(1)
+                      continue
+                  out.append(line)
+              if removed:
+                  # insert before first s_clothes entry, matching upstream ordering
+                  text=''.join(out)
+                  anchor=re.search(r'^(\s*)"s_clothes"\s*:',text,re.M)
+                  if not anchor: raise SystemExit(f's_clothes anchor missing in {path}')
+                  ins=f'{anchor.group(1)}"s_gun_a": 1200,\n{anchor.group(1)}"s_gun_b": 300,\n'
+                  text=text[:anchor.start()]+ins+text[anchor.start():]
+                  p.write_text(text,encoding='utf-8')
+                  print(path,'removed old gunstore weights',removed)
+                  return True
+              return False
+          if not patch_weights('data/json/regional_map_settings.json'): raise SystemExit('base regional gunstore weights not found')
+          patch_weights('data/mods/TropiCataclysm/tropical_regional_map_settings.json')
 
-          # #62791 的幸存者枪店不再依赖被移出自然生成池的 s_gunstore，改为作为 s_gun_a 的稀有变体。
-          survivor_path = Path('data/json/mapgen/store/upstream_62791_gunstore_survivor.json')
-          survivor = load(survivor_path)
-          changed = False
-          for obj in survivor:
-              if obj.get('type') == 'mapgen' and obj.get('om_terrain') == ['s_gunstore']:
-                  obj['om_terrain'] = ['s_gun_a']
-                  changed = True
-          if not changed:
-              raise SystemExit('62791 gunstore survivor hook not found')
-          dump(survivor_path, survivor)
+          p=Path('data/json/mapgen/store/upstream_62791_gunstore_survivor.json'); s=p.read_text(encoding='utf-8')
+          old='"om_terrain": [ "s_gunstore" ]'; new='"om_terrain": [ "s_gun_a" ]'
+          if old not in s: raise SystemExit('62791 gunstore survivor hook not found')
+          p.write_text(s.replace(old,new,1),encoding='utf-8')
 
-          # 基础 JSON 语法和引用结构的静态检查。
-          check_files = [
-              'data/json/mapgen/upstream_79285_s_gun.json',
-              'data/json/mapgen/nested/upstream_79285_gunstore_nested.json',
-              'data/json/mapgen_palettes/upstream_79285_gunstore.json',
-              'data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json',
-              'data/json/overmap/multitile_city_buildings.json',
-              'data/json/overmap/overmap_terrain/overmap_terrain_commercial.json',
-              'data/json/regional_map_settings.json',
-              str(survivor_path)
-          ]
-          for filename in check_files:
-              json.loads(Path(filename).read_text(encoding='utf-8'))
-          print('79285 adaptation files:', *check_files, sep='\n - ')
+          for f in ['data/json/mapgen/upstream_79285_s_gun.json','data/json/mapgen/nested/upstream_79285_gunstore_nested.json','data/json/mapgen_palettes/upstream_79285_gunstore.json','data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json','data/json/overmap/multitile_city_buildings.json','data/json/overmap/overmap_terrain/overmap_terrain_commercial.json','data/json/regional_map_settings.json','data/json/mapgen/store/upstream_62791_gunstore_survivor.json']:
+              json.loads(Path(f).read_text(encoding='utf-8'))
           PY
-
           git diff --check
-          git add data/json/mapgen/upstream_79285_s_gun.json \
-                  data/json/mapgen/nested/upstream_79285_gunstore_nested.json \
-                  data/json/mapgen_palettes/upstream_79285_gunstore.json \
-                  data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json \
-                  data/json/overmap/multitile_city_buildings.json \
-                  data/json/overmap/overmap_terrain/overmap_terrain_commercial.json \
-                  data/json/regional_map_settings.json \
-                  data/json/mapgen/store/upstream_62791_gunstore_survivor.json
-          if git diff --quiet -- data/mods/TropiCataclysm/tropical_regional_map_settings.json; then :; else git add data/mods/TropiCataclysm/tropical_regional_map_settings.json; fi
+          git add data/json/mapgen/upstream_79285_s_gun.json data/json/mapgen/nested/upstream_79285_gunstore_nested.json data/json/mapgen_palettes/upstream_79285_gunstore.json data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json data/json/overmap/multitile_city_buildings.json data/json/overmap/overmap_terrain/overmap_terrain_commercial.json data/json/regional_map_settings.json data/json/mapgen/store/upstream_62791_gunstore_survivor.json
+          if ! git diff --quiet -- data/mods/TropiCataclysm/tropical_regional_map_settings.json; then git add data/mods/TropiCataclysm/tropical_regional_map_settings.json; fi
           git commit -F - <<'MSG'
           同步上游 #79285：重制枪店布局与状态
 
@@ -245,5 +177,5 @@ jobs:
           Upstream-PR: CleverRaven/Cataclysm-DDA#79285
           Original-Author: Holli-Git
           MSG
-          git log --oneline -4
+          git show --stat --oneline HEAD
           git push --force origin HEAD:sync1191-staging-final
