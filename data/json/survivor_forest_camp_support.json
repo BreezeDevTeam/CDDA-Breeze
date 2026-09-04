@@ -1,0 +1,79 @@
+[
+  {
+    "type": "GENERIC",
+    "id": "childnote",
+    "category": "books",
+    "symbol": ",",
+    "color": "white",
+    "name": { "str": "child's note" },
+    "snippet_category": "note_child",
+    "description": "A piece of paper.  Something's written on it, scrawled in simple, messy handwriting.",
+    "price": 0,
+    "price_postapoc": 0,
+    "material": [ "paper" ],
+    "flags": [ "TRADER_AVOID" ],
+    "weight": "12 mg",
+    "volume": "1 ml"
+  },
+  {
+    "type": "snippet",
+    "category": "note_child",
+    "text": [
+      {
+        "id": "note_child_29",
+        "text": "\"Dad and I have been living in the woods for a week now.  He gives me his pistol when he is out hunting.  It wasn´t enough to stop the werewolf that attacked me.  So I had to hide in a small hole for a whole night where it couldn´t reach me.  Luckily dad found me and killed it. He also said he will make me a werewolf jacket for my birthday.  A WEREWOLF JACKET, IHAVETHECOOLESTDADINTHEWORLD.\""
+      }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_POND_FISH_2",
+    "is_animal": true,
+    "monsters": [
+      { "monster": "mon_fish_bluegill", "weight": 50, "cost_multiplier": 0 },
+      { "monster": "mon_fish_carp", "weight": 50, "cost_multiplier": 0 },
+      { "monster": "mon_fish_sbass", "weight": 50, "cost_multiplier": 0 }
+    ]
+  },
+  {
+    "name": "GROUP_SURVIVOR_FOREST",
+    "type": "monstergroup",
+    "monsters": [
+      { "monster": "mon_zombie_survivor", "weight": 50 },
+      { "monster": "mon_feral_sapien_spear", "weight": 50 }
+    ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": [ "survivor_forest_camp" ],
+    "name": "survivor forest camp",
+    "sym": "+",
+    "color": "green",
+    "see_cost": 5,
+    "flags": [ "REQUIRES_PREDECESSOR" ]
+  },
+  {
+    "type": "overmap_special",
+    "id": "survivor_forest_camp",
+    "overmaps": [ { "point": [ 0, 0, 0 ], "overmap": "survivor_forest_camp_north" } ],
+    "locations": [ "forest_center" ],
+    "city_distance": [ 10, 80 ],
+    "occurrences": [ 75, 100 ],
+    "flags": [ "CLASSIC", "WILDERNESS", "UNIQUE", "MAN_MADE" ]
+  },
+  {
+    "type": "region_overlay",
+    "regions": [ "all" ],
+    "forest_mapgen_settings": {
+      "forest_thick": {
+        "terrains": [
+          "forest_thick",
+          "survivor_forest_camp_north",
+          "survivor_forest_camp_south",
+          "survivor_forest_camp_east",
+          "survivor_forest_camp_west"
+        ]
+      }
+    }
+  }
+]

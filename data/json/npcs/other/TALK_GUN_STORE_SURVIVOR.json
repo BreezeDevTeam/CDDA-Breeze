@@ -1,0 +1,116 @@
+[
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_GUN_STORE_SURVIVOR",
+    "dynamic_line": {
+      "npc_has_var": "knows_u",
+      "type": "dialogue",
+      "context": "first_meeting",
+      "value": "yes",
+      "yes": "<greet>",
+      "no": "嘿，陌生人。这些日子过得怎么样？"
+    },
+    "speaker_effect": { "effect": { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } },
+    "responses": [
+      {
+        "text": "把东西都交出来。别乱动，不然你就死定了。",
+        "trial": { "type": "INTIMIDATE", "difficulty": 30 },
+        "success": { "topic": "TALK_WEAPON_DROPPED", "effect": "drop_weapon", "opinion": { "trust": -4, "fear": 3 } },
+        "failure": { "topic": "TALK_DONE", "effect": "hostile" },
+        "condition": { "not": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } }
+      },
+      {
+        "text": "嘿，很高兴见到你。",
+        "topic": "TALK_NPC_GUN_STORE_SURVIVOR_INTRO",
+        "condition": { "not": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } }
+      },
+      {
+        "text": "<greet>",
+        "topic": "TALK_NPC_GUN_STORE_SURVIVOR_INTRO",
+        "condition": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" }
+      },
+      { "text": "回头见。", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_GUN_STORE_SURVIVOR_INTRO",
+    "dynamic_line": "你来这儿有什么事？",
+    "responses": [
+      { "text": "你为什么待在这里？", "topic": "TALK_NPC_GUN_STORE_SURVIVOR_WHO" },
+      {
+        "text": "有兴趣做点买卖吗？",
+        "topic": "TALK_NPC_GUN_STORE_SURVIVOR_INTRO",
+        "effect": "start_trade"
+      },
+      { "text": "我能在这里待一会儿吗？", "topic": "TALK_NPC_PREPPER_SURVIVOR_STAY" },
+      {
+        "text": "要不要跟我一起走？",
+        "trial": { "type": "PERSUADE", "difficulty": -15, "mod": [ [ "value", 2 ] ] },
+        "success": { "topic": "TALK_AGREE_FOLLOW", "effect": "follow", "opinion": { "trust": 1, "value": 1 } },
+        "failure": { "topic": "TALK_DENY_FOLLOW", "effect": "deny_follow", "opinion": { "trust": 0, "fear": 0 } }
+      },
+      {
+        "text": "有什么活需要帮忙吗？",
+        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      { "text": "我该走了。", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_GUN_STORE_SURVIVOR_WHO",
+    "dynamic_line": "我就是个普通人。那群<swear><zombies>敲上我家门的时候，我撒腿就跑。算我运气好，混乱里有人没来得及关这家店，我冲进来把这里锁死了。我敢说，整个<city>都没什么东西能撞开这些墙和防盗窗，我大概是城里最走运的<name_b>。",
+    "responses": [
+      {
+        "text": "这种时候，枪店怎么会还开着门？",
+        "topic": "TALK_NPC_GUN_STORE_SURVIVOR_WHY_HERE"
+      },
+      {
+        "text": "有兴趣做点买卖吗？",
+        "topic": "TALK_NPC_GUN_STORE_SURVIVOR_INTRO",
+        "effect": "start_trade"
+      },
+      { "text": "我能在这里待一会儿吗？", "topic": "TALK_NPC_PREPPER_SURVIVOR_STAY" },
+      {
+        "text": "要不要跟我一起走？",
+        "trial": { "type": "PERSUADE", "difficulty": -15, "mod": [ [ "value", 2 ] ] },
+        "success": { "topic": "TALK_AGREE_FOLLOW", "effect": "follow", "opinion": { "trust": 1, "value": 1 } },
+        "failure": { "topic": "TALK_DENY_FOLLOW", "effect": "deny_follow", "opinion": { "trust": 0, "fear": 0 } }
+      },
+      {
+        "text": "有什么活需要帮忙吗？",
+        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      { "text": "我该走了。", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_GUN_STORE_SURVIVOR_WHY_HERE",
+    "dynamic_line": "因为他们已经没法回来锁门了。最先赶到这里的人拿十二号霰弹枪把店主的脑袋轰开了，可店主又爬起来动了，还想杀我。现在他们都在外面的垃圾箱里。",
+    "responses": [
+      { "text": "听起来真糟。我们换个话题吧。", "topic": "TALK_NPC_GUN_STORE_SURVIVOR_INTRO" },
+      {
+        "text": "有兴趣做点买卖吗？",
+        "topic": "TALK_NPC_GUN_STORE_SURVIVOR_INTRO",
+        "effect": "start_trade"
+      },
+      { "text": "我能在这里待一会儿吗？", "topic": "TALK_NPC_PREPPER_SURVIVOR_STAY" },
+      {
+        "text": "要不要跟我一起走？",
+        "trial": { "type": "PERSUADE", "difficulty": -15, "mod": [ [ "value", 2 ] ] },
+        "success": { "topic": "TALK_AGREE_FOLLOW", "effect": "follow", "opinion": { "trust": 1, "value": 1 } },
+        "failure": { "topic": "TALK_DENY_FOLLOW", "effect": "deny_follow", "opinion": { "trust": 0, "fear": 0 } }
+      },
+      {
+        "text": "有什么活需要帮忙吗？",
+        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      { "text": "我该走了。", "topic": "TALK_DONE" }
+    ]
+  }
+]

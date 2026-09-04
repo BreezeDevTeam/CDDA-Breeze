@@ -1,0 +1,11 @@
+[
+  { "id": [ "303_bthp", "303_sp" ], "type": "MIGRATION", "replace": "rifle_ball" },
+  { "id": [ "reloaded_303", "reloaded_303sp" ], "type": "MIGRATION", "replace": "reloaded_rifle_ball" },
+  { "id": [ "bp_303", "bp_303sp" ], "type": "MIGRATION", "replace": "bp_rifle_ball" },
+  { "id": [ "303_fmjbt" ], "type": "MIGRATION", "replace": "rifle_AP" },
+  { "id": [ "reloaded_303fmj" ], "type": "MIGRATION", "replace": "reloaded_rifle_AP" },
+  { "id": [ "bp_303fmj" ], "type": "MIGRATION", "replace": "bp_rifle_AP" },
+  { "id": [ "303_casing" ], "type": "MIGRATION", "replace": "rifle_casing" },
+  { "id": [ "smle_mk3", "number4_mki" ], "type": "MIGRATION", "replace": "rifle_sporter" },
+  { "id": [ "enfield_303mag", "clip303_5rd" ], "type": "MIGRATION", "replace": "rifle_sniper_mag" }
+]

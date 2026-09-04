@@ -1,0 +1,62 @@
+[
+  {
+    "type": "item_group",
+    "id": "guns_common_boxed",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "guns_common_display"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "mags_common_gunstore"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_hearing",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "ear_protection"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_optics_packaged",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "gunmod_common"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_optics_display",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "gunmod_common"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_carry_gear",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "SUS_gunstore_gear"
+      }
+    ]
+  }
+]
