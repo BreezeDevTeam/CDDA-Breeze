@@ -1,0 +1,27 @@
+name: sync1191-worker
+on:
+  push:
+    branches:
+      - sync1191-worker-finalize
+    paths:
+      - .github/workflows/sync1191_worker.yml
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: 132463fafc5d62e6f0eaca5af878b561d98dd916
+      - name: 诊断 62685 冲突
+        shell: bash
+        run: |
+          set -u
+          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/62685.diff -o /tmp/62685.diff
+          git apply --reject --whitespace=nowarn /tmp/62685.diff || true
+          echo '=== 状态 ==='
+          git status --short
+          echo '=== Rejects ==='
+          find data -name '*.rej' -print -exec sh -c 'echo "----- $1"; cat "$1"' _ {} \;
