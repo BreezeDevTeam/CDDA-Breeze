@@ -6,26 +6,234 @@ on:
     paths:
       - .github/workflows/sync1191_worker.yml
 permissions:
-  contents: read
+  contents: write
 jobs:
-  diagnose:
+  build-stack:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
           ref: 132463fafc5d62e6f0eaca5af878b561d98dd916
-      - name: 诊断 79285 整体补丁与核心文件
+      - name: 回移 62685、66402、67058 到候选分支
         shell: bash
         run: |
-          set -u
-          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/79285.diff -o /tmp/79285.diff
-          git apply --reject --whitespace=nowarn /tmp/79285.diff || true
-          echo '=== REJECT FILES ==='
-          find . -name '*.rej' -print | sort
-          echo '=== CHANGED FILES ==='
-          git status --short | sed -n '1,120p'
-          echo '=== CORE EXISTENCE ==='
-          for f in data/json/mapgen/nested/gunstore_nested.json data/json/mapgen/s_gun.json data/json/mapgen_palettes/gunstore.json data/json/overmap/overmap_terrain/overmap_terrain_commercial.json; do
-            test -f "$f" && echo "EXISTS $f" || echo "MISSING $f"
-          done
+          set -euo pipefail
+          git checkout -B sync1191-staging-final
+          git config user.name "ChatGPT Sync Bot"
+          git config user.email "actions@users.noreply.github.com"
+
+          echo '=== 62685 ==='
+          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/62685.diff -o /tmp/62685.diff
+          git apply --reject --whitespace=nowarn /tmp/62685.diff || true
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          def edit_obj(path, obj_id, func):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              needle = f'"id": "{obj_id}"'
+              start = s.find(needle)
+              if start < 0:
+                  raise SystemExit(f'missing object {obj_id} in {path}')
+              end = s.find('\n  },\n  {', start)
+              if end < 0:
+                  end = s.rfind('\n  }\n]')
+              chunk = s[start:end]
+              new = func(chunk)
+              if new == chunk:
+                  print(f'no textual change needed for {obj_id}')
+              p.write_text(s[:start] + new + s[end:], encoding='utf-8')
+
+          def remove_flag(flag):
+              def f(c):
+                  c = c.replace(f'      "{flag}",\n', '')
+                  c = c.replace(f', "{flag}"', '')
+                  c = c.replace(f'"{flag}", ', '')
+                  return c
+              return f
+
+          def add_scents_after_color(color, scents):
+              def f(c):
+                  if '"scents_tracked"' in c:
+                      return c
+                  old = f'"color": "{color}",\n'
+                  if old not in c:
+                      raise SystemExit(f'color anchor {color} missing')
+                  return c.replace(old, old + f'    "scents_tracked": {json.dumps(scents)},\n', 1)
+              return f
+
+          edit_obj('data/json/monsters/zed-classic.json', 'mon_zombie', remove_flag('SMELLS'))
+          edit_obj('data/json/monsters/zed-winged.json', 'mon_spawn_raptor', add_scents_after_color('white', ['sc_human','sc_fetid']))
+          edit_obj('data/json/monsters/zed_fusion.json', 'mon_devourer_lab_sec', add_scents_after_color('blue', ['sc_human','sc_fetid']))
+          edit_obj('data/json/monsters/zed_misc.json', 'mon_zombie_hunter', remove_flag('GROUP_BASH'))
+          edit_obj('data/json/monsters/zed_misc.json', 'mon_zombie_runner', remove_flag('SMELLS'))
+          edit_obj('data/json/monsters/zed_soldiers.json', 'mon_zombie_military_pilot', remove_flag('SMELLS'))
+
+          for rej in Path('data').rglob('*.rej'):
+              rej.unlink()
+          for p in Path('data/json/monsters').glob('*.json'):
+              if p.name in {
+                  'zanimal_upgrade.json','zed-animal.json','zed-classic.json','zed-pupating.json','zed-winged.json',
+                  'zed_acid.json','zed_amalgamation.json','zed_command.json','zed_ferrous.json','zed_fusion.json','zed_lab.json',
+                  'zed_misc.json','zed_soldiers.json','zed_survivor.json'
+              }:
+                  json.loads(p.read_text(encoding='utf-8'))
+          json.loads(Path('data/json/scent_types.json').read_text(encoding='utf-8'))
+          PY
+          git diff --check
+          git add data/json/monsters data/json/scent_types.json
+          git commit -F - <<'MSG'
+          同步上游 #62685：细化丧尸的气味追踪
+
+          不再让所有丧尸天生都像猎犬一样精确追踪气味，只给动物型、嗅觉明显强化或特定进化方向的丧尸保留或加入人类与腐臭气味追踪。这样夜间潜行和绕开普通尸群更有意义，同时僵尸犬等嗅觉型敌人仍会成为真正的追踪威胁。
+
+          微风适配：按上游气味分类规则回移到微风旧基线，并保留微风已有怪物以及此前同步的毛茸茸丧尸内容。
+
+          Upstream-PR: CleverRaven/Cataclysm-DDA#62685
+          Original-Author: Maleclypse
+          MSG
+
+          echo '=== 66402 ==='
+          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/66402.diff -o /tmp/66402.diff
+          git apply --check /tmp/66402.diff
+          git apply /tmp/66402.diff
+          git diff --check
+          git add data/json/mapgen/speedway.json data/json/overmap/overmap_special/specials.json data/json/overmap/overmap_terrain/overmap_terrain_speedway.json
+          git commit -F - <<'MSG'
+          同步上游 #66402：加入大型赛车场
+
+          加入一处大型椭圆赛车场，包含泥土地停车区、看台、热狗摊、厕所、维修车库、加油设施与完整赛道，可用于练习驾驶、测试车辆或搜刮机械工具与燃料。
+
+          微风适配：按旧基线地图 JSON 结构接入赛车场地图、专用 overmap terrain 与特殊地点定义，不改动微风其他地点生成规则。
+
+          Upstream-PR: CleverRaven/Cataclysm-DDA#66402
+          Original-Author: FarkasKBence
+          MSG
+
+          echo '=== 67058 ==='
+          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/67058.diff -o /tmp/67058.diff
+          git apply --reject --whitespace=nowarn /tmp/67058.diff || true
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('src/activity_item_handling.cpp')
+          s = p.read_text(encoding='utf-8')
+          start = s.find('int get_auto_consume_moves( Character &you, const bool food )')
+          end = s.find('\n// Try to add fuel', start)
+          if start < 0 or end < 0:
+              raise SystemExit('auto consume function anchors not found')
+          new = r'''int get_auto_consume_moves( Character &you, const bool food )
+          {
+              if( you.is_npc() ) {
+                  return 0;
+              }
+              const tripoint pos = you.pos();
+              zone_manager &mgr = zone_manager::get_manager();
+              const zone_type_id zone_type = food ? zone_type_LOOT_AUTO_EAT : zone_type_LOOT_AUTO_DRINK;
+              const std::unordered_set<tripoint_abs_ms> &dest_set =
+                  mgr.get_near( zone_type, here.getglobal( pos ), ACTIVITY_SEARCH_DISTANCE, nullptr,
+                                _fac_id( you ) );
+              if( dest_set.empty() ) {
+                  return 0;
+              }
+              item_location best_comestible;
+              for( const tripoint_abs_ms &loc : dest_set ) {
+                  if( loc.z() != you.pos().z ) {
+                      continue;
+                  }
+
+                  const auto visit = [&]( item_location & it ) -> VisitResponse {
+                      if( !you.can_consume_as_is( *it ) ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( it->has_flag( json_flag_NO_AUTO_CONSUME ) ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( it->is_null() || it->is_craft() || !it->is_food() || you.fun_for( *it ).first < -5 ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( food && you.compute_effective_nutrients( *it ).kcal() < 50 ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( !you.will_eat( *it, false ).success() ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( !it->is_owned_by( you, true ) ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( !food && it->get_comestible()->quench < 15 ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( !food && it->is_watertight_container() && it->made_of( phase_id::SOLID ) ) {
+                          return VisitResponse::NEXT;
+                      }
+                      const use_function *usef = it->type->get_use( "BLECH_BECAUSE_UNCLEAN" );
+                      if( usef ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( it->get_comestible()->add == STATIC( addiction_id( "alcohol" ) ) &&
+                          !you.has_addiction( it->get_comestible()->add ) ) {
+                          return VisitResponse::NEXT;
+                      }
+                      if( !best_comestible || comestible_sort_compare( you, it, best_comestible ) ) {
+                          best_comestible = it;
+                      }
+                      return VisitResponse::NEXT;
+                  };
+
+                  const optional_vpart_position vp = here.veh_at( here.getlocal( loc ) );
+                  if( vp ) {
+                      vehicle &veh = vp->vehicle();
+                      const int index = veh.part_with_feature( vp->part_index(), "CARGO", false );
+                      if( index >= 0 ) {
+                          vehicle_stack vehitems = veh.get_items( index );
+                          for( item &it : vehitems ) {
+                              item_location i_loc( vehicle_cursor( veh, index ), &it );
+                              visit_item_contents( i_loc, visit );
+                          }
+                      }
+                  } else {
+                      map_stack mapitems = here.i_at( here.getlocal( loc ) );
+                      for( item &it : mapitems ) {
+                          item_location i_loc( map_cursor( here.getlocal( loc ) ), &it );
+                          visit_item_contents( i_loc, visit );
+                      }
+                  }
+              }
+
+              if( best_comestible ) {
+                  int consume_moves = -Pickup::cost_to_move_item( you, *best_comestible ) *
+                                      std::max( rl_dist( you.pos(), here.getlocal( best_comestible.position() ) ), 1 );
+                  consume_moves += to_moves<int>( you.get_consume_time( *best_comestible ) );
+                  you.consume( best_comestible );
+                  if( best_comestible.get_item() && best_comestible->is_container() ) {
+                      best_comestible->on_contents_changed();
+                  }
+                  return consume_moves;
+              }
+              return 0;
+          }
+          '''
+          s = s[:start] + new + s[end:]
+          p.write_text(s, encoding='utf-8')
+          rej = Path('src/activity_item_handling.cpp.rej')
+          if rej.exists():
+              rej.unlink()
+          PY
+          git diff --check
+          git add src/activity_item_handling.cpp
+          git commit -F - <<'MSG'
+          同步上游 #67058：自动进食优先处理更快变质的食物
+
+          自动进食和自动饮水区域不再简单吃到扫描到的第一件东西，而会在可用食物中优先挑选更老、更接近变质的物品；噬腐相关角色则保持适合自身的腐败食物优先逻辑。这样长期基地库存更不容易因为自动进食顺序不合理而浪费。
+
+          微风适配：沿用微风旧基线的自动区域、车辆货舱和 item_location 接口，仅回移候选遍历与新鲜度排序逻辑，不改动区域系统其余行为。
+
+          Upstream-PR: CleverRaven/Cataclysm-DDA#67058
+          Original-Author: nornagon
+          MSG
+
+          echo '=== 候选提交 ==='
+          git log --oneline -3
+          git push --force origin HEAD:sync1191-staging-final
