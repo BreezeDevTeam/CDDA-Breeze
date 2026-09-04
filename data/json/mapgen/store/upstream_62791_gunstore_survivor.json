@@ -2,7 +2,7 @@
   {
     "type": "mapgen",
     "method": "json",
-    "om_terrain": [ "s_gunstore" ],
+    "om_terrain": [ "s_gun_a" ],
     "//": "Survivor",
     "weight": 50,
     "object": {
