@@ -188,7 +188,8 @@
     "method": "json",
     "om_terrain": [
       [ "convention_0_0_2", "convention_1_0_2", "convention_2_0_2", "convention_3_0_2", "convention_4_0_2" ],
-      [ "convention_0_1_2", "convention_1_1_2", "convention_2_1_2", "convention_3_1_2", "convention_4_1_2" ]
+      [ "convention_0_1_2", "convention_1_1_2", "convention_2_1_2", "convention_3_1_2", "convention_4_1_2" ],
+      [ "convention_0_2_2", "convention_1_2_2", "convention_2_2_2", "convention_3_2_2", "convention_4_2_2" ]
     ],
     "object": {
       "fill_ter": "t_tar_flat_roof",

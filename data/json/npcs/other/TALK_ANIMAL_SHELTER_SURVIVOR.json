@@ -14,18 +14,18 @@
       "yes": "<greet>",
       "no": "总算见到一个不是<zombies>的活人了。"
     },
-    "speaker_effect": { "effect": { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } },
     "responses": [
       {
         "text": "对，今天算你走运。把东西交出来，不然你也会变成它们的一员。",
         "trial": { "type": "INTIMIDATE", "difficulty": 30 },
-        "success": { "topic": "TALK_WEAPON_DROPPED", "effect": "drop_weapon", "opinion": { "trust": -4, "fear": 3 } },
-        "failure": { "topic": "TALK_DONE", "effect": "hostile" },
+        "success": { "topic": "TALK_WEAPON_DROPPED", "effect": [ "drop_weapon", { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } ], "opinion": { "trust": -4, "fear": 3 } },
+        "failure": { "topic": "TALK_DONE", "effect": [ "hostile", { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } ] },
         "condition": { "not": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } }
       },
       {
         "text": "嘿，很高兴见到你。",
         "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+        "effect": { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" },
         "condition": { "not": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } }
       },
       {

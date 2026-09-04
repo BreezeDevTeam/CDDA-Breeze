@@ -5234,7 +5234,8 @@ bool game::spawn_hallucination( const tripoint &p )
     mtype_id hallu = MonsterGenerator::generator().get_valid_hallucination();
 
     // 有静态怪物刷新表的地点，幻觉大多从当地怪物群中抽取，减少明显不合场景的幻觉。
-    const oter_id &terrain_type = overmap_buffer.ter( get_player_character().global_omt_location() );
+    const oter_id &terrain_type = overmap_buffer.ter(
+        tripoint_abs_omt( ms_to_omt_copy( get_map().getabs( p ) ) ) );
     const overmap_static_spawns &spawns = terrain_type->get_static_spawns();
     if( !spawns.group.is_null() && !one_in( 9 ) ) {
         hallu = MonsterGroupManager::GetRandomMonsterFromGroup( spawns.group );
