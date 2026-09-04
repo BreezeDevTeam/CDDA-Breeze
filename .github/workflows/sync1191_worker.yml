@@ -15,20 +15,17 @@ jobs:
         with:
           fetch-depth: 1
           ref: 132463fafc5d62e6f0eaca5af878b561d98dd916
-      - name: 检查 66402 与 67058 可直接回移性
+      - name: 诊断 79285 整体补丁与核心文件
         shell: bash
         run: |
           set -u
-          for pr in 66402 67058; do
-            git reset --hard 132463fafc5d62e6f0eaca5af878b561d98dd916
-            git clean -fd
-            curl -fsSL "https://github.com/CleverRaven/Cataclysm-DDA/pull/${pr}.diff" -o "/tmp/${pr}.diff"
-            echo "=== PR ${pr} ==="
-            if git apply --check "/tmp/${pr}.diff"; then
-              echo "DIRECT_APPLY_OK"
-            else
-              echo "DIRECT_APPLY_FAIL"
-              git apply --reject --whitespace=nowarn "/tmp/${pr}.diff" || true
-              find . -name '*.rej' -print -exec sh -c 'echo "----- $1"; cat "$1"' _ {} \;
-            fi
+          curl -fsSL https://github.com/CleverRaven/Cataclysm-DDA/pull/79285.diff -o /tmp/79285.diff
+          git apply --reject --whitespace=nowarn /tmp/79285.diff || true
+          echo '=== REJECT FILES ==='
+          find . -name '*.rej' -print | sort
+          echo '=== CHANGED FILES ==='
+          git status --short | sed -n '1,120p'
+          echo '=== CORE EXISTENCE ==='
+          for f in data/json/mapgen/nested/gunstore_nested.json data/json/mapgen/s_gun.json data/json/mapgen_palettes/gunstore.json data/json/overmap/overmap_terrain/overmap_terrain_commercial.json; do
+            test -f "$f" && echo "EXISTS $f" || echo "MISSING $f"
           done
