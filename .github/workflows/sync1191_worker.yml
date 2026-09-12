@@ -1,4 +1,4 @@
-# 触发 #1191 第二轮旧基线运行时兼容修复
+# 触发 #1191 第三轮旧基线运行时兼容修复
 name: sync1191-worker
 on:
   push:
@@ -7,18 +7,18 @@ on:
 permissions:
   contents: write
 jobs:
-  fix-legacy-runtime-data:
+  fix-legacy-runtime-data-round3:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
           ref: sync/upstream-interesting-batch-02
-      - name: 修复旧基线数据加载问题并推送
+      - name: 修复第三轮实际启动暴露的旧基线兼容问题并推送
         shell: bash
         run: |
           set -euo pipefail
-          expected_head="06a03981e9fe1556e66eceff7e832de111ad2ead"
+          expected_head="6f9f65cc996c0493d0b901a540a8f46dbaa273f6"
           [[ "$(git rev-parse HEAD)" == "$expected_head" ]] || { echo "功能分支已移动" >&2; exit 1; }
           git config user.name "ChatGPT Sync Bot"
           git config user.email "actions@users.noreply.github.com"
@@ -26,101 +26,91 @@ jobs:
           from pathlib import Path
           import json
 
-          # 65097/66402：家具定义必须在 mapgen 读取前注册，不能留在晚加载的 z_upstream_sync。
-          old_room = Path('data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json')
-          new_room = Path('data/json/furniture_and_terrain/上游兼容_房间隔断.json')
-          if not old_room.exists():
-              raise SystemExit('未找到晚加载的 f_room_divider 兼容文件')
-          if new_room.exists():
-              raise SystemExit('早加载的 f_room_divider 兼容文件已存在，拒绝覆盖')
-          room_text = old_room.read_text(encoding='utf-8')
-          if room_text.count('"id": "f_room_divider"') != 1:
-              raise SystemExit('f_room_divider 定义数量异常')
-          new_room.parent.mkdir(parents=True, exist_ok=True)
-          new_room.write_text(room_text, encoding='utf-8')
-          old_room.unlink()
-
-          # 67328：回移 BANK_NOTE_SHAPED 的 json_flag 注册，钱包照片才能合法使用该形状标志。
-          bank_flag = Path('data/json/上游兼容_个人照片标志.json')
-          if bank_flag.exists():
-              raise SystemExit('BANK_NOTE_SHAPED 兼容文件已存在，拒绝覆盖')
-          bank_flag.write_text('''[
-            {
-              "id": "BANK_NOTE_SHAPED",
-              "type": "json_flag",
-              "restriction": "Item must be shaped like a bank note"
-            }
-          ]
-          ''', encoding='utf-8')
-
-          # 65097：会展中心屋顶 #v# 是向下梯子，原移植漏掉了 v 的地形映射。
-          palette = Path('data/json/mapgen_palettes/convention_center_palette.json')
-          s = palette.read_text(encoding='utf-8')
-          old = '      "^": "t_ladder_up",\n      "I": "t_gutter_downspout",'
-          new = '      "^": "t_ladder_up",\n      "v": "t_ladder_down",\n      "I": "t_gutter_downspout",'
+          # 65097：屋顶实际引用的是通用 roof_palette，而不是 convention_center_palette。
+          # 将 v 直接映射到旧基线已有的向下梯子，修复会展中心屋顶 #v# 报错。
+          roof = Path('data/json/mapgen_palettes/roof_palette.json')
+          s = roof.read_text(encoding='utf-8')
+          if '"v": "t_ladder_down"' in s:
+              raise SystemExit('roof_palette 已存在 v 映射，拒绝重复修改')
+          old = '      "y": "t_null"\n    },'
+          new = '      "y": "t_null",\n      "v": "t_ladder_down"\n    },'
           if s.count(old) != 1:
-              raise SystemExit('会展中心 v 地形映射插入点不符合预期')
-          palette.write_text(s.replace(old, new, 1), encoding='utf-8')
+              raise SystemExit('roof_palette v 映射插入点不符合预期')
+          roof.write_text(s.replace(old, new, 1), encoding='utf-8')
 
-          # 79285：微风 12.0 只有旧版 mapgen flags。用旧基线支持的 ERASE_ALL
-          # 近似新版“拆除全部”和“仅清物品”语义，优先保证洗劫态地图可靠加载。
-          nested = Path('data/json/mapgen/nested/upstream_79285_gunstore_nested.json')
-          s = nested.read_text(encoding='utf-8')
+          # 66402：新版赛车场屋顶使用 t_stairs_down_no_roof，微风 12.0 没有这个地形。
+          # 旧版 t_stairs_down 是最接近且已存在的向下楼梯。
+          speedway = Path('data/json/mapgen/speedway.json')
+          s = speedway.read_text(encoding='utf-8')
+          if s.count('t_stairs_down_no_roof') != 1:
+              raise SystemExit('赛车场新版楼梯地形引用数量异常')
+          speedway.write_text(s.replace('t_stairs_down_no_roof', 't_stairs_down'), encoding='utf-8')
+
+          # 67328：wallet_photo 虽有 BANK_NOTE_SHAPED，但旧基线钱包使用显式 item_restriction，
+          # 因此还必须把照片加入钱包的折叠夹层白名单。三处分别对应普通/大号/旅行钱包结构。
+          generic = Path('data/json/items/generic.json')
+          s = generic.read_text(encoding='utf-8')
+          old = '          "family_photo",\n          "money_one",'
+          new = '          "family_photo",\n          "wallet_photo",\n          "money_one",'
+          if s.count(old) != 3:
+              raise SystemExit(f'钱包夹层插入点数量异常: {s.count(old)}')
+          generic.write_text(s.replace(old, new), encoding='utf-8')
+
+          # 79285：枪店地图来自更晚的上游数据，清理微风 12.0 中不存在的物品、物品组和墙体 ID。
+          # 这里优先映射到旧基线已有且语义接近的对象，避免额外引入新版物品依赖链。
+          gunstore = Path('data/json/mapgen_palettes/upstream_79285_gunstore.json')
+          s = gunstore.read_text(encoding='utf-8')
           replacements = [
-              ('        "DISMANTLE_ALL_BEFORE_PLACING_TERRAIN"', '        "ERASE_ALL_BEFORE_PLACING_TERRAIN"'),
-              ('        "ERASE_ITEMS_BEFORE_PLACING_TERRAIN"', '        "ERASE_ALL_BEFORE_PLACING_TERRAIN"'),
+              ('t_wall_gray', 't_wall', 3),
+              ('t_wall_black', 't_brick_wall', 3),
+              ('gun_lock', 'lock', 2),
+              ('ammo_casings_gunsmith_bulk', 'ammo_casings_bulk', 4),
+              ('blister_pack', 'wrapper', 1),
+              ('bag_plastic_small', 'bag_plastic', 1),
           ]
-          for old, new in replacements:
-              if s.count(old) != 1:
-                  raise SystemExit(f'枪店新版 mapgen flag 数量异常: {old}')
-              s = s.replace(old, new, 1)
-          nested.write_text(s, encoding='utf-8')
+          for old, new, expected in replacements:
+              count = s.count(old)
+              if count != expected:
+                  raise SystemExit(f'枪店兼容引用数量异常: {old} = {count}, 预期 {expected}')
+              s = s.replace(old, new)
+          gunstore.write_text(s, encoding='utf-8')
 
-          touched = [
-              new_room,
-              bank_flag,
-              palette,
-              nested,
-          ]
+          touched = [roof, speedway, generic, gunstore]
           for path in touched:
               json.loads(path.read_text(encoding='utf-8'))
 
-          # 防止本批回移里还藏有微风 12.0 不认识的新版细粒度 mapgen flags。
-          unsupported = {
-              'DISMANTLE_ALL_BEFORE_PLACING_TERRAIN',
-              'ALLOW_TERRAIN_UNDER_FURNITURE',
-              'DISMANTLE_FURNITURE_BEFORE_PLACING_TERRAIN',
-              'ERASE_FURNITURE_BEFORE_PLACING_TERRAIN',
-              'ALLOW_TERRAIN_UNDER_TRAP',
-              'DISMANTLE_TRAP_BEFORE_PLACING_TERRAIN',
-              'ERASE_TRAP_BEFORE_PLACING_TERRAIN',
-              'ALLOW_TERRAIN_UNDER_ITEMS',
-              'ERASE_ITEMS_BEFORE_PLACING_TERRAIN',
-              'SKIP_ON_OPEN_AIR',
+          # 对本轮用户实际看到的所有错误做反向断言，同时把同批枪店下一个明显缺失的
+          # blister_pack 一并清掉，避免修完一个又弹出下一个。
+          forbidden = {
+              't_stairs_down_no_roof',
+              't_wall_gray',
+              't_wall_black',
+              'gun_lock',
+              'ammo_casings_gunsmith_bulk',
+              'blister_pack',
+              'bag_plastic_small',
           }
           bad = []
           for path in Path('data/json').rglob('*.json'):
               text = path.read_text(encoding='utf-8')
-              for flag in unsupported:
-                  if flag in text:
-                      bad.append(f'{path}: {flag}')
+              for token in forbidden:
+                  if token in text:
+                      bad.append(f'{path}: {token}')
           if bad:
-              raise SystemExit('仍存在旧基线不支持的 mapgen flags:\n' + '\n'.join(bad))
+              raise SystemExit('仍存在本轮旧基线缺失引用:\n' + '\n'.join(bad))
 
-          # 兼容定义与实际引用都必须存在。
-          if '"BANK_NOTE_SHAPED"' not in Path('data/json/items/wallet_photo.json').read_text(encoding='utf-8'):
-              raise SystemExit('wallet_photo 未使用 BANK_NOTE_SHAPED')
-          if '"v": "t_ladder_down"' not in palette.read_text(encoding='utf-8'):
-              raise SystemExit('会展中心 v 映射写入失败')
+          if '"v": "t_ladder_down"' not in roof.read_text(encoding='utf-8'):
+              raise SystemExit('roof_palette 的 v -> t_ladder_down 写入失败')
+          if generic.read_text(encoding='utf-8').count('"wallet_photo"') < 3:
+              raise SystemExit('钱包夹层没有完整接纳 wallet_photo')
           PY
           git diff --check
           git diff --stat
           git add -- \
-            'data/json/furniture_and_terrain/上游兼容_房间隔断.json' \
-            'data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json' \
-            'data/json/上游兼容_个人照片标志.json' \
-            'data/json/mapgen_palettes/convention_center_palette.json' \
-            'data/json/mapgen/nested/upstream_79285_gunstore_nested.json'
+            'data/json/mapgen_palettes/roof_palette.json' \
+            'data/json/mapgen/speedway.json' \
+            'data/json/items/generic.json' \
+            'data/json/mapgen_palettes/upstream_79285_gunstore.json'
           git diff --cached --check
-          git commit -m "修复第二批上游内容旧基线兼容问题"
+          git commit -m "修复测试版第三轮运行时兼容问题"
           git push origin HEAD:sync/upstream-interesting-batch-02
