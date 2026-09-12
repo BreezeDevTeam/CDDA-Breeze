@@ -1,4 +1,4 @@
-# 触发 #1191 最终合并最新 main
+# 触发 #1191 测试版运行时数据修复
 name: sync1191-worker
 on:
   push:
@@ -7,28 +7,133 @@ on:
 permissions:
   contents: write
 jobs:
-  merge-main:
+  fix-runtime-data:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
           ref: sync/upstream-interesting-batch-02
-      - name: 合并最新 main 并推送
+      - name: 修复测试版运行时数据校验问题并推送
         shell: bash
         run: |
           set -euo pipefail
-          expected_head="65adf012c8fa428ef15b865ac2b5169a4268382e"
-          expected_main="6409b4ae7988824b19fa788b1db912ba1c44857b"
+          expected_head="e68b3a7da911e793222a2d2881b2a0d6ba1116a7"
           [[ "$(git rev-parse HEAD)" == "$expected_head" ]] || { echo "功能分支已移动" >&2; exit 1; }
-          git fetch origin main
-          [[ "$(git rev-parse origin/main)" == "$expected_main" ]] || { echo "main 已再次移动" >&2; exit 1; }
           git config user.name "ChatGPT Sync Bot"
           git config user.email "actions@users.noreply.github.com"
-          git merge --no-ff -m "合并最新 main 到 #1191 收尾分支" origin/main
-          test -z "$(git diff --name-only --diff-filter=U)"
-          git diff --check HEAD^ HEAD
-          echo "merge_sha=$(git rev-parse HEAD)"
-          echo "first_parent=$(git rev-parse HEAD^1)"
-          echo "second_parent=$(git rev-parse HEAD^2)"
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          # 61173：去掉与 mon_zombie 完全相同的继承字段，避免 strict JSON 报重复赋值。
+          p = Path('data/json/z_upstream_sync/第二批/61173_兽装丧尸.json')
+          s = p.read_text(encoding='utf-8')
+          for line in [
+              '    "default_faction": "zombie",\n',
+              '    "symbol": "Z",\n',
+              '    "melee_dice": 2,\n',
+              '    "armor_elec": 1,\n',
+              '    "harvest": "zombie",\n',
+              '    "burn_into": "mon_zombie_scorched",\n',
+              '    "fungalize_into": "mon_zombie_fungus",\n',
+          ]:
+              if s.count(line) != 1:
+                  raise SystemExit(f'61173 预期字段数量异常: {line!r}')
+              s = s.replace(line, '', 1)
+          p.write_text(s, encoding='utf-8')
+
+          # 62174：核心数据不能用同 ID copy-from 自己做物品后置覆盖，移除三处覆盖对象。
+          p = Path('data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json')
+          s = p.read_text(encoding='utf-8')
+          start_marker = '  {\n    "id": "ammo_pouch", "type": "ARMOR", "copy-from": "ammo_pouch",'
+          end_marker = '  {\n    "result": "reloaded_303"'
+          if s.count(start_marker) != 1 or s.count(end_marker) != 1:
+              raise SystemExit('62174 覆盖对象边界不符合预期')
+          start = s.index(start_marker)
+          end = s.index(end_marker, start)
+          removed = s[start:end]
+          for item_id in ('ammo_pouch', 'bandolier_rifle', 'bandolier_wrist'):
+              if f'"id": "{item_id}"' not in removed:
+                  raise SystemExit(f'62174 未找到预期覆盖对象: {item_id}')
+          s = s[:start] + s[end:]
+          p.write_text(s, encoding='utf-8')
+
+          # 直接在核心携行具定义中加入 .303，保留原有所有弹种限制。
+          p = Path('data/json/items/armor/ammo_pouch.json')
+          s = p.read_text(encoding='utf-8')
+          old = '          "3006": 60,\n          "270win": 60,'
+          new = '          "3006": 60,\n          "303": 60,\n          "270win": 60,'
+          if s.count(old) != 1:
+              raise SystemExit('ammo_pouch 插入点不符合预期')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          p = Path('data/json/items/armor/bandolier.json')
+          s = p.read_text(encoding='utf-8')
+          replacements = [
+              ('          "3006": 16,\n          "308": 16,', '          "3006": 16,\n          "303": 16,\n          "308": 16,'),
+              ('          "3006": 4,\n          "308": 4,', '          "3006": 4,\n          "303": 4,\n          "308": 4,'),
+          ]
+          for old, new in replacements:
+              if s.count(old) != 1:
+                  raise SystemExit('bandolier 插入点不符合预期')
+              s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+          # 回移上游 f_room_divider 家具定义，供会展中心和赛车场共用。
+          p = Path('data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json')
+          if p.exists():
+              raise SystemExit('房间隔断兼容文件已存在，拒绝覆盖')
+          p.write_text('''[
+            {
+              "type": "furniture",
+              "id": "f_room_divider",
+              "name": "room divider",
+              "description": "A tall piece of furniture used to divide rooms into separate areas.",
+              "move_cost_mod": -1,
+              "required_str": 8,
+              "coverage": 80,
+              "symbol": "#",
+              "color": "light_gray",
+              "looks_like": "f_curtain",
+              "flags": [ "THIN_OBSTACLE", "TRANSPARENT", "CLIMBABLE", "BLOCKSDOOR", "NOITEM", "PERMEABLE" ],
+              "examine_action": "chainfence",
+              "deconstruct": {
+                "items": [ { "item": "pipe", "count": 2 }, { "item": "scrap", "count": 4 }, { "item": "plastic_chunk", "count": 8 } ]
+              },
+              "bash": {
+                "str_min": 8,
+                "str_max": 30,
+                "sound": "smash!",
+                "sound_fail": "whump.",
+                "items": [
+                  { "item": "pipe", "count": [ 0, 2 ] },
+                  { "item": "scrap", "count": [ 1, 3 ] },
+                  { "item": "plastic_chunk", "count": [ 1, 6 ] }
+                ]
+              }
+            }
+          ]
+          ''', encoding='utf-8')
+
+          touched = [
+              'data/json/z_upstream_sync/第二批/61173_兽装丧尸.json',
+              'data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json',
+              'data/json/items/armor/ammo_pouch.json',
+              'data/json/items/armor/bandolier.json',
+              'data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json',
+          ]
+          for path in touched:
+              json.loads(Path(path).read_text(encoding='utf-8'))
+          PY
+          git diff --check
+          git diff --stat
+          git add -- \
+            'data/json/z_upstream_sync/第二批/61173_兽装丧尸.json' \
+            'data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json' \
+            'data/json/items/armor/ammo_pouch.json' \
+            'data/json/items/armor/bandolier.json' \
+            'data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json'
+          git diff --cached --check
+          git commit -m "修复测试版运行时数据校验问题"
           git push origin HEAD:sync/upstream-interesting-batch-02
