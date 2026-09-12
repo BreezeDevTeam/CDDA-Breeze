@@ -22,6 +22,8 @@ jobs:
           [[ "$(git rev-parse HEAD)" == "$expected_head" ]] || { echo "功能分支已移动" >&2; exit 1; }
           git fetch origin main
           [[ "$(git rev-parse origin/main)" == "$expected_main" ]] || { echo "main 已再次移动" >&2; exit 1; }
+          git config user.name "Merge Diagnostic"
+          git config user.email "diagnostic@users.noreply.github.com"
           git merge --no-ff --no-commit origin/main || true
           echo '=== STATUS ==='
           git status --short
@@ -36,7 +38,7 @@ jobs:
             for stage in 1 2 3; do
               echo "[stage $stage]"
               if git cat-file -e ":$stage:$p" 2>/dev/null; then
-                git show ":$stage:$p" | grep -nEi 'psl|303|british|enfield|mag_psl|762x54|lee|no4|smle' | head -80 || true
+                git show ":$stage:$p" | grep -nEi 'psl|303|british|enfield|mag_psl|762x54|lee|no4|smle' | head -100 || true
                 echo "lines=$(git show ":$stage:$p" | wc -l)"
               else
                 echo '<absent>'
@@ -52,7 +54,7 @@ jobs:
                 /int get_auto_consume_moves\(/ { printing=1 }
                 printing { print NR ":" $0 }
                 printing && /return ACTIVITY_SEARCH_DISTANCE;/ { exit }
-              ' | head -260
+              ' | head -300
             else
               echo '<absent>'
             fi
