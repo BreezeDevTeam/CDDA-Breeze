@@ -1,10 +1,8 @@
 name: sync1191-worker
 on:
   push:
-    branches:
-      - sync1191-worker-finalize
-    paths:
-      - .github/workflows/sync1191_worker.yml
+    branches: [sync1191-worker-finalize]
+    paths: [.github/workflows/sync1191_worker.yml]
 permissions:
   contents: write
 jobs:
@@ -20,11 +18,7 @@ jobs:
         run: |
           set -euo pipefail
           expected="c9afcc86c05d196d46d4b415e2054e3d8b482ab3"
-          actual="$(git rev-parse HEAD)"
-          if [[ "$actual" != "$expected" ]]; then
-            echo "目标分支已移动：期望 $expected，实际 $actual" >&2
-            exit 1
-          fi
+          [[ "$(git rev-parse HEAD)" == "$expected" ]] || { echo "目标分支已移动" >&2; exit 1; }
           git config user.name "ChatGPT Sync Bot"
           git config user.email "actions@users.noreply.github.com"
           python3 - <<'PY'
@@ -34,106 +28,96 @@ jobs:
           def replace_once(path, old, new, label):
               p = Path(path)
               s = p.read_text(encoding="utf-8")
-              count = s.count(old)
-              if count != 1:
-                  raise SystemExit(f"{label}: expected 1 match in {path}, got {count}")
+              if s.count(old) != 1:
+                  raise SystemExit(f"{label}: expected 1 match, got {s.count(old)}")
               p.write_text(s.replace(old, new, 1), encoding="utf-8")
 
-          # 1. 按上游 #79285 原始定义，为三个枪店调色板补回 interior_wall_type 参数。
-          palette_path = Path("data/json/mapgen_palettes/upstream_79285_gunstore.json")
-          palette = palette_path.read_text(encoding="utf-8")
-          parameter_block = (
-              '    "parameters": {\n'
-              '      "interior_wall_type": {\n'
-              '        "type": "ter_str_id",\n'
-              '        "default": { "distribution": [ [ "t_wall_w", 1 ], [ "t_wall_gray", 1 ], [ "t_wall_black", 1 ] ] }\n'
-              '      }\n'
-              '    },\n'
-          )
+          # 枪店调色板：恢复上游 #79285 原有参数声明。
+          p = Path("data/json/mapgen_palettes/upstream_79285_gunstore.json")
+          s = p.read_text(encoding="utf-8")
+          block = ('    "parameters": {\n'
+                   '      "interior_wall_type": {\n'
+                   '        "type": "ter_str_id",\n'
+                   '        "default": { "distribution": [ [ "t_wall_w", 1 ], [ "t_wall_gray", 1 ], [ "t_wall_black", 1 ] ] }\n'
+                   '      }\n'
+                   '    },\n')
           for suffix in ("unlooted", "looted", "occupied"):
               anchor = f'    "id": "gunstore_palette_{suffix}",\n'
-              if palette.count(anchor) != 1:
+              if s.count(anchor) != 1:
                   raise SystemExit(f"palette anchor mismatch: {suffix}")
-              palette = palette.replace(anchor, anchor + parameter_block, 1)
-          palette_path.write_text(palette, encoding="utf-8")
+              s = s.replace(anchor, anchor + block, 1)
+          p.write_text(s, encoding="utf-8")
 
-          # 2. 修正 JSON 风格，不改变翼型丧尸的嗅觉行为。
-          replace_once(
-              "data/json/monsters/zed-winged.json",
-              '    "scents_tracked": ["sc_human", "sc_fetid"],',
-              '    "scents_tracked": [ "sc_human", "sc_fetid" ],',
-              "zed-winged scents formatting"
-          )
+          # 翼型丧尸只修正 JSON 格式。
+          replace_once("data/json/monsters/zed-winged.json",
+                       '    "scents_tracked": ["sc_human", "sc_fetid"],',
+                       '    "scents_tracked": [ "sc_human", "sc_fetid" ],',
+                       "zed-winged formatting")
 
-          # 3. 地狱袭击者销赃商与军需官必须能实际打开交易界面。
-          npc_path = Path("data/json/npcs/hells_raiders/upstream_67212_npcs.json")
-          npc = npc_path.read_text(encoding="utf-8")
-          trader_old = '''    "id": "bandit_trader",\n    "name_suffix": "销赃商",\n    "class": "NC_BANDIT_TRADER",\n    "attitude": 0,\n    "mission": 3,\n    "chat": "TALK_DONE",'''
-          trader_new = trader_old.replace('"chat": "TALK_DONE"', '"chat": "TALK_BANDIT_SHOPKEEPER"')
-          quarter_old = '''    "id": "bandit_quartermaster",\n    "name_suffix": "军需官",\n    "class": "NC_BANDIT_QUARTERMASTER",\n    "attitude": 0,\n    "mission": 3,\n    "chat": "TALK_DONE",'''
-          quarter_new = quarter_old.replace('"chat": "TALK_DONE"', '"chat": "TALK_BANDIT_SHOPKEEPER"')
-          if npc.count(trader_old) != 1 or npc.count(quarter_old) != 1:
-              raise SystemExit("bandit shopkeeper npc anchors mismatch")
-          npc = npc.replace(trader_old, trader_new, 1).replace(quarter_old, quarter_new, 1)
-          topic = '''  {\n    "type": "talk_topic",\n    "id": "TALK_BANDIT_SHOPKEEPER",\n    "dynamic_line": "要买点什么，还是有东西要出手？",\n    "responses": [\n      { "text": "让我看看你的货。", "topic": "TALK_BANDIT_SHOPKEEPER", "effect": "start_trade" },\n      { "text": "没事了。", "topic": "TALK_DONE" }\n    ]\n  }\n'''
-          if not npc.endswith("  }\n]"):
-              raise SystemExit("bandit npc file ending mismatch")
-          npc = npc[:-4] + "  },\n" + topic + "]"
-          npc_path.write_text(npc, encoding="utf-8")
+          # 地狱袭击者商人补交易入口。
+          p = Path("data/json/npcs/hells_raiders/upstream_67212_npcs.json")
+          s = p.read_text(encoding="utf-8")
+          for npc_id in ("bandit_trader", "bandit_quartermaster"):
+              marker = f'    "id": "{npc_id}",'
+              start = s.find(marker)
+              if start < 0:
+                  raise SystemExit(f"missing npc {npc_id}")
+              end = s.find("  }", start)
+              chunk = s[start:end]
+              if chunk.count('"chat": "TALK_DONE"') != 1:
+                  raise SystemExit(f"chat anchor mismatch: {npc_id}")
+              chunk = chunk.replace('"chat": "TALK_DONE"', '"chat": "TALK_BANDIT_SHOPKEEPER"', 1)
+              s = s[:start] + chunk + s[end:]
+          topic = ('  {\n'
+                   '    "type": "talk_topic",\n'
+                   '    "id": "TALK_BANDIT_SHOPKEEPER",\n'
+                   '    "dynamic_line": "要买点什么，还是有东西要出手？",\n'
+                   '    "responses": [\n'
+                   '      { "text": "让我看看你的货。", "topic": "TALK_BANDIT_SHOPKEEPER", "effect": "start_trade" },\n'
+                   '      { "text": "没事了。", "topic": "TALK_DONE" }\n'
+                   '    ]\n'
+                   '  }')
+          body = s.rstrip()
+          if not body.endswith("]"):
+              raise SystemExit("npc json array ending missing")
+          body = body[:-1].rstrip()
+          if not body.endswith("}"):
+              raise SystemExit("npc final object ending missing")
+          p.write_text(body + ",\n" + topic + "\n]\n", encoding="utf-8")
 
-          # 4. 微风旧基线没有 nylon_holster，把其权重并入最接近的通用 holster。
-          compat_path = Path("data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json")
-          compat = compat_path.read_text(encoding="utf-8")
-          if compat.count('{ "item": "holster", "prob": 60 },') != 1:
-              raise SystemExit("generic holster anchor mismatch")
-          compat = compat.replace('{ "item": "holster", "prob": 60 },', '{ "item": "holster", "prob": 180 },', 1)
-          old_tail = '      { "item": "bootstrap", "prob": 15 },\n      { "item": "nylon_holster", "prob": 120 }'
-          new_tail = '      { "item": "bootstrap", "prob": 15 }'
-          if compat.count(old_tail) != 1:
-              raise SystemExit("nylon holster anchor mismatch")
-          compat = compat.replace(old_tail, new_tail, 1)
-          compat_path.write_text(compat, encoding="utf-8")
+          # 旧基线没有 nylon_holster：保留总权重并并入通用枪套。
+          p = Path("data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json")
+          s = p.read_text(encoding="utf-8")
+          if s.count('{ "item": "holster", "prob": 60 },') != 1:
+              raise SystemExit("holster anchor mismatch")
+          s = s.replace('{ "item": "holster", "prob": 60 },', '{ "item": "holster", "prob": 180 },', 1)
+          old = '      { "item": "bootstrap", "prob": 15 },\n      { "item": "nylon_holster", "prob": 120 }'
+          if s.count(old) != 1:
+              raise SystemExit("nylon_holster anchor mismatch")
+          p.write_text(s.replace(old, '      { "item": "bootstrap", "prob": 15 }', 1), encoding="utf-8")
 
-          # 5. here 必须保持可变，因为旧基线 map::i_at 没有 const 重载；仅抑制误导性的 clang-tidy 建议。
-          replace_once(
-              "src/activity_item_handling.cpp",
-              '    const zone_type_id zone_type = food ? zone_type_AUTO_EAT : zone_type_AUTO_DRINK;\n    map &here = get_map();\n    const std::unordered_set<tripoint_abs_ms> &dest_set =',
-              '    const zone_type_id zone_type = food ? zone_type_AUTO_EAT : zone_type_AUTO_DRINK;\n'
-              '    // NOLINTNEXTLINE(misc-const-correctness): map::i_at requires mutable map access on this baseline.\n'
-              '    map &here = get_map();\n'
-              '    const std::unordered_set<tripoint_abs_ms> &dest_set =',
-              "mutable map clang-tidy suppression"
-          )
+          # 旧基线 map::i_at 需要可变 map，窄范围抑制 const 建议。
+          replace_once("src/activity_item_handling.cpp",
+                       '    const zone_type_id zone_type = food ? zone_type_AUTO_EAT : zone_type_AUTO_DRINK;\n    map &here = get_map();\n    const std::unordered_set<tripoint_abs_ms> &dest_set =',
+                       '    const zone_type_id zone_type = food ? zone_type_AUTO_EAT : zone_type_AUTO_DRINK;\n    // NOLINTNEXTLINE(misc-const-correctness): map::i_at requires mutable map access on this baseline.\n    map &here = get_map();\n    const std::unordered_set<tripoint_abs_ms> &dest_set =',
+                       "mutable map suppression")
 
-          # 6. 当地点怪物组返回空类型时，保留原先有效的随机幻觉兜底。
-          replace_once(
-              "src/game.cpp",
-              '    if( !spawns.group.is_null() && !one_in( 9 ) ) {\n        hallu = MonsterGroupManager::GetRandomMonsterFromGroup( spawns.group );\n    }',
-              '    if( !spawns.group.is_null() && !one_in( 9 ) ) {\n'
-              '        const mtype_id local_hallu = MonsterGroupManager::GetRandomMonsterFromGroup( spawns.group );\n'
-              '        if( !local_hallu.is_null() ) {\n'
-              '            hallu = local_hallu;\n'
-              '        }\n'
-              '    }',
-              "hallucination null fallback"
-          )
+          # 本地怪物组若返回空类型，不覆盖已有的有效随机幻觉。
+          replace_once("src/game.cpp",
+                       '    if( !spawns.group.is_null() && !one_in( 9 ) ) {\n        hallu = MonsterGroupManager::GetRandomMonsterFromGroup( spawns.group );\n    }',
+                       '    if( !spawns.group.is_null() && !one_in( 9 ) ) {\n        const mtype_id local_hallu = MonsterGroupManager::GetRandomMonsterFromGroup( spawns.group );\n        if( !local_hallu.is_null() ) {\n            hallu = local_hallu;\n        }\n    }',
+                       "hallucination fallback")
 
-          for f in (
+          for f in [
               "data/json/mapgen_palettes/upstream_79285_gunstore.json",
               "data/json/monsters/zed-winged.json",
               "data/json/npcs/hells_raiders/upstream_67212_npcs.json",
               "data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json",
-          ):
+          ]:
               json.loads(Path(f).read_text(encoding="utf-8"))
           PY
           git diff --check
-          git status --short
-          git add data/json/mapgen_palettes/upstream_79285_gunstore.json \
-                  data/json/monsters/zed-winged.json \
-                  data/json/npcs/hells_raiders/upstream_67212_npcs.json \
-                  data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json \
-                  src/activity_item_handling.cpp \
-                  src/game.cpp
+          git add data/json/mapgen_palettes/upstream_79285_gunstore.json data/json/monsters/zed-winged.json data/json/npcs/hells_raiders/upstream_67212_npcs.json data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json src/activity_item_handling.cpp src/game.cpp
           git commit -F - <<'MSG'
           修复 #1191 终审剩余适配问题
 
