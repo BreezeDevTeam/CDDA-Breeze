@@ -1,4 +1,4 @@
-# 触发 #1191 测试版运行时数据修复
+# 触发 #1191 第二轮旧基线运行时兼容修复
 name: sync1191-worker
 on:
   push:
@@ -7,18 +7,18 @@ on:
 permissions:
   contents: write
 jobs:
-  fix-runtime-data:
+  fix-legacy-runtime-data:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
           ref: sync/upstream-interesting-batch-02
-      - name: 修复测试版运行时数据校验问题并推送
+      - name: 修复旧基线数据加载问题并推送
         shell: bash
         run: |
           set -euo pipefail
-          expected_head="e68b3a7da911e793222a2d2881b2a0d6ba1116a7"
+          expected_head="06a03981e9fe1556e66eceff7e832de111ad2ead"
           [[ "$(git rev-parse HEAD)" == "$expected_head" ]] || { echo "功能分支已移动" >&2; exit 1; }
           git config user.name "ChatGPT Sync Bot"
           git config user.email "actions@users.noreply.github.com"
@@ -26,114 +26,101 @@ jobs:
           from pathlib import Path
           import json
 
-          # 61173：去掉与 mon_zombie 完全相同的继承字段，避免 strict JSON 报重复赋值。
-          p = Path('data/json/z_upstream_sync/第二批/61173_兽装丧尸.json')
-          s = p.read_text(encoding='utf-8')
-          for line in [
-              '    "default_faction": "zombie",\n',
-              '    "symbol": "Z",\n',
-              '    "melee_dice": 2,\n',
-              '    "armor_elec": 1,\n',
-              '    "harvest": "zombie",\n',
-              '    "burn_into": "mon_zombie_scorched",\n',
-              '    "fungalize_into": "mon_zombie_fungus",\n',
-          ]:
-              if s.count(line) != 1:
-                  raise SystemExit(f'61173 预期字段数量异常: {line!r}')
-              s = s.replace(line, '', 1)
-          p.write_text(s, encoding='utf-8')
+          # 65097/66402：家具定义必须在 mapgen 读取前注册，不能留在晚加载的 z_upstream_sync。
+          old_room = Path('data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json')
+          new_room = Path('data/json/furniture_and_terrain/上游兼容_房间隔断.json')
+          if not old_room.exists():
+              raise SystemExit('未找到晚加载的 f_room_divider 兼容文件')
+          if new_room.exists():
+              raise SystemExit('早加载的 f_room_divider 兼容文件已存在，拒绝覆盖')
+          room_text = old_room.read_text(encoding='utf-8')
+          if room_text.count('"id": "f_room_divider"') != 1:
+              raise SystemExit('f_room_divider 定义数量异常')
+          new_room.parent.mkdir(parents=True, exist_ok=True)
+          new_room.write_text(room_text, encoding='utf-8')
+          old_room.unlink()
 
-          # 62174：核心数据不能用同 ID copy-from 自己做物品后置覆盖，移除三处覆盖对象。
-          p = Path('data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json')
-          s = p.read_text(encoding='utf-8')
-          start_marker = '  {\n    "id": "ammo_pouch", "type": "ARMOR", "copy-from": "ammo_pouch",'
-          end_marker = '  {\n    "result": "reloaded_303"'
-          if s.count(start_marker) != 1 or s.count(end_marker) != 1:
-              raise SystemExit('62174 覆盖对象边界不符合预期')
-          start = s.index(start_marker)
-          end = s.index(end_marker, start)
-          removed = s[start:end]
-          for item_id in ('ammo_pouch', 'bandolier_rifle', 'bandolier_wrist'):
-              if f'"id": "{item_id}"' not in removed:
-                  raise SystemExit(f'62174 未找到预期覆盖对象: {item_id}')
-          s = s[:start] + s[end:]
-          p.write_text(s, encoding='utf-8')
-
-          # 直接在核心携行具定义中加入 .303，保留原有所有弹种限制。
-          p = Path('data/json/items/armor/ammo_pouch.json')
-          s = p.read_text(encoding='utf-8')
-          old = '          "3006": 60,\n          "270win": 60,'
-          new = '          "3006": 60,\n          "303": 60,\n          "270win": 60,'
-          if s.count(old) != 1:
-              raise SystemExit('ammo_pouch 插入点不符合预期')
-          p.write_text(s.replace(old, new, 1), encoding='utf-8')
-
-          p = Path('data/json/items/armor/bandolier.json')
-          s = p.read_text(encoding='utf-8')
-          replacements = [
-              ('          "3006": 16,\n          "308": 16,', '          "3006": 16,\n          "303": 16,\n          "308": 16,'),
-              ('          "3006": 4,\n          "308": 4,', '          "3006": 4,\n          "303": 4,\n          "308": 4,'),
-          ]
-          for old, new in replacements:
-              if s.count(old) != 1:
-                  raise SystemExit('bandolier 插入点不符合预期')
-              s = s.replace(old, new, 1)
-          p.write_text(s, encoding='utf-8')
-
-          # 回移上游 f_room_divider 家具定义，供会展中心和赛车场共用。
-          p = Path('data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json')
-          if p.exists():
-              raise SystemExit('房间隔断兼容文件已存在，拒绝覆盖')
-          p.write_text('''[
+          # 67328：回移 BANK_NOTE_SHAPED 的 json_flag 注册，钱包照片才能合法使用该形状标志。
+          bank_flag = Path('data/json/上游兼容_个人照片标志.json')
+          if bank_flag.exists():
+              raise SystemExit('BANK_NOTE_SHAPED 兼容文件已存在，拒绝覆盖')
+          bank_flag.write_text('''[
             {
-              "type": "furniture",
-              "id": "f_room_divider",
-              "name": "room divider",
-              "description": "A tall piece of furniture used to divide rooms into separate areas.",
-              "move_cost_mod": -1,
-              "required_str": 8,
-              "coverage": 80,
-              "symbol": "#",
-              "color": "light_gray",
-              "looks_like": "f_curtain",
-              "flags": [ "THIN_OBSTACLE", "TRANSPARENT", "CLIMBABLE", "BLOCKSDOOR", "NOITEM", "PERMEABLE" ],
-              "examine_action": "chainfence",
-              "deconstruct": {
-                "items": [ { "item": "pipe", "count": 2 }, { "item": "scrap", "count": 4 }, { "item": "plastic_chunk", "count": 8 } ]
-              },
-              "bash": {
-                "str_min": 8,
-                "str_max": 30,
-                "sound": "smash!",
-                "sound_fail": "whump.",
-                "items": [
-                  { "item": "pipe", "count": [ 0, 2 ] },
-                  { "item": "scrap", "count": [ 1, 3 ] },
-                  { "item": "plastic_chunk", "count": [ 1, 6 ] }
-                ]
-              }
+              "id": "BANK_NOTE_SHAPED",
+              "type": "json_flag",
+              "restriction": "Item must be shaped like a bank note"
             }
           ]
           ''', encoding='utf-8')
 
+          # 65097：会展中心屋顶 #v# 是向下梯子，原移植漏掉了 v 的地形映射。
+          palette = Path('data/json/mapgen_palettes/convention_center_palette.json')
+          s = palette.read_text(encoding='utf-8')
+          old = '      "^": "t_ladder_up",\n      "I": "t_gutter_downspout",'
+          new = '      "^": "t_ladder_up",\n      "v": "t_ladder_down",\n      "I": "t_gutter_downspout",'
+          if s.count(old) != 1:
+              raise SystemExit('会展中心 v 地形映射插入点不符合预期')
+          palette.write_text(s.replace(old, new, 1), encoding='utf-8')
+
+          # 79285：微风 12.0 只有旧版 mapgen flags。用旧基线支持的 ERASE_ALL
+          # 近似新版“拆除全部”和“仅清物品”语义，优先保证洗劫态地图可靠加载。
+          nested = Path('data/json/mapgen/nested/upstream_79285_gunstore_nested.json')
+          s = nested.read_text(encoding='utf-8')
+          replacements = [
+              ('        "DISMANTLE_ALL_BEFORE_PLACING_TERRAIN"', '        "ERASE_ALL_BEFORE_PLACING_TERRAIN"'),
+              ('        "ERASE_ITEMS_BEFORE_PLACING_TERRAIN"', '        "ERASE_ALL_BEFORE_PLACING_TERRAIN"'),
+          ]
+          for old, new in replacements:
+              if s.count(old) != 1:
+                  raise SystemExit(f'枪店新版 mapgen flag 数量异常: {old}')
+              s = s.replace(old, new, 1)
+          nested.write_text(s, encoding='utf-8')
+
           touched = [
-              'data/json/z_upstream_sync/第二批/61173_兽装丧尸.json',
-              'data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json',
-              'data/json/items/armor/ammo_pouch.json',
-              'data/json/items/armor/bandolier.json',
-              'data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json',
+              new_room,
+              bank_flag,
+              palette,
+              nested,
           ]
           for path in touched:
-              json.loads(Path(path).read_text(encoding='utf-8'))
+              json.loads(path.read_text(encoding='utf-8'))
+
+          # 防止本批回移里还藏有微风 12.0 不认识的新版细粒度 mapgen flags。
+          unsupported = {
+              'DISMANTLE_ALL_BEFORE_PLACING_TERRAIN',
+              'ALLOW_TERRAIN_UNDER_FURNITURE',
+              'DISMANTLE_FURNITURE_BEFORE_PLACING_TERRAIN',
+              'ERASE_FURNITURE_BEFORE_PLACING_TERRAIN',
+              'ALLOW_TERRAIN_UNDER_TRAP',
+              'DISMANTLE_TRAP_BEFORE_PLACING_TERRAIN',
+              'ERASE_TRAP_BEFORE_PLACING_TERRAIN',
+              'ALLOW_TERRAIN_UNDER_ITEMS',
+              'ERASE_ITEMS_BEFORE_PLACING_TERRAIN',
+              'SKIP_ON_OPEN_AIR',
+          }
+          bad = []
+          for path in Path('data/json').rglob('*.json'):
+              text = path.read_text(encoding='utf-8')
+              for flag in unsupported:
+                  if flag in text:
+                      bad.append(f'{path}: {flag}')
+          if bad:
+              raise SystemExit('仍存在旧基线不支持的 mapgen flags:\n' + '\n'.join(bad))
+
+          # 兼容定义与实际引用都必须存在。
+          if '"BANK_NOTE_SHAPED"' not in Path('data/json/items/wallet_photo.json').read_text(encoding='utf-8'):
+              raise SystemExit('wallet_photo 未使用 BANK_NOTE_SHAPED')
+          if '"v": "t_ladder_down"' not in palette.read_text(encoding='utf-8'):
+              raise SystemExit('会展中心 v 映射写入失败')
           PY
           git diff --check
           git diff --stat
           git add -- \
-            'data/json/z_upstream_sync/第二批/61173_兽装丧尸.json' \
-            'data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json' \
-            'data/json/items/armor/ammo_pouch.json' \
-            'data/json/items/armor/bandolier.json' \
-            'data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json'
+            'data/json/furniture_and_terrain/上游兼容_房间隔断.json' \
+            'data/json/z_upstream_sync/第二批/65097_66402_房间隔断兼容.json' \
+            'data/json/上游兼容_个人照片标志.json' \
+            'data/json/mapgen_palettes/convention_center_palette.json' \
+            'data/json/mapgen/nested/upstream_79285_gunstore_nested.json'
           git diff --cached --check
-          git commit -m "修复测试版运行时数据校验问题"
+          git commit -m "修复第二批上游内容旧基线兼容问题"
           git push origin HEAD:sync/upstream-interesting-batch-02
