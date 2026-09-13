@@ -1,0 +1,4 @@
+[
+  { "id": [ "psl" ], "type": "MIGRATION", "replace": "rifle_sporter" },
+  { "id": [ "pslmag5", "pslmag10" ], "type": "MIGRATION", "replace": "rifle_sniper_mag" }
+]

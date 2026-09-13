@@ -1,0 +1,77 @@
+[
+  {
+    "type": "item_group",
+    "id": "guns_common_boxed",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "guns_common_display"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "mags_common_restricted_packaged",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "mags_common_gunstore"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_hearing",
+    "subtype": "collection",
+    "items": [
+      {
+        "group": "ear_protection"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_optics_packaged",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "box_small", "contents-item": "holo_sight", "prob": 100 },
+      { "item": "box_small", "contents-item": "pistol_scope", "prob": 8 },
+      { "item": "box_small", "contents-item": "red_dot_sight", "prob": 800 },
+      { "item": "box_small", "contents-item": "rifle_scope", "prob": 1000 },
+      { "item": "box_small", "contents-item": "rifle_scope_high_end_mount", "prob": 15 },
+      { "item": "box_small", "contents-item": "acog_scope", "prob": 12 },
+      { "item": "box_small", "contents-item": "holo_magnifier", "prob": 10 },
+      { "item": "box_small", "contents-item": "hybrid_sight_4x", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_optics_display",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "holo_sight", "prob": 100 },
+      { "item": "pistol_scope", "prob": 8 },
+      { "item": "red_dot_sight", "prob": 800 },
+      { "item": "rifle_scope", "prob": 1000 },
+      { "item": "rifle_scope_high_end_mount", "prob": 15 },
+      { "item": "acog_scope", "prob": 12 },
+      { "item": "holo_magnifier", "prob": 10 },
+      { "item": "hybrid_sight_4x", "prob": 3 }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "SUS_gunstore_carry_gear",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "holster", "prob": 180 },
+      { "item": "sholster", "prob": 25 },
+      { "item": "bholster", "prob": 20 },
+      { "item": "bbholster", "prob": 10 },
+      { "item": "suspenders_holster", "prob": 8 },
+      { "item": "tactical_holster", "prob": 25 },
+      { "item": "shoulder_holster", "prob": 12 },
+      { "item": "bootstrap", "prob": 15 }
+    ]
+  }
+]

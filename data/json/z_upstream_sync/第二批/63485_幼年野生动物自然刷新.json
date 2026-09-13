@@ -1,0 +1,86 @@
+[
+  {
+    "type": "monstergroup",
+    "name": "GROUP_COWS",
+    "monsters": [
+      { "monster": "mon_cow_calf", "weight": 50, "ends": "7 days" },
+      { "monster": "mon_cow_calf", "weight": 25, "starts": "7 days" }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_PIGS",
+    "monsters": [
+      { "monster": "mon_pig", "weight": 150, "cost_multiplier": 2 },
+      { "monster": "mon_pig_piglet", "weight": 25, "pack_size": [ 1, 2 ], "ends": "7 days" },
+      { "monster": "mon_pig_piglet", "weight": 12, "pack_size": [ 1, 2 ], "starts": "7 days" }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_SHEEPS",
+    "monsters": [
+      { "monster": "mon_sheep", "weight": 150, "cost_multiplier": 2 },
+      { "monster": "mon_sheep_lamb", "weight": 25, "ends": "7 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_sheep_lamb", "weight": 12, "starts": "7 days", "conditions": [ "SPRING", "SUMMER" ] }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_CAVE",
+    "monsters": [
+      { "monster": "mon_bear_cub", "weight": 33, "ends": "31 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_bear_cub", "weight": 17, "starts": "31 days", "conditions": [ "SPRING", "SUMMER" ] }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_FOREST",
+    "monsters": [
+      { "monster": "mon_bear_cub", "weight": 1, "ends": "31 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_bear_cub", "weight": 1, "starts": "31 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_boar_wild_piglet", "weight": 1, "pack_size": [ 1, 6 ], "ends": "14 days" },
+      { "monster": "mon_boar_wild_piglet", "weight": 1, "pack_size": [ 1, 3 ], "starts": "14 days" },
+      { "group": "GROUP_PIGS", "weight": 1, "cost_multiplier": 2, "pack_size": [ 1, 4 ] },
+      { "group": "GROUP_SHEEPS", "weight": 1, "cost_multiplier": 2, "pack_size": [ 1, 3 ] },
+      { "monster": "mon_deer_fawn", "weight": 2, "ends": "7 days", "conditions": [ "SPRING", "SUMMER", "AUTUMN" ] },
+      { "monster": "mon_deer_fawn", "weight": 1, "starts": "7 days", "conditions": [ "SPRING", "SUMMER", "AUTUMN" ] },
+      { "monster": "mon_reindeer_fawn", "weight": 1, "pack_size": [ 1, 3 ], "ends": "7 days", "conditions": [ "AUTUMN", "WINTER", "SPRING" ] },
+      { "monster": "mon_reindeer_fawn", "weight": 1, "pack_size": [ 1, 2 ], "starts": "7 days", "conditions": [ "AUTUMN", "WINTER", "SPRING" ] },
+      { "monster": "mon_wolf_pup", "weight": 1, "pack_size": [ 1, 2 ], "ends": "31 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_wolf_pup", "weight": 1, "starts": "31 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_horse_foal", "weight": 1, "ends": "31 days" },
+      { "monster": "mon_moose_calf", "weight": 1, "ends": "31 days", "conditions": [ "AUTUMN", "WINTER" ] },
+      { "monster": "mon_deer_mutant_spider_fawn", "weight": 1, "starts": "31 days", "conditions": [ "SPRING", "SUMMER", "AUTUMN" ] },
+      { "monster": "mon_tusked_moose_calf", "weight": 1, "starts": "70 days", "conditions": [ "SPRING", "SUMMER" ] }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_DOMESTIC",
+    "monsters": [
+      { "monster": "mon_cow_calf", "weight": 17, "ends": "7 days", "pack_size": [ 1, 4 ] },
+      { "monster": "mon_cow_calf", "weight": 8, "starts": "7 days", "pack_size": [ 1, 3 ] },
+      { "monster": "mon_horse_foal", "weight": 17, "ends": "31 days", "pack_size": [ 1, 2 ] },
+      { "monster": "mon_horse_foal", "weight": 8, "starts": "31 days" },
+      { "monster": "mon_pig_piglet", "weight": 8, "ends": "7 days", "pack_size": [ 1, 3 ] },
+      { "monster": "mon_pig_piglet", "weight": 4, "starts": "7 days", "pack_size": [ 1, 2 ] },
+      { "monster": "mon_sheep_lamb", "weight": 8, "ends": "7 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_sheep_lamb", "weight": 4, "starts": "7 days", "conditions": [ "SPRING", "SUMMER" ] }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_SAFE",
+    "monsters": [
+      { "monster": "mon_cow_calf", "weight": 3, "ends": "7 days" },
+      { "monster": "mon_cow_calf", "weight": 2, "starts": "7 days" },
+      { "monster": "mon_horse_foal", "weight": 3, "ends": "31 days" },
+      { "monster": "mon_horse_foal", "weight": 2, "starts": "31 days" },
+      { "monster": "mon_pig_piglet", "weight": 2, "pack_size": [ 1, 2 ], "ends": "7 days" },
+      { "monster": "mon_pig_piglet", "weight": 1, "starts": "7 days" },
+      { "monster": "mon_sheep_lamb", "weight": 2, "ends": "7 days", "conditions": [ "SPRING", "SUMMER" ] },
+      { "monster": "mon_sheep_lamb", "weight": 1, "starts": "7 days", "conditions": [ "SPRING", "SUMMER" ] }
+    ]
+  }
+]

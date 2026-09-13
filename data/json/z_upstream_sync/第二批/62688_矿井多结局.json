@@ -1,0 +1,223 @@
+[
+  {
+    "type": "mapgen",
+    "method": "json",
+    "om_terrain": "mine_finale",
+    "weight": 3333,
+    "object": {
+      "fill_ter": "t_rock_floor",
+      "rows": [
+        "####                ####",
+        "#@@@                @@@#",
+        "#@                  @###",
+        "#@                  @###",
+        "#@                  @###",
+        "#@                  @###",
+        "#@                  @###",
+        "##@@@               @###",
+        "####@@@             @###",
+        "######@@           @@@@#",
+        "#######@          @@####",
+        "#######@@@ @@@  @@@#####",
+        "#########@ @##@ @#######",
+        "#########@ @##@ @#######",
+        "#########@  @@@ @#######",
+        "#########@      @#######",
+        "#########@  @@  @#######",
+        "#########@   @  @#######",
+        "#########@  @@  @#######",
+        "#########@  @   @#######",
+        "#########@      @#######",
+        "#########@  @   @#######",
+        "#########@  @@  @#######",
+        "#########@   @  @#######"
+      ],
+      "terrain": { "#": "t_rock", "@": [ [ "t_rock", 4 ], [ "t_rock_floor", 1 ] ] },
+      "furniture": { " ": [ [ "f_null", 5 ], "f_rubble_rock" ] },
+      "items": { " ": { "item": "mine_equipment", "chance": 3 } },
+      "monster": { " ": { "monster": "mon_zombie_miner", "chance": 5 } },
+      "nested": { " ": { "chunks": [ [ "mine_minerals_equipment", 10 ], [ "null", 100 ] ] } }
+    }
+  },
+  {
+    "type": "mapgen",
+    "method": "json",
+    "om_terrain": "mine_finale",
+    "weight": 1667,
+    "object": {
+      "fill_ter": "t_rock_floor",
+      "rows": [
+        "####                ####",
+        "#@@@                @@@#",
+        "#@                  @###",
+        "#@        .....     @###",
+        "#@        ..o..     @###",
+        "#@        .....     @###",
+        "#@        ......    @###",
+        "##@@@     ......    @###",
+        "####@@@   ......    @###",
+        "######@@  ......   @@@@#",
+        "#######@  ......  @@####",
+        "#######@@@......@@@#####",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######",
+        "#########@......@#######"
+      ],
+      "terrain": { "#": "t_rock", "@": [ [ "t_rock", 4 ], [ "t_rock_floor", 1 ] ] },
+      "furniture": { " ": [ [ "f_null", 5 ], "f_rubble_rock" ] },
+      "items": { " ": { "item": "mine_equipment", "chance": 3 } },
+      "monster": { " ": { "monster": "mon_zombie_miner", "chance": 5 } },
+      "vehicles": { "o": { "vehicle": "trencher", "chance": 100, "fuel": 100, "status": 0 } },
+      "nested": { " ": { "chunks": [ [ "mine_minerals_equipment", 10 ], [ "null", 100 ] ] } }
+    }
+  },
+  {
+    "type": "mapgen",
+    "method": "json",
+    "nested_mapgen_id": "mine_finale_archaeology",
+    "object": {
+      "fill_ter": "t_rock_floor",
+      "mapgensize": [ 6, 6 ],
+      "rows": [ "!!!###", "#C  D#", "##!Ac#", "##GG##", "@####@", "@@@@@@" ],
+      "terrain": { " ": "t_rock_floor", "#": "t_rock", "@": [ [ "t_rock", 4 ], [ "t_rock_floor", 1 ] ] },
+      "furniture": {
+        "c": "f_crate_c",
+        "C": "f_crate_c",
+        "D": "f_crate_c",
+        "G": [ "f_grave_stone_old", "f_grave_head", "f_grave_monument" ],
+        " ": [ "f_null", "f_rubble_rock" ]
+      },
+      "item": {
+        "!": { "item": "material_soil", "chance": 40, "amount": [ 5, 10 ] },
+        "D": { "item": "dynamite", "chance": 90, "repeat": 2 }
+      },
+      "items": {
+        "C": { "item": "museum_misc", "chance": 90, "repeat": [ 1, 2 ] },
+        "c": { "item": "museum_primitive", "chance": 90, "repeat": [ 1, 2 ] }
+      },
+      "monster": { "A": { "monster": "mon_feral_human_archaeologist" } },
+      "flags": [ "ERASE_ALL_BEFORE_PLACING_TERRAIN" ]
+    }
+  },
+  {
+    "type": "mapgen",
+    "method": "json",
+    "om_terrain": "mine_finale",
+    "weight": 1333,
+    "object": {
+      "fill_ter": "t_rock_floor",
+      "rows": [
+        "####               G####",
+        "#@@@      1.....    @@@#",
+        "#@ G      ......   G@###",
+        "#@ G      ......    @###",
+        "#@G       ......   G@###",
+        "#@ G      ......    @###",
+        "#@ G      ......    @###",
+        "##@@@              S@###",
+        "####@@@             @###",
+        "######@@           @@@@#",
+        "#######@          @@####",
+        "#######@@@ @@@  @@@#####",
+        "#########@ @##@ @#######",
+        "#########@ @##@ @#######",
+        "#########@  @@@ @#######",
+        "#########@      @#######",
+        "#########@  @@  @#######",
+        "#########@   @  @#######",
+        "#########@  @@  @#######",
+        "#########@  @   @#######",
+        "#########@      @#######",
+        "#########@  @   @#######",
+        "#########@  @@  @#######",
+        "#########@   @  @#######"
+      ],
+      "terrain": { ".": "t_rock_floor", "#": "t_rock", "@": [ [ "t_rock", 4 ], [ "t_rock_floor", 1 ] ] },
+      "furniture": {
+        "G": [ "f_grave_stone_old", "f_grave_head", "f_grave_monument" ],
+        "S": "f_utility_shelf",
+        " ": [ [ "f_null", 5 ], "f_rubble_rock" ]
+      },
+      "item": { " ": { "item": "material_soil", "chance": 5, "amount": [ 5, 10 ] } },
+      "items": { "S": { "item": "archeology_tools", "chance": 90, "repeat": [ 1, 2 ] } },
+      "monster": { " ": { "monster": "mon_feral_human_archaeologist", "chance": 5 } },
+      "nested": { "1": { "chunks": [ [ "mine_finale_archaeology", 100 ] ] } }
+    }
+  },
+  {
+    "type": "mapgen",
+    "method": "json",
+    "om_terrain": "mine_finale",
+    "weight": 1000,
+    "object": {
+      "fill_ter": "t_rock_floor",
+      "rows": [
+        "####    .........   ####",
+        "#@@@    .........   @@@#",
+        "#@      .........   @###",
+        "#@      .........   @###",
+        "#@      ....o....   @###",
+        "#@      .........   @###",
+        "#@      .........   @###",
+        "##@@@   .........   @###",
+        "####@@@ .........   @###",
+        "######@@           @@@@#",
+        "#######@          @@####",
+        "#######@@@ @@@  @@@#####",
+        "#########@ @##@ @#######",
+        "#########@ @##@ @#######",
+        "#########@  @@@ @#######",
+        "#########@      @#######",
+        "#########@  @@  @#######",
+        "#########@   @  @#######",
+        "#########@  @@  @#######",
+        "#########@  @   @#######",
+        "#########@      @#######",
+        "#########@  @   @#######",
+        "#########@  @@  @#######",
+        "#########@   @  @#######"
+      ],
+      "terrain": { "#": "t_rock", "@": [ [ "t_rock", 4 ], [ "t_rock_floor", 1 ] ] },
+      "furniture": { " ": [ [ "f_null", 5 ], "f_rubble_rock" ] },
+      "items": {
+        " ": { "item": "mine_equipment", "chance": 3 },
+        "o": { "item": "microlab_artifacts", "chance": 100 }
+      },
+      "monster": { "o": { "monster": "mon_breather_hub" } }
+    }
+  },
+  {
+    "id": "feral_archaelogist_death_drops",
+    "type": "item_group",
+    "subtype": "collection",
+    "entries": [
+      { "group": "clothing_outdoor_set", "prob": 100, "damage": [ 1, 4 ] },
+      { "group": "socks_unisex", "prob": 100, "damage": [ 1, 4 ] },
+      { "group": "archeology_tools", "prob": 30, "damage": [ 0, 2 ] },
+      { "group": "scarfs_unisex", "prob": 10, "damage": [ 1, 4 ] },
+      { "group": "clothing_work_gloves", "prob": 10, "damage": [ 1, 4 ] },
+      { "group": "clothing_work_hat", "prob": 10, "damage": [ 1, 4 ] },
+      { "group": "accesories_personal_unisex", "prob": 5, "damage": [ 1, 4 ] },
+      { "item": "shovel", "prob": 100, "damage": [ 0, 2 ] },
+      { "item": "bullwhip", "prob": 3, "damage": [ 0, 2 ] }
+    ]
+  },
+  {
+    "id": "mon_feral_human_archaeologist",
+    "type": "MONSTER",
+    "name": "feral archaeologist",
+    "description": "Judging by looks, this poor individual was probably an archeologist in their former life.  Maniac and bloodshot, it now seems intent to make you a part of its collection of artifacts, as it comes at you with a shovel in hand.",
+    "copy-from": "mon_feral_human_pipe",
+    "looks_like": "mon_feral_human_tool",
+    "death_drops": "feral_archaelogist_death_drops"
+  }
+]

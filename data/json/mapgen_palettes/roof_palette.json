@@ -27,7 +27,10 @@
       "L": "t_null",
       "C": "t_null",
       "Y": "t_null",
-      "y": "t_null"
+      "y": "t_null",
+      ">": "t_stairs_down",
+      "v": "t_ladder_down",
+      "+": "t_door_metal_c"
     },
     "furniture": {
       "&": "f_roof_turbine_vent",

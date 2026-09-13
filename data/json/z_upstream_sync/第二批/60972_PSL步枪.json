@@ -1,0 +1,90 @@
+[
+  {
+    "type": "GUN",
+    "id": "psl",
+    "copy-from": "rifle_semi",
+    "looks_like": "ar15",
+    "name": { "str": "PSL" },
+    "description": "The Romanian PSL is a designated marksman's rifle developed by Romania after political tensions with Soviet Russia forced them to develop their own alternative to the SVD.",
+    "weight": "4100 g",
+    "volume": "7339 ml",
+    "longest_side": "1150 mm",
+    "price": 290000,
+    "price_postapoc": 4000,
+    "to_hit": -1,
+    "bashing": 12,
+    "material": [ "steel", "wood" ],
+    "color": "brown",
+    "ammo": [ "762R" ],
+    "dispersion": 150,
+    "durability": 9,
+    "modes": [ [ "DEFAULT", "semi-auto", 1 ] ],
+    "valid_mod_locations": [
+      [ "accessories", 4 ], [ "barrel", 1 ], [ "bore", 1 ], [ "brass catcher", 1 ], [ "grip", 1 ],
+      [ "mechanism", 4 ], [ "muzzle", 1 ], [ "rail mount", 1 ], [ "sights mount", 1 ], [ "sling", 1 ],
+      [ "stock mount", 1 ], [ "stock accessory", 2 ], [ "underbarrel mount", 1 ]
+    ],
+    "default_mods": [ "sights_mount" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "pslmag5", "pslmag10" ] } ]
+  },
+  {
+    "id": "pslmag5",
+    "looks_like": "stanag30",
+    "type": "MAGAZINE",
+    "name": { "str": "PSL 5-round magazine" },
+    "description": "A compact 5-round magazine for 7.62x54R PSL designated marksman's rifle, made of stamped sheet metal.  Not compatible with a Dragunov despite similar appearances.",
+    "weight": "60 g",
+    "volume": "320 ml",
+    "price": 3000,
+    "price_postapoc": 100,
+    "material": [ "steel" ],
+    "symbol": "#",
+    "color": "light_gray",
+    "ammo_type": [ "762R" ],
+    "flags": [ "MAG_COMPACT" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "762R": 5 } } ]
+  },
+  {
+    "id": "pslmag10",
+    "looks_like": "stanag30",
+    "type": "MAGAZINE",
+    "name": { "str": "PSL 10-round magazine" },
+    "description": "A compact 10-round magazine for 7.62x54R PSL designated marksman's rifle, made of stamped sheet metal.  Not compatible with a Dragunov despite similar appearances.",
+    "weight": "130 g",
+    "volume": "648 ml",
+    "price": 3000,
+    "price_postapoc": 100,
+    "material": [ "steel" ],
+    "symbol": "#",
+    "color": "light_gray",
+    "ammo_type": [ "762R" ],
+    "flags": [ "MAG_COMPACT" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "ammo_restriction": { "762R": 10 } } ]
+  },
+  {
+    "id": "nested_psl",
+    "type": "item_group",
+    "subtype": "collection",
+    "ammo": 100,
+    "entries": [
+      { "item": "psl", "charges-min": 0, "charges-max": 10 },
+      { "item": "pslmag10" },
+      { "item": "pslmag10", "prob": 50 },
+      { "item": "pslmag5", "prob": 50 },
+      { "group": "on_hand_762R" }
+    ]
+  },
+  {
+    "id": "guns_rifle_rare",
+    "type": "item_group",
+    "copy-from": "guns_rifle_rare",
+    "extend": { "items": [ { "group": "nested_psl", "prob": 5 } ] }
+  },
+  {
+    "id": "guns_rifle_obscure",
+    "type": "item_group",
+    "subtype": "distribution",
+    "copy-from": "guns_rifle_obscure",
+    "extend": { "items": [ { "group": "nested_psl", "prob": 10 } ] }
+  }
+]
