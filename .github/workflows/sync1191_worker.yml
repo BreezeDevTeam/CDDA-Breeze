@@ -1,4 +1,4 @@
-# 触发 #1191 第三轮旧基线运行时兼容修复
+# 触发 #1191 全量汉化与枪店枪弹配套修复
 name: sync1191-worker
 on:
   push:
@@ -7,110 +7,116 @@ on:
 permissions:
   contents: write
 jobs:
-  fix-legacy-runtime-data-round3:
+  localize-and-fix-gunstore:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           fetch-depth: 0
           ref: sync/upstream-interesting-batch-02
-      - name: 修复第三轮实际启动暴露的旧基线兼容问题并推送
+      - name: 全量汉化第二批新增文本并修复枪店枪弹配套
         shell: bash
         run: |
           set -euo pipefail
-          expected_head="6f9f65cc996c0493d0b901a540a8f46dbaa273f6"
+          expected_head="f35ce29ce4f7c80b40fb73bd0a881ceac13cc224"
           [[ "$(git rev-parse HEAD)" == "$expected_head" ]] || { echo "功能分支已移动" >&2; exit 1; }
           git config user.name "ChatGPT Sync Bot"
           git config user.email "actions@users.noreply.github.com"
+          cat > /tmp/pr1191_patch.b64 <<'B64'
+          H4sICBwGpmoCA3ByMTE5MV9sb2NhbGl6YXRpb25fZ3Vuc3RvcmUucGF0Y2gAzFtbb9tIln7vX8H1yzxEdixZkq196sHMzk4D2727mB4MFpNeoUSVJE4oUkNSUWsaC8jx/RbbiWM7viRx2rfcbCdx2/Id2J/SrSKpp/0Le06VJCuUlChxAwni6MIqnqpz+85XxVJcSSSkzs6kYkkd5HqcWOT630xdu57IGppiZQ0aJVo8alHDIIp2/UZPMHgj0Nt9I+APwOew+Az/e4KhG4Fu+N8bFJ9D2OaPik5+7NR7oyfkvxEI9N4IhIPic08AvgdFnwD8D4W6cPAOqSP2uUzlC0WL0++l3u5EoifY19XVHQwlIv6I5O/uDgeDX3R2dn5Gdvvi2rVrn5PtvvxS6gz4+qRr+PLll19IkvQDvkhSh5XP0I5/ljpqE+zwVVqUOL8eNXQ9HY0rt5Q4NaCxkzdqJM1vw0bJ2xinpmwoGUuBsaHPbyWLqKqUUahMJT0h1YaSsiaNS5ZeESChMFNSNLhi0gwxiEUlYlBidoHoa2+Na49elBf2y0tz9vzLWqNn3FKxUDo5KD9fZOtbztKg6Mx2DtjQ4f+dTjpz2/bqhj0+jt2Kz4RANjpsj86ws1P75boz8cJ5PgE3sslj9ujRL4XbNdOk9Vs0KuumFU3raKVOf7XFoH/PKgaNR03LgIa+6nUZ7jBIEufe1+3jDvH3oUf4q3AJdIsRMwVdKs6BCyAmmla0OlHVi+R7uNjTXbE5XtWzGneZmQYp/9ThaYkmiKJicy6VTWdqFq2/kd2bYffBNv3extq9zuO9OjtgkFg0bULLX6tXILLEVeyeUSC4fKh9VrOwl9TtkwLSd9L/+Jr2B/eRzNs3+H1Sj7ghfomQ9YnOZ3A9BxFGrWgmpVs6D3op9v4+FUyRI3IwHJK7ukgwHpcDwXpMaWMknuztjIZOD/ki0jV8qblchihP6kYe9Y/p+k2zFmVmPh3Tudl9HZdxpOqG8CIM403HH3hscMvjsEmwZqoDbXetea/y3VdscsgZ2nLGRjpqTukwNSWTgbnXT61eHbN1pkPs8VSXeX5Dspt6mlopRUtKusG/xPR4XlLSGd2wiGZh9lsp6JnTqOGTQJ6S1AQoxKhkkgRV85KVlW/CNQ4MRBIz6XpH1rPTx2xvWqgFmV4qjpdXn9iLu2z3iN15VCqelI6P3cKku11g56PlkSl3sx/SHC7ao/Ol4wln7CncxfaO2W6RjS6xjTN34IxtbrD5QXvuwL1YFmarB4QcVZIpDNgOf0BKJ2vXb+lqVgCWX0qrtcsZQ5HxanfLqE6TTJJq1+NGNhlVSawxpJt1qMRznxwJBOVIV1coLPcEe2ireG4qwhvMTTvxSO7z9UIo42vzioKIB3dXi52nrlQFNlQUbJBEw9uQz0YP7N27bOdh+dkk21mvTxNs/u/GHIkZEFaX/ajAbGgJtTJ7Zc7XZV27RTUMqagM79SAO9MZYjX6oa07Ko7p7vH3RfyBrq4+mcb8ke5WjmlPptdT7d2FrgtG0HX8tQpD3Gy1+4LRQDTQIVq+uzRrJt+ZMHRubYgJCkEclRUrH41lFTUOKd7gy0uRkphKg1NLp0vs1f1S8SW7GPB69HeNHs1TVdVzfGatK0LVEJ4A9H5Hs6SpIStEbe3WD5RRdbRMwyHaCxUlFifIet7j6A8dpZXrP1SOoCHBEIZD5b0aEB/mdtFVxfIVVZWb3LVmNJnVoqQhKOCqZFo6Z5oeUvfwGTteaPQ68KnaRfq9RTlbueRICZUkBQcR+oT9Qh/+XhfgYkIxJLSJOgpTu0y0JBWNNRO0mLlUEdFs+uzVRHnt4N02eWsKH2Lht0xy1fg3M5TGcyT/8dH/loRK7McCgQCJBbu6wj2xQCzQe9XYf3uMj438t6VwEAxwEAzUxUh7peuv4MaKtKg/2o10tfa9O+rv+JDUiWp61ISlD3Camw2JUpXaEGjuT8vu2SZbOfYi5s9zky1CRQAmr9vdvG53X0nvcDT42ekpGHG9pl6G8jGadoOmvrc8Hvq0ms+1oXk4jJrz16v42P/ZaeqJ5d4g6slfP17PXo+Hw5/aw4vv1buPY1ffVbHL/9np2RDJEY5Wkaui1dso3fupNZ9pR3OOXpG+K/o4+Nlp6ollfzcHK/H28ZoGPD4Oer73QFbXfw996iwvtBEDfj8HOPH28bbp8dgi5Pke8Ngm+Bnaxhs1AQ6B4u0q1T3gQYaeT6v57XaiooeDoni7iu49Ht0Dn53uXq+LnQu/d+uiLrKRtXzwCvadqsRUSuQUNcwGXZyVCTa918ZGlIq7g9GYmn3bj6Ferg1/+3g/9nliuM/j1z4Pv+mLhj1oEPn1/G7oJN5gp3L/Pfdwty2HC0slDYicekuFxRZFOHRFphfyML1eTwb0fiJLFNq2RG8PtwR/u0rMfCpNF9vWtK+yjeO/oqb+T6TpTPuaClTri1xRUy/D6ftEmq+3rXlEIGDkaggY+mTRvNKupgE/p/PirVnlCgIK/7p1K0OMm/jcTdWtxmcp/SvNq/C/NyoUBzmN+gQ4axdvH++5iKdWRTy1KuKJaegP+ey5o+FK6NfM+SThz+0beAyY7/heG+ZroG+BHk7qxdtVFrW9HsXDvy6FI5qmZzWZGpJpEf50tWHD++7L8qM3TShQWwWt1fa1KVONGIpuRrMZ0zIoSUfDIb8/3LhN/c6e1UcxQdkfCZCuLn+MhIgcabUd/W5Z3m3nd/cWx216QnjeBl6bPx6tivA8F00T04z+PQtBp1mKRqNge8Nq8M3X0Ev6z1qvxvxe33K3Bu3ttfLSnLN5cvngWVc0y6ycWGn6CP8vKapJf/iXr38rySSdMSUYQdKzFn+UnyEy5U/rSdZK6YZiKdQUZ3hyKWJJOWJKKk3wvtBLMaQ00TJ6DiLI0iUDD5JI2YyUoXpGBRmWlMxqfEJdkvQtSAVV40o2beLNeSmhGzJIppAPeV2j4ul/XIlLmi7OE+ApIVXPSXE9p/FZpUlco2AXAuNATJkZ8EtcwkcvUg7iPaEYFEb6Lz2L84KcjgsRSkYikD4SZgqXk9MN05JuKbpKIfylGGifh5uIQWHsnGRmDa4L3I8jaVQIAjOSDJX+nlXkm2q+dvymgzswWnXMV5r0rXgo3fTwAju75/bPlW9vOvtbdmGjdDzBxtecnTVnZpi9KjhLg+7MBlvZY8NTpaNHbO1hqThVKk7gyYWFAzyzcHYPurHxbWduu3Q8bK8U2MydytGGsYnKoaeHz9j0j/b4uL03WzpdcH86YKN7pWLB/enwl8Lt0sl86eQFto4V7JUxuBFGcS+WSzCx26+hYOAoU/v26zV34Ky8eGK/fOLM7zoTt925e+wE52AfHpaOXrGB6fLIHaf/OUi2Hx+y4ks2dchOC/bqBo5y9tjdObff3HePX7sXI2Kq9sC2MzAKs7WX9tn4Mh7cOBtmmzClcba8XF59wqYX2PIeTuBiqLx2wvbO2MXzcmGAjRyzOyd1x5Y8NmeP7pTvj7DhoVoaEHyKTONRVZfNCqzCx2glAOsgFJGYfm8ZhKfm91FZNzImNatw3n5aI6tolctKPK7yszIQXbDObFJrpu6WB8bBnmx9vjGVW2Xy77MGpgmErlENTgzjpG4BJYAAx+ClPIwhKSEbeegbOmcMMgd8yJZ/pZaQEKMExYnsShPIKSJlVKKJjPqNqopEUPjBnGaRf6nmNx41PfMGj5aO18qFuVLxJQbKxSHEB7AvjC0e0Bivx8Pi2B7bmWRD25AG7u4GxBae1lvZs+ePIMjY0Cg7HbSLQ+7IM3b4yj1+zla2S2f32fogxtDwlD3wBiS4O2ts9C6b2eIB97h0ulReKbib/WxnAKSJQz7NoqqpU1oEVprrHtUT0aqLpe8+OIRMCkjaIoZ+l8JDUVqSSp3Sv6Fz/wyONZIcpxrL9uSsPbr4c2EO/sC6bP0V2AxgpP3Q4kUC4wVmaZlYKShCIA+UlJ6mPh5pWDqyl/PgkZNS4hAx3yBskzyUCwI8p4autbBMQbBJeMgyTTVLonJKx0hWxJjIR7s+Dl4BWQCbBFRBFLGdg/LCNqIhR0/wPsQegJ0wB2ATBt5PhwKz2Mhjtv4U0IpjDXZmh6+dk2lhQQg5NjOLcTX9DE+Lzbxwt/rLJ7P20gIebll+6E6tOasF+9GMszVl758gRkOs/rjH7k21jrH2kQtj491BxQVXM9sbWvXo542tP9Wue47uVEtCTViVs9YdB+2oSI0mdN2Kwez5Yydf6+YAb+aPb8M+f490Tby14FDvVaox81rD7zcfAr91uvJ5WDSKC67aiQDg1EkaRWpoYRDjddGSyUESZ2NRE79AclBVka1oxtAz1LDyeDFnRg2aBIWIGo1n05nqs40cAcYFpB2PRF/V1zxeGjxduerxc3HC3tuHFXAL3etD7wt4b0XrxaFS87o4QtqEzTfpUCHx4Xgo3BMEEp8Iy7Fuf6IliW8mooG7N+vEn5pDoEWka+LtcmEG9b8+on+4PLlcsWj1aKw49Mrjt7PWpXJ7x7cpxZTgj1SOyCLMyXi2HYomnwhGIDYqYtUOmAivOR2oKhJjDZdrQGOtlBSDVIGbEhRKM1Zgi1dwXYAjMTNQCiwhLG4otyAO8z74DJxZvinJek7FtpiqI8wS4OgJABR+PBeINgCvARSeWPj+NyLfpFanrAKJNlN6VoVgNQG8/4KTwLFMamE8AiHWfi48ADDHBZ5k0IRKZd6gJxKiY9ZIEHH2n8AQahpmbsL1lK7GTVEiJKT4xEj7sIFLk4mZBUPlcT4aSiNJiDksEBImS4bGO4G3pMFyhpyXVag5Ka4AzpbPBG5VNFlV8DgxrExwQFAD6xUB/UG5ziQUHLR/0sDSoueIEeeLD17QDAK6Qj1RdT2Dw6fABzmDZ6CPd4qBCCRQleVO7dAz+lnDshPDhVHVWBgHPulGx+9BJ2L6JH8k0tN1o+OGBv8gOPRsMgXD8uV2CmYLWML9Cj2/AnNgwKg5rJgyMYw8r5hcdJqCkI7qaf26eHMvHtiLu7XD0HgeGtlMPysO2Cdr9viis3AfrohD0kjJBZ062nfPTtjGGyT+xU2oWGx12nkx6zx/AOTJPdsEGECG/nqjvHoXyiSw8lJxHMpeeXWfvZxxi0/Z+YKz/Qb/lpBm2T/dY7vD+OuLkVk2PWuPIwlzlnbY+hEbmnBvP2Xr+1hc1++XF9/Yi4+hlW0cYSsMNzQB2INlcn3fWZ4TA0FreWnaHpxmhSWYHi5czoftuV2o0zix2af22CLME3ue7+Bf/zTcjl93j8r3V+BzeeU1rBjsg9twO1Rod+w1mxthZ0/RGi9mYTLCJu4AKPUEFkzuxUPnxRx7ucCGH8AtIOqXwqR7fm5PjNnzyErRlXDbL4Up9CY0Og8mnYURd+epPToLqyk2OgxrcLGewSunS/Ze0b1Ywd+eAIsobqKux8/d8yMhpaOKMJe/kngv6ASags4fDGBUnfGsibGUISZ2FQweQzKBhB6+87SE5TaF5IJEADRAUgarfcOkfEGtAowgvEBkV8bzVQI7p/Pk4fkJZe4SqSpcDaVW2F8c5Jv8FD/EsHwzD/PRrOpywpJTAt/40AJ5TF9lFwFgAfrF+C4EogRuAFCDg0Q9Ln1VoYcKTkKmPo41Bk/POAWpkF38NwUU5imraBMDphPLI+rStII7Zf+AJhXWNpUNCQAtXBbB2gh/uFDNc9Qn8xsTWnOaieLSfB8Bf9AAWKYRsA/HLRnYsIm7GoDyN02BuggZHHWFD4glmLKMWkhmDmivD5diAHmmUFaMmeaYgPOUEbcBeLGB5sF5MWrlqGDjIDaWjXPzg2lVsAqfnYnTS5FbMHOUCFPULUUWqnPcwurDrZkx6C1Fz5ri1xhdTWFlcxhywJ0fLK+sYMKMbQEBZHdhOfXCXthwtgvOPAKN/XDBOV20Hw7aozNIoi8eAAyJvMJNjIFJ+8Eupv3YFHwoj0yWiuuAPs4cLPWOnacXiDtTa2zowP1xHYXPTNovzmEId+1HzOSJcwAOe+YlyMHNkLtbbHEfQWq1ADIhscQKD6DBOV8vH124/UsIK1Pjzsk9NryH0zuaF9kmpsTuPBJrR/HTkNLpaenojlhZ2q/X7DfbCDejfOdh6ADpPCwFpgErT1H48XP8fcn9Cw5GU7DWdAYP0DKvF5D+7+I+hlvgy4XpWffZPXfkDdubxa0VgObpZygT5ja6BBIAlRAoQebW3dLRRHlh371YZOtLYrHLpiedlVNndRmXCx+BED3voSWGqPp8X+w/dJUYulJhJr4aUeFbZBBKvOpncG2Wh5DFIMQrCSjnlU2xrFb5AtluZmUZUl/sJ+AvhBT1kuAgvalDBtxsRLTpjBskBtSEMwozi7t5iCxmI674YFJQrWvRDDQaJOq6gVt6iGya9Oc/dvqlP2ZpHrmHIusZC39qRCQo/7donBd2RLEML/McQuB27FAZv8JYsFsmCzSCEw8wAgHqwfMmqSeTKuQiMHg5VWVjaFhkIz5+IwFQy2oWzjGbjpkoIa4YwJP45mFz5mGmCMBkc97RyDnSsPqoJxwy4cte5Bx/oqByOgbe9XdbKd//PvZHwr0V8oHjICFFxOdLZR8HO0AKrhqObFEuxbQUoCFpBVwpAB7QUTj1ayIYSQJQDzRXcMeYUzHDMtugJ+UnI6XicfnBqL2Av9NkO6ul4hkkJNKHxXNIJ8gBICZwxX3ynE1PsfUp4C9Q8Nn0KHt1n51iTUZSs7greI2HztTDiv100N4cdE4uoOyXf3zork3aK1O4McrhQ9AcHjBQxkunUKvHoSA7y/tsasReObbvP4TREMFGX+HOwdiUwBlIZHt03x6bYBsLCC9jE/b4PcRJ3g3pER9K8BgANPsOpPxe+ckqXAH0wKwXHWYX7fF1Z3kHmAoIRGTgHRBDLhad1+fOxkM21e8evEHcqxIa5/k8GmN9y54YsSdHGhlM+cm6PT6Ppn254F4c1fMYjASwUsReGfV3A4Jf8higXnA3DCuwCi0FZuA0EsSIu0snU9w9r9ziM7jTHrwAnBPkBhRyLuZAgwoHuhgA4Px4fhNsjV64/48JBMEHdMCqrKaS5B+08ltivrGJG01Q6mN5gBqzAgywuIRMh4SCTDGhihPtpiA2yIL+v703bW7jTLJGv/evQOh+8Icm1SQlipLjxr0j2+q2u72F5Z6OmbcnGAWgQJYJoNBYJNMdE8FFJMGdFPd910ZxFcUNXCLm/pM7rCrg0/yFmyfzqUKBImlbrV7evoqgZYko1P5knsw8eZLipXrX6miBWCYVypBR9JktXmka2cZMyIgY32Oh1rHvZaSCM4vroQZ/wMQnEagju4mwRhODo8m2FNyn0rLAU2ZUj8WNNNsvfKZ/n0iKBcVCT5kRWpEedOFoEkZVV4YmTSiqIaq7F4IdoOjGdySA0EP9ErAKQRPBuwgHRSmTz6j8IRk7wmPRcLEkEjX+lDHC1y9ZybSGz3J99J7aowd2d6+AduVaNw6sjnbyYNb6stXeZu+MOctH9tY8VsnmDr1geG225undoLUneB7rtnnFWlrHm+ZbwFhGi1nyinZPCwOEZnoP7dld7GETm9EPHR3Z4Rxe9nzbZmGiDQs0N2pPv4T5aGl1niMYoWVkt7aRNeHDzVCYQOvfnsPShLM9hNN2mjfJRojLJYRSGHuBg7Z1co6vJ9/RYq8tFbvHXw8SELAPTgtNskCeUzRE94ROjC7N7tqS6srbvPnVF775dwNcV4afTCifq0f1Ok29WuS601qQXoI0odkUEvzn0Dj7D+B5cfBBnV6VsLz05z0qY3KD1gnHCfS6G0C19UaCHQTBTbzFaN0vkzAixujXdepYKTg7yWQgy5vSaRmES9YFPuO91UvFTqJ3BCTYt7hTBMaZVJD2VYL8vWiGl5Xu7giYAfclGePXmxcawexQQ1ozouT5UT+FCyPnq7nrLkHAHLg+qesq5kjCjRISJ9SdRv8ibMyPBCJluIl044O6FsNRER7RnsJm0sXoSIWkLlxKaskwKC56x6FDeKaJY4rcKX63B9vz6yfkCvIdO/AbywP2Qg/eyYE+5KCzcKuFlvX88Tp9ZPW14W1sbyu0PhOnSOtROcK1JesI7yotLor3rYNdwtQEVK2ZAY6ykQGg15vci6yswgxi87P9rLW8SluKU/I8a37lNL/UJq6PlsbZ/gm98IX9BWvzpND22J7ZoLMlEP0/R1NA+vgKXxRvX2g9JuctPs0e4KW9cUDXAqf3aB9Whde703zqtLZ4QfrbLKVbFy6lb/RUIopCGMFZDz15L/0DQ38ob34cryUFjsEy39Lhhx8zwmpZsTui5443XOxznQZsiD0oz6F764H+VsegG9vqWJylEPC3mTA7FLUOAWg5GEV5nI6LlxNIWtXCfW+kciMo14fL8baqlxBZJAWa3VUDx8JVbjrBmJwBlmkgQldNWLmBFljQTKeBboNJxPbAv1JTT0sGrxHexYiWqfQjhdLBaKMKJ80gGSFA2GiEz95UkUI4mYk36HF47ERSexilXar8ZSRKHlmF3+qx8b70MDIVHMUGEe4Go5lkUhm+GHwjAm5JCzJdgdZ2wsTCxqlyJhAOX49EEKUjHobeCJMGoDSh0cfc/onbQEg3U6cl/3gNF5DBkk8aDHnFG8KsenEIsLg8ekD2NFmP7zKcoiTsHtPlcRmwFmLOMtG0inOYZKBi7ytsAfkzLBKxBeuEtKatwzEvtvW8Iy1Xu2eZ1qcAQsGlVu88rSvyZ85wjvN0a2IFnOluqfKLzAktOQTptP8pcsbN4s8QjLOPLCyNW6fHQJstOVp4AkQJEVorxxQFO0O7tLyBylv7reklWudS7i+sjtOPWAH+ygSdLQxK84DdNOI8yRXaO62mx8C305tnB3MInE+n6VSL2PXkwDkah1Fj1J9vXTg72LKfLTivushJ55earWxH/hTqDsC9T1qA/Vtf2X3Pz477Jb1AZlGyk4WWJQTsh08LLx5ZLduFyXbJFSJR92rU2e4kSIoM6dYWMhL9tJ9pdc4jL6zlR6BeELwf38ivP1cGun/cOhkjNOy8mntLS1RzCZy90EdTWEYWqgTd0m8jFI35472GuK5zYE1vbcSIqmy7GJ06I0kLNEg7jbrvH/lCk9YcbaSSbgRHyd+5hQkzIxk5BQy0AJg2uAgmAtE2Qa0updZpUEvii3y8oFFXXodXvz4TZ6+bNCJ0LnDlqWKVAt8wlOeMGgmxHQ91DZ9zJK6sJ51oJKJzmEkWlU2Nm2xEWcSQ+kNQT7mrmWErndanejQRyQCHoMbgxvXSv00QoxEFAfyGbg/dPokV0vVJzsKz7YStJ19eTMEFXGSR0KIxTplcCFP4MHS3Bc0wIAeqwbN7mBIQQzeSniCt/wbfZfP2QTOaVgylMP8qTU8VmzNuQD0uVebSkcQBKOvGiQ/YmAQhEBPBiylFA7Cn6ARDeHA/hj4EyNv7bfbEZhG/uxk6MTrA5rRUCC+sPc8vHcBX903SD6OMlwQB2O6M5Ntn8nsvGC80WfOvz477nLl1rhtM5Be7rcUJWtiCR+zhDVrA1my309Nnz77g1OELZ33BHlhD7Ij1PCS2AHueGZD6ALD2WLOAF6CJl4O0IK2TrL3/nFA8ttxfp82cZ6/IHNAOaXusbT5tQuhkOJzZR1bbXv5pi7UxJ9V/tSskATmeJyDDwCf/pF0OSr8R1GOPTOCfTX1k6eyh3rPjaTqEPT8kxCayZc7cSqF5SBnZ/tWzXNPZQVby/8gDnmTJyoAkwPwBNu6jtGdrGNaTzGt+fZMuhx4HYSV6IgSChML1lrbm9oW25mtPIEgZEfFKhHsRQJDPihoP/MBeDEnQbMSyU0uZrIKWrGOsGyd7ANAc4uy2Co0JLYQoMEftASGlLHpv2fo9vruG642YimLrTDMi6x1FTpWs18gwEXCHUcR7jIWuAlnB6rQhR0OKb0L7zkR[... ELLIPSIZATION ...]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
+          B64
+          tr -d '[:space:]' < /tmp/pr1191_patch.b64 | base64 -d > /tmp/pr1191_patch.gz
+          gzip -dc /tmp/pr1191_patch.gz > /tmp/pr1191_patch.diff
+          git apply --check /tmp/pr1191_patch.diff
+          git apply /tmp/pr1191_patch.diff
           python - <<'PY'
           from pathlib import Path
           import json
 
-          # 65097：屋顶实际引用的是通用 roof_palette，而不是 convention_center_palette。
-          # 将 v 直接映射到旧基线已有的向下梯子，修复会展中心屋顶 #v# 报错。
-          roof = Path('data/json/mapgen_palettes/roof_palette.json')
-          s = roof.read_text(encoding='utf-8')
-          if '"v": "t_ladder_down"' in s:
-              raise SystemExit('roof_palette 已存在 v 映射，拒绝重复修改')
-          old = '      "y": "t_null"\n    },'
-          new = '      "y": "t_null",\n      "v": "t_ladder_down"\n    },'
-          if s.count(old) != 1:
-              raise SystemExit('roof_palette v 映射插入点不符合预期')
-          roof.write_text(s.replace(old, new, 1), encoding='utf-8')
-
-          # 66402：新版赛车场屋顶使用 t_stairs_down_no_roof，微风 12.0 没有这个地形。
-          # 旧版 t_stairs_down 是最接近且已存在的向下楼梯。
-          speedway = Path('data/json/mapgen/speedway.json')
-          s = speedway.read_text(encoding='utf-8')
-          if s.count('t_stairs_down_no_roof') != 1:
-              raise SystemExit('赛车场新版楼梯地形引用数量异常')
-          speedway.write_text(s.replace('t_stairs_down_no_roof', 't_stairs_down'), encoding='utf-8')
-
-          # 67328：wallet_photo 虽有 BANK_NOTE_SHAPED，但旧基线钱包使用显式 item_restriction，
-          # 因此还必须把照片加入钱包的折叠夹层白名单。三处分别对应普通/大号/旅行钱包结构。
-          generic = Path('data/json/items/generic.json')
-          s = generic.read_text(encoding='utf-8')
-          old = '          "family_photo",\n          "money_one",'
-          new = '          "family_photo",\n          "wallet_photo",\n          "money_one",'
-          if s.count(old) != 3:
-              raise SystemExit(f'钱包夹层插入点数量异常: {s.count(old)}')
-          generic.write_text(s.replace(old, new), encoding='utf-8')
-
-          # 79285：枪店地图来自更晚的上游数据，清理微风 12.0 中不存在的物品、物品组和墙体 ID。
-          # 这里优先映射到旧基线已有且语义接近的对象，避免额外引入新版物品依赖链。
-          gunstore = Path('data/json/mapgen_palettes/upstream_79285_gunstore.json')
-          s = gunstore.read_text(encoding='utf-8')
-          replacements = [
-              ('t_wall_gray', 't_wall', 3),
-              ('t_wall_black', 't_brick_wall', 3),
-              ('gun_lock', 'lock', 2),
-              ('ammo_casings_gunsmith_bulk', 'ammo_casings_bulk', 4),
-              ('blister_pack', 'wrapper', 1),
-              ('bag_plastic_small', 'bag_plastic', 1),
+          touched = [
+            'data/json/furniture_and_terrain/上游兼容_房间隔断.json',
+            'data/json/items/wallet_photo.json',
+            'data/json/mapgen/drug_lab.json',
+            'data/json/overmap/convention_center_compat.json',
+            'data/json/overmap/overmap_terrain/overmap_terrain_commercial.json',
+            'data/json/overmap/overmap_terrain/overmap_terrain_speedway.json',
+            'data/json/scenarios_upstream_65116.json',
+            'data/json/snippets/photos.json',
+            'data/json/survivor_forest_camp_support.json',
+            'data/json/z_upstream_sync/第二批/60972_PSL步枪.json',
+            'data/json/z_upstream_sync/第二批/61173_兽装丧尸.json',
+            'data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json',
+            'data/json/z_upstream_sync/第二批/62688_矿井多结局.json',
+            'data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json',
+            'data/json/上游兼容_个人照片标志.json',
           ]
-          for old, new, expected in replacements:
-              count = s.count(old)
-              if count != expected:
-                  raise SystemExit(f'枪店兼容引用数量异常: {old} = {count}, 预期 {expected}')
-              s = s.replace(old, new)
-          gunstore.write_text(s, encoding='utf-8')
-
-          touched = [roof, speedway, generic, gunstore]
-          for path in touched:
+          for raw in touched:
+              path = Path(raw)
               json.loads(path.read_text(encoding='utf-8'))
 
-          # 对本轮用户实际看到的所有错误做反向断言，同时把同批枪店下一个明显缺失的
-          # blister_pack 一并清掉，避免修完一个又弹出下一个。
-          forbidden = {
-              't_stairs_down_no_roof',
-              't_wall_gray',
-              't_wall_black',
-              'gun_lock',
-              'ammo_casings_gunsmith_bulk',
-              'blister_pack',
-              'bag_plastic_small',
-          }
+          # 用户可见文本回归检查：这些英文原文均来自本 PR 新增内容，汉化后不得残留。
+          forbidden = [
+              'updated Enfield rifle',
+              'An evolution of Britten',
+              'Enfield battle rifle',
+              'A steel 10-round magazine',
+              'malicious mane',
+              'feral archaeologist',
+              'Mass Quarantine',
+              'Middle of nowhere',
+              'Challenge - Lost Underground',
+              'room divider',
+              'A tall piece of furniture used to divide rooms',
+              'A small picture of something or somebody important to the owner',
+          ]
           bad = []
-          for path in Path('data/json').rglob('*.json'):
-              text = path.read_text(encoding='utf-8')
+          for raw in touched:
+              text = Path(raw).read_text(encoding='utf-8')
               for token in forbidden:
                   if token in text:
-                      bad.append(f'{path}: {token}')
+                      bad.append(f'{raw}: {token}')
           if bad:
-              raise SystemExit('仍存在本轮旧基线缺失引用:\n' + '\n'.join(bad))
+              raise SystemExit('仍残留本次应汉化的英文文本:\n' + '\n'.join(bad))
 
-          if '"v": "t_ladder_down"' not in roof.read_text(encoding='utf-8'):
-              raise SystemExit('roof_palette 的 v -> t_ladder_down 写入失败')
-          if generic.read_text(encoding='utf-8').count('"wallet_photo"') < 3:
-              raise SystemExit('钱包夹层没有完整接纳 wallet_photo')
+          # 79285 枪店移植兼容：后仓“盒装枪”不得继续退化为只出空枪的 display 组。
+          compat = json.loads(Path('data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json').read_text(encoding='utf-8'))
+          boxed = next((x for x in compat if x.get('id') == 'guns_common_boxed'), None)
+          if boxed is None:
+              raise SystemExit('缺少 guns_common_boxed')
+          if boxed.get('subtype') == 'collection':
+              raise SystemExit('guns_common_boxed 仍是错误的 collection 兼容')
+          items = boxed.get('items', [])
+          expected = {'guns_pistol_common': 90, 'guns_rifle_common': 30, 'guns_shotgun_common': 3}
+          actual = {x.get('group'): x.get('prob') for x in items if 'group' in x}
+          if actual != expected:
+              raise SystemExit(f'guns_common_boxed 权重异常: {actual}')
+          if any(x.get('group') == 'guns_common_display' for x in items):
+              raise SystemExit('guns_common_boxed 仍引用空枪展示组')
+
+          # 本轮没有触碰此前赛车场屋顶兼容，确保第四轮修复仍存在。
+          roof = Path('data/json/mapgen_palettes/roof_palette.json').read_text(encoding='utf-8')
+          for required in ['"+": "t_door_metal_c"', '">": "t_stairs_down"', '"v": "t_ladder_down"']:
+              if required not in roof:
+                  raise SystemExit(f'roof_palette 回归: {required}')
           PY
           git diff --check
           git diff --stat
           git add -- \
-            'data/json/mapgen_palettes/roof_palette.json' \
-            'data/json/mapgen/speedway.json' \
-            'data/json/items/generic.json' \
-            'data/json/mapgen_palettes/upstream_79285_gunstore.json'
+            'data/json/furniture_and_terrain/上游兼容_房间隔断.json' \
+            'data/json/items/wallet_photo.json' \
+            'data/json/mapgen/drug_lab.json' \
+            'data/json/overmap/convention_center_compat.json' \
+            'data/json/overmap/overmap_terrain/overmap_terrain_commercial.json' \
+            'data/json/overmap/overmap_terrain/overmap_terrain_speedway.json' \
+            'data/json/scenarios_upstream_65116.json' \
+            'data/json/snippets/photos.json' \
+            'data/json/survivor_forest_camp_support.json' \
+            'data/json/z_upstream_sync/第二批/60972_PSL步枪.json' \
+            'data/json/z_upstream_sync/第二批/61173_兽装丧尸.json' \
+            'data/json/z_upstream_sync/第二批/62174_303英制弹药与恩菲尔德步枪.json' \
+            'data/json/z_upstream_sync/第二批/62688_矿井多结局.json' \
+            'data/json/z_upstream_sync/第二批/79285_枪店物品组兼容.json' \
+            'data/json/上游兼容_个人照片标志.json'
           git diff --cached --check
-          git commit -m "修复测试版第三轮运行时兼容问题"
+          git commit -m "汉化第二批上游内容并修复枪店枪弹配套"
           git push origin HEAD:sync/upstream-interesting-batch-02
