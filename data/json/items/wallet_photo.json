@@ -1,0 +1,18 @@
+[
+  {
+    "type": "GENERIC",
+    "id": "wallet_photo",
+    "category": "books",
+    "symbol": ",",
+    "color": "white",
+    "name": { "str": "照片" },
+    "snippet_category": "wallet_photos",
+    "description": "一张小照片，拍着对原主人很重要的人或事物，尺寸正适合妥帖地塞进钱包里。",
+    "weight": "12 mg",
+    "volume": "1 ml",
+    "price": 0,
+    "price_postapoc": 0,
+    "material": [ "paper" ],
+    "flags": [ "TRADER_AVOID", "BANK_NOTE_SHAPED" ]
+  }
+]

@@ -1,0 +1,244 @@
+[
+  {
+    "type": "ammunition_type",
+    "id": "303",
+    "name": ".303英制",
+    "default": "303_bthp"
+  },
+  {
+    "id": "303_casing",
+    "copy-from": "casing",
+    "looks_like": "223_casing",
+    "type": "GENERIC",
+    "name": { "str": ".303弹壳" },
+    "description": "一枚打空的 .303 弹壳。",
+    "weight": "7 g",
+    "volume": "10ml"
+  },
+  {
+    "id": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 BTHP弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 174 格令船尾空尖弹头。船尾外形能在远距离降低空气阻力并提高稳定性，因此很适合竞赛射击。",
+    "weight": "25 g",
+    "volume": "287 ml",
+    "price": 160,
+    "price_postapoc": 250,
+    "flags": [ "IRREPLACEABLE_CONSUMABLE" ],
+    "material": [ "brass", "powder" ],
+    "symbol": "=",
+    "color": "yellow",
+    "count": 20,
+    "stack_size": 20,
+    "ammo_type": "303",
+    "casing": "303_casing",
+    "range": 42,
+    "damage": {
+      "damage_type": "bullet",
+      "amount": 51,
+      "armor_penetration": 6,
+      "barrels": [
+        { "barrel_length": "27 mm", "amount": 16 }, { "barrel_length": "30 mm", "amount": 17 },
+        { "barrel_length": "35 mm", "amount": 18 }, { "barrel_length": "38 mm", "amount": 19 },
+        { "barrel_length": "41 mm", "amount": 20 }, { "barrel_length": "46 mm", "amount": 22 },
+        { "barrel_length": "51 mm", "amount": 23 }, { "barrel_length": "56 mm", "amount": 24 },
+        { "barrel_length": "61 mm", "amount": 25 }, { "barrel_length": "68 mm", "amount": 27 },
+        { "barrel_length": "74 mm", "amount": 28 }, { "barrel_length": "82 mm", "amount": 29 },
+        { "barrel_length": "90 mm", "amount": 31 }, { "barrel_length": "99 mm", "amount": 32 },
+        { "barrel_length": "108 mm", "amount": 33 }, { "barrel_length": "119 mm", "amount": 35 },
+        { "barrel_length": "130 mm", "amount": 36 }, { "barrel_length": "142 mm", "amount": 37 },
+        { "barrel_length": "156 mm", "amount": 39 }, { "barrel_length": "170 mm", "amount": 40 },
+        { "barrel_length": "187 mm", "amount": 41 }, { "barrel_length": "204 mm", "amount": 43 },
+        { "barrel_length": "224 mm", "amount": 44 }, { "barrel_length": "246 mm", "amount": 45 },
+        { "barrel_length": "270 mm", "amount": 47 }, { "barrel_length": "297 mm", "amount": 48 },
+        { "barrel_length": "327 mm", "amount": 49 }, { "barrel_length": "360 mm", "amount": 51 },
+        { "barrel_length": "398 mm", "amount": 52 }, { "barrel_length": "441 mm", "amount": 53 },
+        { "barrel_length": "459 mm", "amount": 54 }
+      ]
+    },
+    "dispersion": 25,
+    "recoil": 3400,
+    "effects": [ "COOKOFF" ]
+  },
+  {
+    "id": "303_sp",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 SP弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 180 格令单芯软尖弹头。裸露的铅质弹尖能让弹头命中目标后产生更明显的膨胀，形成更大的创道。",
+    "relative": { "damage": { "damage_type": "bullet", "amount": 5, "armor_penetration": -6 } }
+  },
+  {
+    "id": "303_fmjbt",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 FMJ弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 174 格令单芯全金属被甲弹头。坚固的金属被甲能提高穿透厚实材料的能力，但几乎不会膨胀，因此总体杀伤略低。",
+    "relative": { "damage": { "damage_type": "bullet", "amount": -4, "armor_penetration": 8 } }
+  },
+  {
+    "id": "bp_303",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 BTHP黑火药弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 174 格令船尾空尖弹头。船尾外形能在远距离降低空气阻力并提高稳定性，因此很适合竞赛射击。这发弹药仿照十九世纪早期版本改用黑火药装填，射速更低、枪口烟雾更明显，也会让枪管更快积垢。",
+    "proportional": { "price": 0.3, "damage": { "damage_type": "bullet", "amount": 0.76, "armor_penetration": 0.5 }, "recoil": 0.76, "dispersion": 1.2 },
+    "extend": { "effects": [ "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "bp_303sp",
+    "copy-from": "303_sp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 SP黑火药弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 180 格令单芯软尖弹头。裸露的铅质弹尖能让弹头命中目标后产生更明显的膨胀，形成更大的创道。这发弹药仿照十九世纪早期版本改用黑火药装填，射速更低、枪口烟雾更明显，也会让枪管更快积垢。",
+    "proportional": { "price": 0.3, "damage": { "damage_type": "bullet", "amount": 0.76, "armor_penetration": 0.5 }, "recoil": 0.76, "dispersion": 1.2 },
+    "extend": { "effects": [ "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "bp_303fmj",
+    "copy-from": "303_fmjbt",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 FMJ黑火药弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 174 格令单芯全金属被甲弹头。坚固的金属被甲能提高穿透厚实材料的能力，但几乎不会膨胀，因此总体杀伤略低。这发弹药仿照十九世纪早期版本改用黑火药装填，射速更低、枪口烟雾更明显，也会让枪管更快积垢。",
+    "proportional": { "price": 0.3, "damage": { "damage_type": "bullet", "amount": 0.76, "armor_penetration": 0.5 }, "recoil": 0.76, "dispersion": 1.2 },
+    "extend": { "effects": [ "RECYCLED", "BLACKPOWDER", "MUZZLE_SMOKE" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "reloaded_303",
+    "copy-from": "303_bthp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 BTHP复装弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 174 格令船尾空尖弹头。船尾外形能在远距离降低空气阻力并提高稳定性，因此很适合竞赛射击。这一发由幸存者或灾变前的射击爱好者手工复装，性能比工厂生产的弹药稍差。",
+    "proportional": { "price": 0.7, "damage": { "damage_type": "bullet", "amount": 0.9 }, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "reloaded_303sp",
+    "copy-from": "303_sp",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 SP复装弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 180 格令单芯软尖弹头。裸露的铅质弹尖能让弹头命中目标后产生更明显的膨胀，形成更大的创道。这一发由幸存者或灾变前的射击爱好者手工复装，性能比工厂生产的弹药稍差。",
+    "proportional": { "price": 0.7, "damage": { "damage_type": "bullet", "amount": 0.9 }, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "reloaded_303fmj",
+    "copy-from": "303_fmjbt",
+    "type": "AMMO",
+    "name": { "str_sp": ".303英制 FMJ复装弹" },
+    "description": "大英帝国在十九、二十世纪长期使用的标准军用弹药，从早期的瓶颈式黑火药弹发展为采用尖头弹头与无烟火药的现代弹种。这是一发现代生产的 .303 口径弹药，装填 174 格令单芯全金属被甲弹头。坚固的金属被甲能提高穿透厚实材料的能力，但几乎不会膨胀，因此总体杀伤略低。这一发由幸存者或灾变前的射击爱好者手工复装，性能比工厂生产的弹药稍差。",
+    "proportional": { "price": 0.7, "damage": { "damage_type": "bullet", "amount": 0.9 }, "dispersion": 1.1 },
+    "extend": { "effects": [ "RECYCLED" ] },
+    "delete": { "effects": [ "NEVER_MISFIRES" ], "flags": [ "IRREPLACEABLE_CONSUMABLE" ] }
+  },
+  {
+    "id": "smle_mk3",
+    "copy-from": "rifle_manual",
+    "looks_like": "ar15",
+    "type": "GUN",
+    "name": { "str": "恩菲尔德战斗步枪" },
+    "description": "这款栓动步枪是两次世界大战中的标志性武器，曾随英联邦军队征战欧洲乃至更远地区。它使用 .303 口径弹药和 10 发恩菲尔德弹匣，其名声早已无需多言。",
+    "variant_type": "gun",
+    "variants": [ { "id": "smle_mk3", "name": { "str": "SMLE No. 1 Mk III" }, "description": "短弹匣李-恩菲尔德 Mk III 是英国人钟爱的名枪，也是第一次世界大战的象征之一，自 1907 年起成为英联邦标准制式步枪。它发射 .303 弹药，使用 10 发可拆卸弹匣。全长木质护木、黄铜托底板和顺滑枪机让它无论出现在大战战壕里，还是遍布丧尸的废土上，都一眼可认。", "weight": 1 } ],
+    "weight": "3960 g", "volume": "3000 ml", "longest_side": "1132 mm", "barrel_length": "640 mm",
+    "price": 57375, "price_postapoc": 3000, "to_hit": -1, "melee_damage": { "bash": 12 },
+    "material": [ "steel", "wood" ], "color": "brown", "ammo": [ "303" ], "dispersion": 170,
+    "durability": 8, "blackpowder_tolerance": 40,
+    "valid_mod_locations": [ [ "accessories", 4 ], [ "barrel", 1 ], [ "bore", 1 ], [ "brass catcher", 1 ], [ "mechanism", 4 ], [ "muzzle", 1 ], [ "sights mount", 1 ], [ "sling", 1 ], [ "grip mount", 1 ], [ "rail mount", 1 ], [ "stock mount", 1 ], [ "stock accessory", 2 ], [ "underbarrel", 1 ] ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "enfield_303mag" ] } ]
+  },
+  {
+    "id": "number4_mki",
+    "copy-from": "rifle_manual",
+    "looks_like": "ar15",
+    "type": "GUN",
+    "name": { "str": "改进型恩菲尔德步枪" },
+    "description": "这是英国第一次世界大战制式步枪的后续改进型，仍然使用与前代相同的 .303 口径弹药。这类栓动步枪深受世界各地收藏家喜爱，并作为英国步兵步枪一直服役到 20 世纪 50 年代，其专门的狙击型甚至持续服役到 90 年代初。",
+    "variant_type": "gun",
+    "variants": [ { "id": "number4_mki", "name": { "str": "Lee-Enfield No. 4 Mk I" }, "description": "No. 4 是英联邦李-恩菲尔德战斗步枪在第二次世界大战时期的改进型，自 1939 年起开始了长达数十年的服役生涯。它外形与前代相近，但采用加强机匣、调整后的前端结构和更重的枪管，仍发射相同的 .303 口径弹药。No. 4 也成为美国历史上进口数量极大的枪械之一。", "weight": 1 } ],
+    "weight": "4110 g", "volume": "3000 ml", "longest_side": "1129 mm", "barrel_length": "640 mm",
+    "price": 57375, "price_postapoc": 3000, "to_hit": -1, "melee_damage": { "bash": 12 },
+    "material": [ "steel", "wood" ], "color": "brown", "ammo": [ "303" ], "dispersion": 150,
+    "durability": 8, "blackpowder_tolerance": 40,
+    "valid_mod_locations": [ [ "accessories", 4 ], [ "barrel", 1 ], [ "bore", 1 ], [ "brass catcher", 1 ], [ "mechanism", 4 ], [ "muzzle", 1 ], [ "sights mount", 1 ], [ "sling", 1 ], [ "grip mount", 1 ], [ "rail mount", 1 ], [ "stock mount", 1 ], [ "stock accessory", 2 ], [ "underbarrel", 1 ] ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE_WELL", "item_restriction": [ "enfield_303mag" ] } ]
+  },
+  {
+    "id": "enfield_303mag", "looks_like": "stanag30", "type": "MAGAZINE",
+    "name": { "str": "10发恩菲尔德弹匣" },
+    "description": "一种钢制 10 发弹匣，供 .303 口径恩菲尔德步枪使用。",
+    "weight": "157 g", "volume": "300 ml", "longest_side": "100 mm", "price": 6445, "price_postapoc": 500,
+    "material": [ "steel" ], "symbol": "#", "color": "light_gray", "ammo_type": [ "303" ], "flags": [ "MAG_COMPACT" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "rigid": true, "allowed_speedloaders": [ "clip303_5rd" ], "ammo_restriction": { "303": 10 } } ]
+  },
+  {
+    "id": "clip303_5rd", "looks_like": "stanag30", "type": "MAGAZINE",
+    "name": { "str": ".303 5发桥夹" },
+    "description": "一小片带导槽的金属桥夹，可让射手快速把 5 发 .303 口径弹药压入弹匣。",
+    "weight": "9 g", "volume": "10 ml", "longest_side": "10 cm", "material": [ "steel" ],
+    "symbol": "#", "color": "light_gray", "count": 5, "ammo_type": [ "303" ], "flags": [ "SPEEDLOADER" ],
+    "pocket_data": [ { "pocket_type": "MAGAZINE", "ammo_restriction": { "303": 5 } } ]
+  },
+  {
+    "id": "enfield_bayonet",
+    "type": "TOOL",
+    "category": "weapons",
+    "name": { "str": "恩菲尔德 No. 4 刺刀" },
+    "description": "一把供英国李-恩菲尔德 No. 4 步枪使用的老式尖刺刺刀，采用醒目的十字形刀身和套筒式安装结构。",
+    "weight": "500 g", "volume": "300 ml", "longest_side": "25 cm", "price": 4281, "price_postapoc": 3000,
+    "melee_damage": { "bash": 7, "stab": 12 },
+    "to_hit": { "grip": "weapon", "length": "short", "surface": "line", "balance": "good" },
+    "material": [ "steel" ], "symbol": "/", "color": "light_gray",
+    "gunmod_data": { "location": "underbarrel", "mod_targets": [ "number4_mki" ], "mode_modifier": [ [ "REACH", "bayonet", 2, [ "MELEE", "REACH_ATTACK" ] ] ], "install_time": "5 s" },
+    "min_skills": [ [ "weapon", 2 ], [ "melee", 1 ] ], "techniques": [ "WBLOCK_1", "RAPID" ],
+    "qualities": [ [ "CUT", 1 ], [ "COOK", 1 ], [ "BUTCHER", 7 ] ], "flags": [ "DURABLE_MELEE", "SHEATH_SWORD" ], "weapon_category": [ "KNIVES" ]
+  },
+  {
+    "id": "on_hand_303", "type": "item_group", "subtype": "distribution",
+    "entries": [
+      { "item": "303_bthp", "prob": 100, "charges": [ 1, 20 ] }, { "item": "303_bthp", "prob": 75, "charges": [ 22, 40 ] }, { "item": "303_bthp", "prob": 30, "charges": [ 44, 80 ] },
+      { "item": "303_sp", "prob": 100, "charges": [ 1, 20 ] }, { "item": "303_sp", "prob": 75, "charges": [ 22, 40 ] }, { "item": "303_sp", "prob": 30, "charges": [ 44, 80 ] },
+      { "item": "303_fmjbt", "prob": 100, "charges": [ 1, 20 ] }, { "item": "303_fmjbt", "prob": 75, "charges": [ 22, 40 ] }, { "item": "303_fmjbt", "prob": 30, "charges": [ 44, 80 ] }
+    ]
+  },
+  {
+    "id": "nested_mk3", "type": "item_group", "subtype": "collection", "ammo": 100,
+    "entries": [
+      { "distribution": [ { "item": "smle_mk3", "charges-min": 0, "charges-max": 10, "prob": 70 }, { "item": "smle_mk3", "charges-min": 0, "charges-max": 10, "contents-item": [ "sword_bayonet" ], "prob": 30 } ] },
+      { "item": "clip303_5rd" }, { "item": "clip303_5rd", "prob": 50 }, { "item": "enfield_303mag", "prob": 5 }, { "group": "on_hand_303" }
+    ]
+  },
+  {
+    "id": "nested_number4", "type": "item_group", "subtype": "collection", "ammo": 100,
+    "entries": [
+      { "distribution": [ { "item": "number4_mki", "charges-min": 0, "charges-max": 10, "prob": 70 }, { "item": "number4_mki", "charges-min": 0, "charges-max": 10, "contents-item": [ "enfield_bayonet" ], "prob": 30 } ] },
+      { "item": "clip303_5rd" }, { "item": "clip303_5rd", "prob": 50 }, { "item": "enfield_303mag", "prob": 5 }, { "group": "on_hand_303" }
+    ]
+  },
+  { "id": "ammo_rifle_rare", "type": "item_group", "subtype": "distribution", "copy-from": "ammo_rifle_rare", "extend": { "entries": [ { "item": "303_bthp", "prob": 30 }, { "item": "303_sp", "prob": 25 }, { "item": "303_fmjbt", "prob": 25 } ] } },
+  { "id": "ammo_rifle_rare_collection", "type": "item_group", "subtype": "collection", "copy-from": "ammo_rifle_rare_collection", "extend": { "entries": [ { "item": "303_bthp", "prob": 30 }, { "item": "303_sp", "prob": 25 }, { "item": "303_fmjbt", "prob": 25 } ] } },
+  { "id": "ammo_rifle_reloaded", "type": "item_group", "subtype": "distribution", "copy-from": "ammo_rifle_reloaded", "extend": { "entries": [ { "item": "reloaded_303", "prob": 20 }, { "item": "reloaded_303sp", "prob": 5 }, { "item": "reloaded_303fmj", "prob": 5 } ] } },
+  { "id": "guns_rifle_rare", "type": "item_group", "copy-from": "guns_rifle_rare", "extend": { "items": [ { "group": "nested_mk3", "prob": 10 }, { "group": "nested_number4", "prob": 10 } ] } },
+  { "id": "guns_rifle_rare_display", "type": "item_group", "subtype": "distribution", "copy-from": "guns_rifle_rare_display", "extend": { "items": [ { "item": "smle_mk3", "prob": 10, "charges-min": 0, "charges-max": 0 }, { "item": "number4_mki", "prob": 10, "charges-min": 0, "charges-max": 0 } ] } },
+  { "id": "mags_rifle_rare", "type": "item_group", "copy-from": "mags_rifle_rare", "extend": { "items": [ [ "clip303_5rd", 15 ], [ "enfield_303mag", 4 ] ] } },
+  {
+    "result": "reloaded_303", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 3 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder", 31 ], [ "gunpowder_rifle", 31 ], [ "gunpowder_large_rifle", 31 ] ], [ [ "copper", 2 ] ] ]
+  },
+  {
+    "result": "reloaded_303fmj", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 3 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder", 31 ], [ "gunpowder_rifle", 31 ], [ "gunpowder_large_rifle", 31 ] ], [ [ "copper", 2 ] ] ]
+  },
+  {
+    "result": "reloaded_303sp", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 3 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder", 31 ], [ "gunpowder_rifle", 31 ], [ "gunpowder_large_rifle", 31 ] ], [ [ "copper", 2 ] ] ]
+  },
+  { "result": "bp_303", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 4 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "chem_black_powder", 31 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "bp_303fmj", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 4 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "chem_black_powder", 31 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "bp_303sp", "type": "recipe", "activity_level": "LIGHT_EXERCISE", "category": "CC_AMMO", "subcategory": "CSC_AMMO_RIFLE", "skill_used": "fabrication", "difficulty": 4, "skills_required": [ "gun", 4 ], "time": "2 m", "batch_time_factors": [ 60, 5 ], "book_learn": [ [ "recipe_bullets", 3 ] ], "charges": 1, "reversible": true, "using": [ [ "bullet_forming", 12 ], [ "ammo_bullet", 4 ] ], "proficiencies": [ { "proficiency": "prof_handloading" } ], "components": [ [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "chem_black_powder", 31 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "303_bthp", "type": "uncraft", "activity_level": "MODERATE_EXERCISE", "skill_used": "gun", "difficulty": 5, "time": "5 s", "qualities": [ { "id": "PULL", "level": 1 } ], "components": [ [ [ "lead", 3 ] ], [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder_large_rifle", 32 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "303_sp", "type": "uncraft", "activity_level": "MODERATE_EXERCISE", "skill_used": "gun", "difficulty": 5, "time": "5 s", "qualities": [ { "id": "PULL", "level": 1 } ], "components": [ [ [ "lead", 3 ] ], [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder_large_rifle", 33 ] ], [ [ "copper", 2 ] ] ] },
+  { "result": "303_fmjbt", "type": "uncraft", "activity_level": "MODERATE_EXERCISE", "skill_used": "gun", "difficulty": 5, "time": "5 s", "qualities": [ { "id": "PULL", "level": 1 } ], "components": [ [ [ "lead", 4 ] ], [ [ "303_casing", 1 ] ], [ [ "lgrifle_primer", 1 ] ], [ [ "gunpowder_large_rifle", 33 ] ], [ [ "copper", 2 ] ] ] }
+]

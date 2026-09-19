@@ -1,0 +1,127 @@
+[
+  {
+    "type": "effect_type",
+    "id": "sold_pet"
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR",
+    "dynamic_line": {
+      "npc_has_var": "knows_u",
+      "type": "dialogue",
+      "context": "first_meeting",
+      "value": "yes",
+      "yes": "<greet>",
+      "no": "总算见到一个不是<zombies>的活人了。"
+    },
+    "responses": [
+      {
+        "text": "对，今天算你走运。把东西交出来，不然你也会变成它们的一员。",
+        "trial": { "type": "INTIMIDATE", "difficulty": 30 },
+        "success": { "topic": "TALK_WEAPON_DROPPED", "effect": [ "drop_weapon", { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } ], "opinion": { "trust": -4, "fear": 3 } },
+        "failure": { "topic": "TALK_DONE", "effect": [ "hostile", { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } ] },
+        "condition": { "not": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } }
+      },
+      {
+        "text": "嘿，很高兴见到你。",
+        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+        "effect": { "npc_add_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" },
+        "condition": { "not": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" } }
+      },
+      {
+        "text": "<greet>",
+        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+        "condition": { "npc_has_var": "knows_u", "type": "dialogue", "context": "first_meeting", "value": "yes" }
+      },
+      { "text": "回头见。", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+    "dynamic_line": "有什么我能帮你的？",
+    "responses": [
+      { "text": "你到底是什么人？", "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_WHO" },
+      {
+        "text": "要不要做点买卖，把用不上的东西也卖掉？",
+        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+        "effect": "start_trade"
+      },
+      { "text": "我能买一只你照顾的动物吗？", "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_BUY_PETS" },
+      {
+        "text": "有什么活需要帮忙吗？",
+        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      { "text": "我该走了。", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_WHO",
+    "dynamic_line": "<the_cataclysm>把一切都扔进<swear>垃圾堆之前，我就在这里工作。我负责照顾这里所有动物。<zombies>开始在街上游荡后，我把能找到的宠物和流浪动物都带了回来。现在我还在照顾它们，只不过除了疾病和卫生，还得防着那些<zombies>。",
+    "responses": [
+      {
+        "text": "挺了不起的，不过这么多动物你是怎么照顾过来的？",
+        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_PETS"
+      },
+      {
+        "text": "要不要做点买卖，把用不上的东西也卖掉？",
+        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+        "effect": "start_trade"
+      },
+      {
+        "text": "有什么活需要帮忙吗？",
+        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      { "text": "我该走了。", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_PETS",
+    "dynamic_line": "说实话，挺难的。我会趁晚上或者外面有空档时偷偷出去，把需要的东西带回来，尽量别让什么东西发现我。尸群路过的时候，我有时得在这里困上很久。还好我们以前剩了些书架能堵住入口，不然我早没命了。",
+    "responses": [
+      { "text": "原来如此。", "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO" },
+      {
+        "text": "要不要做点买卖，把用不上的东西也卖掉？",
+        "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO",
+        "effect": "start_trade"
+      },
+      {
+        "text": "有什么活需要帮忙吗？",
+        "condition": { "and": [ { "not": "has_assigned_mission" }, { "not": "has_many_assigned_missions" } ] },
+        "topic": "TALK_MISSION_LIST"
+      },
+      { "text": "我该走了。", "topic": "TALK_DONE" }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_BUY_PETS",
+    "dynamic_line": "我舍不得它们走，不过现在你大概比我更有条件照顾一只。猫和狗都可以，猫要25美元，狗要50美元。",
+    "responses": [
+      { "text": "我改主意了，聊点别的吧。", "topic": "TALK_NPC_ANIMAL_SHELTER_SURVIVOR_INTRO" },
+      {
+        "text": "我要一只狗。",
+        "condition": { "not": { "npc_has_effect": "sold_pet" } },
+        "effect": [
+          { "u_buy_monster": "mon_dog", "cost": 5000, "pacified": true },
+          { "npc_add_effect": "sold_pet", "duration": "24 hours" }
+        ],
+        "topic": "TALK_DONE"
+      },
+      {
+        "text": "我要一只猫。",
+        "condition": { "not": { "npc_has_effect": "sold_pet" } },
+        "effect": [
+          { "u_buy_monster": "mon_cat", "cost": 2500, "pacified": true },
+          { "npc_add_effect": "sold_pet", "duration": "24 hours" }
+        ],
+        "topic": "TALK_DONE"
+      },
+      { "text": "我该走了。", "topic": "TALK_DONE" }
+    ]
+  }
+]

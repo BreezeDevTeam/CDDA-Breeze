@@ -320,14 +320,14 @@
     ],
     "copy-from": "generic_city_building",
     "looks_like": "s_gun",
-    "name": "gun store",
+    "name": "枪店",
     "color": "red",
     "extend": { "flags": [ "SOURCE_GUN", "SOURCE_AMMO" ] }
   },
   {
     "type": "overmap_terrain",
     "id": [ "s_gun_roof", "s_gun_roof_1", "s_gun_roof_3", "s_gun_roof_4", "s_gunstore_roof" ],
-    "name": "gun store roof",
+    "name": "枪店屋顶",
     "looks_like": "s_gun_roof",
     "copy-from": "generic_city_building",
     "color": "red"
@@ -1835,5 +1835,35 @@
     "copy-from": "generic_city_building",
     "sym": ".",
     "color": "blue"
+  },
+  {
+    "type": "overmap_terrain",
+    "id": [
+      "s_gun_a",
+      "s_gun_b_range",
+      "s_gun_b_store"
+    ],
+    "copy-from": "generic_city_building",
+    "looks_like": "s_gun_a",
+    "name": "枪店",
+    "color": "red",
+    "extend": {
+      "flags": [
+        "SOURCE_GUN",
+        "SOURCE_AMMO"
+      ]
+    }
+  },
+  {
+    "type": "overmap_terrain",
+    "id": [
+      "s_gun_a_roof",
+      "s_gun_b_roof",
+      "s_gun_b_range_roof"
+    ],
+    "name": "枪店屋顶",
+    "looks_like": "s_gun_a_roof",
+    "copy-from": "generic_city_building",
+    "color": "red"
   }
 ]

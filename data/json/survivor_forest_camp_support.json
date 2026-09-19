@@ -1,0 +1,79 @@
+[
+  {
+    "type": "GENERIC",
+    "id": "childnote",
+    "category": "books",
+    "symbol": ",",
+    "color": "white",
+    "name": { "str": "孩子的纸条" },
+    "snippet_category": "note_child",
+    "description": "一张纸，上面用简单又潦草的字迹写了些什么。",
+    "price": 0,
+    "price_postapoc": 0,
+    "material": [ "paper" ],
+    "flags": [ "TRADER_AVOID" ],
+    "weight": "12 mg",
+    "volume": "1 ml"
+  },
+  {
+    "type": "snippet",
+    "category": "note_child",
+    "text": [
+      {
+        "id": "note_child_29",
+        "text": "“爸爸和我已经在树林里住了一个星期。他出去打猎的时候会把手枪留给我。可那把枪没能挡住袭击我的狼人，所以我只好躲进一个很小的洞里，整整一晚上它都够不到我。幸好爸爸找到了我，还把它杀了。他说生日时会给我做一件狼人夹克。一件狼人夹克！我爸爸是全世界最酷的爸爸！”"
+      }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_POND_FISH_2",
+    "is_animal": true,
+    "monsters": [
+      { "monster": "mon_fish_bluegill", "weight": 50, "cost_multiplier": 0 },
+      { "monster": "mon_fish_carp", "weight": 50, "cost_multiplier": 0 },
+      { "monster": "mon_fish_sbass", "weight": 50, "cost_multiplier": 0 }
+    ]
+  },
+  {
+    "name": "GROUP_SURVIVOR_FOREST",
+    "type": "monstergroup",
+    "monsters": [
+      { "monster": "mon_zombie_survivor", "weight": 50 },
+      { "monster": "mon_feral_sapien_spear", "weight": 50 }
+    ]
+  },
+  {
+    "type": "overmap_terrain",
+    "id": [ "survivor_forest_camp" ],
+    "name": "幸存者森林营地",
+    "sym": "+",
+    "color": "green",
+    "see_cost": 5,
+    "flags": [ "REQUIRES_PREDECESSOR" ]
+  },
+  {
+    "type": "overmap_special",
+    "id": "survivor_forest_camp",
+    "overmaps": [ { "point": [ 0, 0, 0 ], "overmap": "survivor_forest_camp_north" } ],
+    "locations": [ "forest_center" ],
+    "city_distance": [ 10, 80 ],
+    "occurrences": [ 75, 100 ],
+    "flags": [ "CLASSIC", "WILDERNESS", "UNIQUE", "MAN_MADE" ]
+  },
+  {
+    "type": "region_overlay",
+    "regions": [ "all" ],
+    "forest_mapgen_settings": {
+      "forest_thick": {
+        "terrains": [
+          "forest_thick",
+          "survivor_forest_camp_north",
+          "survivor_forest_camp_south",
+          "survivor_forest_camp_east",
+          "survivor_forest_camp_west"
+        ]
+      }
+    }
+  }
+]

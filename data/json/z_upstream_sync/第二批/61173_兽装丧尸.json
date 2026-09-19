@@ -1,0 +1,54 @@
+[
+  {
+    "type": "item_group",
+    "id": "zombie_fursuits",
+    "subtype": "distribution",
+    "entries": [
+      { "item": "wolfsuit", "prob": 50, "damage": [ 2, 3 ] },
+      { "item": "dragonsuit", "prob": 50, "damage": [ 2, 3 ] },
+      { "item": "felinesuit", "prob": 50, "damage": [ 2, 3 ] },
+      { "item": "dinosuit", "prob": 50, "damage": [ 2, 3 ] },
+      { "item": "sharksuit", "prob": 50, "damage": [ 2, 3 ] }
+    ]
+  },
+  {
+    "type": "monstergroup",
+    "name": "GROUP_ZOMBIE",
+    "monsters": [ { "monster": "mon_zombie_fursuit", "weight": 1, "cost_multiplier": 3 } ]
+  },
+  {
+    "id": "mon_zombie_fursuit",
+    "type": "MONSTER",
+    "name": { "str": "兽装丧尸" },
+    "//": "A pun. 'Mane' being an archaic synonym of zombie, which also refers hair on the back of an animals neck.",
+    "description": "一具人类尸体，裹在撕裂的拟人动物布偶服里，摇摇晃晃地移动着。黑色黏液与鲜血从嘴边滴落，散发出恶臭的腐烂气味。",
+    "copy-from": "mon_zombie",
+    "hp": 70,
+    "speed": 50,
+    "color": "white_green",
+    "melee_skill": 3,
+    "melee_dice_sides": 4,
+    "melee_damage": [ { "damage_type": "cut", "amount": 2 } ],
+    "armor_bash": 5,
+    "armor_cut": 5,
+    "armor_bullet": 1,
+    "//1": "The torn fursuit offers slightly more protection.",
+    "weakpoint_sets": [ "wps_humanoid_body", "wps_humanoid_body_armor" ],
+    "families": [ "prof_intro_biology", "prof_wp_zombie", "prof_wp_nat_armored" ],
+    "special_attacks": [ { "type": "bite", "cooldown": 5 } ],
+    "death_drops": { "subtype": "collection", "groups": [ [ "default_zombie_clothes", 100 ], [ "zombie_fursuits", 100 ] ] },
+    "flags": [
+      "HEARS",
+      "SMELLS",
+      "STUMBLES",
+      "WARM",
+      "BASHES",
+      "GROUP_BASH",
+      "POISON",
+      "NO_BREATHE",
+      "REVIVES",
+      "PUSH_MON",
+      "FILTHY"
+    ]
+  }
+]
