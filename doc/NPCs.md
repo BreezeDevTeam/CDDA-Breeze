@@ -513,6 +513,8 @@ or:
 ]
 ```
 
+A talk topic can optionally set `"speaker_npc": "UNIQUE_ID"` and `"speaker_npc_range": 30`.  When a living NPC with that unique id is loaded on the player's z-level and within range, that NPC's name, color, portrait or character preview, profession, and relationship are used to present the topic's dynamic line.  The existing dialogue object is not replaced: history, responses, topic stack, missions, and speaker effects remain attached to the original conversation.  If the requested NPC is absent or out of range, the normal conversation partner is used.  This is intended for nearby companions interjecting in multi-character scenes without opening a second dialogue window.
+
 The `sentinel` can be any string, but sentinels are unique to each `TALK_TOPIC`.  If there are multiple `speaker_effect`s within the `TALK_TOPIC`, they should have different sentinels.  Sentinels are not required, but since the `speaker_effect` will run every time the dialogue returns to the `TALK_TOPIC`, they are highly encouraged to avoid inadvertently repeating the same effects.
 
 The `effect` can be any legal effect, as described below.  The effect can be a simple string, object, or an array of strings and objects, as normal for objects.

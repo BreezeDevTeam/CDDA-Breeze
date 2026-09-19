@@ -485,6 +485,21 @@
         "type": "dialogue",
         "context": "travel_liang",
         "value": "yes"
+      },
+      {
+        "u_add_var": "travel_liang_maya_resting",
+        "type": "dialogue",
+        "context": "travel_liang",
+        "value": "yes"
+      },
+      {
+        "u_add_var": "travel_liang_maya_rest_start",
+        "type": "timer",
+        "context": "travel_liang",
+        "time": true
+      },
+      {
+        "u_add_trait": "NPC_HOLD_POSITION"
       }
     ]
   },

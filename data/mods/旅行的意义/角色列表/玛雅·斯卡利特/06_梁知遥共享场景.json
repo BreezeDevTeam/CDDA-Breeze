@@ -4,7 +4,12 @@
     "id": "EOC_TRAVEL_LIANG_MARK_SHARED_MAYA_SCENE",
     "eoc_type": "ACTIVATION",
     "effect": [
-      { "u_add_var": "travel_liang_maya_shared_scene_seen", "type": "dialogue", "context": "travel_liang", "value": "yes" }
+      {
+        "u_add_var": "travel_liang_maya_shared_scene_seen",
+        "type": "dialogue",
+        "context": "travel_liang",
+        "value": "yes"
+      }
     ]
   },
   {
@@ -24,10 +29,19 @@
       ]
     },
     "effect": [
-      { "npc_add_var": "travel_maya_shared_scene_seen", "type": "dialogue", "context": "travel_maya", "value": "yes" },
       {
-        "npc_run_npc_eocs": [ "EOC_TRAVEL_LIANG_MARK_SHARED_MAYA_SCENE" ],
-        "unique_ids": [ "TRAVEL_LIANG_ZHIYAO" ],
+        "npc_add_var": "travel_maya_shared_scene_seen",
+        "type": "dialogue",
+        "context": "travel_maya",
+        "value": "yes"
+      },
+      {
+        "npc_run_npc_eocs": [
+          "EOC_TRAVEL_LIANG_MARK_SHARED_MAYA_SCENE"
+        ],
+        "unique_ids": [
+          "TRAVEL_LIANG_ZHIYAO"
+        ],
         "npc_range": 30,
         "z_min": 0,
         "z_max": 1
@@ -37,38 +51,139 @@
   {
     "type": "talk_topic",
     "id": "TALK_TRAVEL_MAYA_LIANG_SHARED_SCENE",
-    "dynamic_line": "玛雅把窗边的椅子让出一半，梁知遥却没有坐。她先蹲下来，检查固定带有没有松动，又看了看玛雅落地时下意识避开的角度。\n\n“检查完了吗，梁知遥同学？”玛雅问。\n\n“没有。你刚才从椅子上站起来时，把重量全偏到左腿了。”\n\n玛雅叹了口气。\n\n“这就是和一个会做记录的人住过太久的后果。”",
+    "dynamic_line": "玛雅把窗边的椅子让出一半，梁知遥却没有坐。她先蹲下来，检查固定带有没有松动，又看了看玛雅落地时下意识避开的角度。\n\n“检查完了吗，梁知遥同学？”",
     "speaker_effect": {
       "effect": [
-        { "run_eocs": [ "EOC_TRAVEL_MAYA_SCAN_LIANG_NEARBY" ] },
-        { "run_eocs": [ "EOC_TRAVEL_MAYA_SHARED_SCENE_SYNC" ] }
+        {
+          "run_eocs": [
+            "EOC_TRAVEL_MAYA_SCAN_LIANG_NEARBY"
+          ]
+        },
+        {
+          "run_eocs": [
+            "EOC_TRAVEL_MAYA_SHARED_SCENE_SYNC"
+          ]
+        }
       ]
     },
     "responses": [
-      { "text": "所以，你们接下来怎么打算？", "topic": "TALK_TRAVEL_MAYA_LIANG_PLAN" },
-      { "text": "[看向墙边成捆的箭] 她休养时也没有闲着。", "topic": "TALK_TRAVEL_MAYA_LIANG_ARROW_WORK" },
-      { "text": "[返回梁知遥与玛雅] 先让你们歇一会儿。", "topic": "TALK_TRAVEL_MAYA_MENU_LIANG" },
-      { "text": "[返回主菜单] 先谈别的。", "topic": "TALK_TRAVEL_MAYA_ISHERWOOD" }
+      {
+        "text": "[看向梁知遥，等她回答。]",
+        "topic": "TALK_TRAVEL_LIANG_SHARED_SCENE_CHECK"
+      }
     ]
   },
   {
     "type": "talk_topic",
     "id": "TALK_TRAVEL_MAYA_LIANG_PLAN",
-    "dynamic_line": "梁知遥站起身，看向桌上摊开的地图。\n\n“她留在这里。农场有干净的水、药和认识她的人。我继续跟你走，找更远的通信线索，也把外面的变化带回来。”\n\n玛雅拍了拍窗边那摞短波记录。\n\n“我等阿琼的消息，也等这条腿重新属于我。你把外面发生的事带回来——别把新的伤也一起带回来。”\n\n梁知遥看了她一会儿，点头。\n\n“好。”",
+    "dynamic_line": "梁知遥看向桌上摊开的地图。\n\n“她留在这里。农场有干净的水、药和认识她的人。我继续跟你走，找更远的通信线索，也把外面的变化带回来。”",
     "responses": [
-      { "text": "[继续听她们说] 我还想确认另一件事。", "topic": "TALK_TRAVEL_MAYA_LIANG_SHARED_SCENE" },
-      { "text": "[返回梁知遥与玛雅] 先把下一周过好。", "topic": "TALK_TRAVEL_MAYA_MENU_LIANG" },
-      { "text": "[返回主菜单] 先谈别的。", "topic": "TALK_TRAVEL_MAYA_ISHERWOOD" }
-    ]
+      {
+        "text": "[听听玛雅怎么说。]",
+        "topic": "TALK_TRAVEL_MAYA_LIANG_PLAN_MAYA"
+      }
+    ],
+    "speaker_npc": "TRAVEL_LIANG_ZHIYAO",
+    "speaker_npc_range": 30
   },
   {
     "type": "talk_topic",
     "id": "TALK_TRAVEL_MAYA_LIANG_ARROW_WORK",
-    "dynamic_line": "梁知遥拿起一支还没装箭头的木箭杆，先看尾栝，再用指腹摸过羽片槽。\n\n“她以前就这样。”梁知遥说，“别人练完去吃饭，她留下来把器材表补齐，把弦距和损坏的箭一支支记下来。”\n\n玛雅从她手里拿回箭杆。\n\n“现在只是把表格换成了能保命的东西。木箭做得快，金属箭要看工坊剩下什么。那些复合弓多半是修出来或换来的，不是我凭空造的。”\n\n“每周重新清点一次，够农场练习、打猎，也能拿出一部分交换。”",
+    "dynamic_line": "梁知遥拿起一支还没装箭头的木箭杆，先看尾栝，再用指腹摸过羽片槽。\n\n“她以前就这样。别人练完去吃饭，她留下来把器材表补齐，把弦距和损坏的箭一支支记下来。”",
     "responses": [
-      { "text": "[继续听她们说] 我还想问问你们的计划。", "topic": "TALK_TRAVEL_MAYA_LIANG_SHARED_SCENE" },
-      { "text": "[返回梁知遥与玛雅] 我明白了。", "topic": "TALK_TRAVEL_MAYA_MENU_LIANG" },
-      { "text": "[返回主菜单] 先谈别的。", "topic": "TALK_TRAVEL_MAYA_ISHERWOOD" }
+      {
+        "text": "[把箭杆还给玛雅。]",
+        "topic": "TALK_TRAVEL_MAYA_LIANG_ARROW_WORK_MAYA"
+      }
+    ],
+    "speaker_npc": "TRAVEL_LIANG_ZHIYAO",
+    "speaker_npc_range": 30
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_LIANG_SHARED_SCENE_CHECK",
+    "speaker_npc": "TRAVEL_LIANG_ZHIYAO",
+    "speaker_npc_range": 30,
+    "dynamic_line": "“没有。你刚才从椅子上站起来时，把重量全偏到左腿了。”",
+    "responses": [
+      {
+        "text": "[听玛雅接着说。]",
+        "topic": "TALK_TRAVEL_MAYA_LIANG_SHARED_SCENE_PUNCHLINE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_MAYA_LIANG_SHARED_SCENE_PUNCHLINE",
+    "dynamic_line": "玛雅叹了口气。\n\n“这就是和一个会做记录的人住过太久的后果。”",
+    "responses": [
+      {
+        "text": "所以，你们接下来怎么打算？",
+        "topic": "TALK_TRAVEL_MAYA_LIANG_PLAN"
+      },
+      {
+        "text": "[看向墙边成捆的箭] 她休养时也没有闲着。",
+        "topic": "TALK_TRAVEL_MAYA_LIANG_ARROW_WORK"
+      },
+      {
+        "text": "[返回梁知遥与玛雅] 先让你们歇一会儿。",
+        "topic": "TALK_TRAVEL_MAYA_MENU_LIANG"
+      },
+      {
+        "text": "[返回主菜单] 先谈别的。",
+        "topic": "TALK_TRAVEL_MAYA_ISHERWOOD"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_MAYA_LIANG_PLAN_MAYA",
+    "dynamic_line": "玛雅拍了拍窗边那摞短波记录。\n\n“我等阿琼的消息，也等这条腿重新属于我。你把外面发生的事带回来，别把新的伤也一起带回来。”",
+    "responses": [
+      {
+        "text": "[看向梁知遥。]",
+        "topic": "TALK_TRAVEL_LIANG_PLAN_PROMISE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_LIANG_PLAN_PROMISE",
+    "speaker_npc": "TRAVEL_LIANG_ZHIYAO",
+    "speaker_npc_range": 30,
+    "dynamic_line": "梁知遥看了玛雅一会儿，点头。\n\n“好。”",
+    "responses": [
+      {
+        "text": "[继续听她们说] 我还想确认另一件事。",
+        "topic": "TALK_TRAVEL_MAYA_LIANG_SHARED_SCENE"
+      },
+      {
+        "text": "[返回梁知遥与玛雅] 先把下一周过好。",
+        "topic": "TALK_TRAVEL_MAYA_MENU_LIANG"
+      },
+      {
+        "text": "[返回主菜单] 先谈别的。",
+        "topic": "TALK_TRAVEL_MAYA_ISHERWOOD"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_MAYA_LIANG_ARROW_WORK_MAYA",
+    "dynamic_line": "玛雅从她手里拿回箭杆。\n\n“现在只是把表格换成了能保命的东西。木箭做得快，金属箭要看工坊剩下什么。那些复合弓多半是修出来或换来的，不是我凭空造的。每周重新清点一次，够农场练习、打猎，也能拿出一部分交换。”",
+    "responses": [
+      {
+        "text": "[继续听她们说] 我还想问问你们的计划。",
+        "topic": "TALK_TRAVEL_MAYA_LIANG_PLAN"
+      },
+      {
+        "text": "[返回梁知遥与玛雅] 我明白了。",
+        "topic": "TALK_TRAVEL_MAYA_MENU_LIANG"
+      },
+      {
+        "text": "[返回主菜单] 先谈别的。",
+        "topic": "TALK_TRAVEL_MAYA_ISHERWOOD"
+      }
     ]
   }
 ]

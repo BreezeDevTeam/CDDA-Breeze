@@ -36,6 +36,13 @@ dialogue_window::dialogue_window()
     history_view = std::make_unique<scrolling_text_view>( history_win );
 }
 
+dialogue_window::~dialogue_window()
+{
+    if( temporary_image != nullptr ) {
+        SDL_DestroyTexture( temporary_image );
+    }
+}
+
 bool dialogue_window::wants_character_sidebar() const
 {
     return !is_computer && !is_not_conversation;
@@ -440,7 +447,31 @@ void dialogue_window::apply_saved_display_preference()
 
 void dialogue_window::set_image( SDL_Texture *image )
 {
+    reset_temporary_image();
+    base_image = image;
     this->image = image;
+    apply_saved_display_preference();
+}
+
+void dialogue_window::set_temporary_image( SDL_Texture *new_image )
+{
+    if( temporary_image != nullptr && temporary_image != new_image ) {
+        SDL_DestroyTexture( temporary_image );
+    }
+    temporary_image = new_image;
+    // A temporary speaker with no portrait must not inherit the original speaker's portrait.
+    // Keeping image null lets the alternate speaker's character preview become the fallback.
+    image = temporary_image;
+    apply_saved_display_preference();
+}
+
+void dialogue_window::reset_temporary_image()
+{
+    if( temporary_image != nullptr ) {
+        SDL_DestroyTexture( temporary_image );
+        temporary_image = nullptr;
+    }
+    image = base_image;
     apply_saved_display_preference();
 }
 

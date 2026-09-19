@@ -2746,6 +2746,53 @@ talk_topic dialogue::opt( dialogue_window &d_win, const talk_topic &topic )
     ui.on_screen_resize( resize_cb );
     resize_cb( ui );
 
+    // A topic may attribute its line to a nearby named NPC without replacing the
+    // dialogue itself.  This keeps the current topic stack, response list and history vector intact.
+    npc *display_speaker = actor( true )->get_npc();
+    if( const json_talk_topic *topic_data = get_talk_topic( topic.id ) ) {
+        const std::string &speaker_id = topic_data->get_speaker_npc();
+        if( !speaker_id.empty() ) {
+            const int speaker_range = topic_data->get_speaker_npc_range();
+            const tripoint listener_pos = actor( false )->pos();
+            const int listener_z = actor( false )->posz();
+            const std::vector<npc *> nearby_speakers = g->get_npcs_if( [&]( const npc & candidate ) {
+                return candidate.get_unique_id() == speaker_id &&
+                       candidate.posz() == listener_z &&
+                       rl_dist( candidate.pos(), listener_pos ) <= speaker_range;
+            } );
+            if( !nearby_speakers.empty() ) {
+                display_speaker = nearby_speakers.front();
+            }
+        }
+    }
+
+    npc *conversation_speaker = actor( true )->get_npc();
+    if( display_speaker != nullptr ) {
+        if( display_speaker != conversation_speaker ) {
+            SDL_Texture *speaker_image = nullptr;
+            if( get_option<bool>( "显示特殊NPC的图片" ) ) {
+                if( !display_speaker->portrait_id.empty() ) {
+                    std::string portrait_key = display_speaker->portrait_id;
+                    speaker_image = get_character_picture( portrait_key );
+                }
+                if( speaker_image == nullptr ) {
+                    std::string speaker_name = display_speaker->get_name();
+                    speaker_image = get_character_picture( speaker_name );
+                }
+                if( speaker_image == nullptr && display_speaker->getID().get_value() > 0 ) {
+                    speaker_image = get_npc_dynamic_picture( display_speaker->getID().get_value() );
+                }
+            }
+            d_win.set_temporary_image( speaker_image );
+        } else {
+            d_win.reset_temporary_image();
+        }
+        d_win.set_preview_character( display_speaker );
+        d_win.set_character_profession( display_speaker->myclass.is_valid() ?
+                                        display_speaker->myclass->get_name() : "" );
+        d_win.set_affection_score( display_speaker->affection_score() );
+    }
+
     // Construct full line
     std::string challenge = dynamic_line( topic );
     gen_responses( topic );
@@ -2764,11 +2811,11 @@ talk_topic dialogue::opt( dialogue_window &d_win, const talk_topic &topic )
     }
     challenge = uppercase_first_letter( challenge );
     
-    bool is_npc_speaking = (actor(true)->get_npc() != nullptr) &&
+    bool is_npc_speaking = display_speaker != nullptr &&
         !d_win.is_computer &&
         !d_win.is_not_conversation;
     if (get_option<bool>("AI润色NPC的回复内容") && is_npc_speaking) {
-        network::RequestId requ_id = network::start_pollinations_request(build_prompt(*actor(true)->get_npc()), "npc说："+challenge);
+        network::RequestId requ_id = network::start_pollinations_request(build_prompt(*display_speaker), "npc说："+challenge);
         while (true) {
             network::process();
             if (network::get_status(requ_id) == network::RequestStatus::Completed) {
@@ -2792,14 +2839,16 @@ talk_topic dialogue::opt( dialogue_window &d_win, const talk_topic &topic )
         challenge = challenge.substr( 1 );
         d_win.add_to_history( challenge );
     } else if( challenge[0] == '*' ) {
-        // Prepend name
-        challenge = string_format( pgettext( "npc does something", "%s %s" ), actor( true )->disp_name(),
-                                   challenge.substr( 1 ) );
+        // Prepend the speaker actually presenting this line.
+        challenge = string_format( pgettext( "npc does something", "%s %s" ),
+                                   display_speaker ? display_speaker->disp_name() :
+                                   actor( true )->disp_name(), challenge.substr( 1 ) );
         d_win.add_to_history( challenge );
     } else {
-        npc *npc_actor = actor( true )->get_npc();
-        d_win.add_to_history( challenge, d_win.is_not_conversation ? "" : actor( true )->disp_name(),
-                              npc_actor ? npc_actor->basic_symbol_color() : c_red );
+        d_win.add_to_history( challenge,
+                              d_win.is_not_conversation ? "" :
+                              ( display_speaker ? display_speaker->disp_name() : actor( true )->disp_name() ),
+                              display_speaker ? display_speaker->basic_symbol_color() : c_red );
     }
 
     apply_speaker_effects( topic );
@@ -2839,7 +2888,8 @@ talk_topic dialogue::opt( dialogue_window &d_win, const talk_topic &topic )
     generate_response_lines();
 
     ui.on_redraw( [&]( const ui_adaptor & ) {
-        d_win.draw( d_win.is_not_conversation ? "" : actor( true )->disp_name() );
+        d_win.draw( d_win.is_not_conversation ? "" :
+                    ( display_speaker ? display_speaker->disp_name() : actor( true )->disp_name() ) );
     } );
 
     size_t response_ind = response_hotkeys.size();
@@ -6132,6 +6182,12 @@ void json_talk_topic::load( const JsonObject &jo )
 {
     if( jo.has_member( "dynamic_line" ) ) {
         dynamic_line = dynamic_line_t::from_member( jo, "dynamic_line" );
+    }
+    if( jo.has_string( "speaker_npc" ) ) {
+        speaker_npc = jo.get_string( "speaker_npc" );
+    }
+    if( jo.has_int( "speaker_npc_range" ) ) {
+        speaker_npc_range = std::max( 0, jo.get_int( "speaker_npc_range" ) );
     }
     if( jo.has_member( "speaker_effect" ) ) {
         std::string id = "no_id";

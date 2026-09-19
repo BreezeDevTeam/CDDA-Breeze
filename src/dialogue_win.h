@@ -35,6 +35,7 @@ class dialogue_window
 {
     public:
         dialogue_window();
+        ~dialogue_window();
         void resize( ui_adaptor &ui );
         void draw( const std::string &npc_name );
 
@@ -63,6 +64,8 @@ class dialogue_window
         catacurses::window *get_resp_win();
 
         void set_image( SDL_Texture *image );
+        void set_temporary_image( SDL_Texture *image );
+        void reset_temporary_image();
         void set_preview_character( const Character *character );
         bool cycle_character_display();
         void set_character_profession( const std::string &profession );
@@ -81,6 +84,8 @@ class dialogue_window
         };
 
         SDL_Texture *image = nullptr;
+        SDL_Texture *base_image = nullptr;
+        SDL_Texture *temporary_image = nullptr;
         const Character *preview_character = nullptr;
         character_display_mode display_mode = character_display_mode::hidden;
         SDL_Rect portrait_inner_rect = {};

@@ -4969,6 +4969,48 @@
     "insert_before_standard_exits": true,
     "responses": [
       {
+        "text": "你今晚就留在这里陪玛雅吧。",
+        "topic": "TALK_TRAVEL_LIANG_MAYA_RESTING",
+        "condition": {
+          "and": [
+            {
+              "npc_has_var": "travel_liang_maya_resting",
+              "type": "dialogue",
+              "context": "travel_liang",
+              "value": "yes"
+            },
+            {
+              "npc_compare_time_since_var": "travel_liang_maya_rest_start",
+              "type": "timer",
+              "context": "travel_liang",
+              "op": "<",
+              "time": "1 day"
+            }
+          ]
+        }
+      },
+      {
+        "text": "昨晚休息得怎么样，准备继续出发了吗？",
+        "topic": "TALK_TRAVEL_LIANG_MAYA_RESTING",
+        "condition": {
+          "and": [
+            {
+              "npc_has_var": "travel_liang_maya_resting",
+              "type": "dialogue",
+              "context": "travel_liang",
+              "value": "yes"
+            },
+            {
+              "npc_compare_time_since_var": "travel_liang_maya_rest_start",
+              "type": "timer",
+              "context": "travel_liang",
+              "op": ">=",
+              "time": "1 day"
+            }
+          ]
+        }
+      },
+      {
         "text": "和梁知遥聊聊她在意的事。",
         "topic": "TALK_TRAVEL_LIANG_PERSONAL_MENU",
         "condition": {
@@ -6074,7 +6116,15 @@
   {
     "type": "talk_topic",
     "id": "TALK_TRAVEL_LIANG_MAYA_REUNION_AFTER",
-    "dynamic_line": "梁知遥朝楼上的方向看了一眼。她的眼睛仍有些红，嘴角却一直压不住那点笑意。\n\n“她还活着。这句话听起来很简单，可我抱住她的时候，才真的相信。”\n\n她低头看了看自己的手，像还记得玛雅掌心的温度。\n\n“我们不会假装灾难没有发生。先确认伤势，吃饭，睡觉，再把彼此错过的路慢慢讲完。未来可以晚一点决定——今晚只需要让她知道，我没有再走丢。”",
+    "dynamic_line": {
+      "npc_compare_time_since_var": "travel_liang_maya_rest_start",
+      "type": "timer",
+      "context": "travel_liang",
+      "op": "<",
+      "time": "1 day",
+      "yes": "梁知遥朝楼上的方向看了一眼。她的眼睛仍有些红，嘴角却一直压不住那点笑意。\n\n“她还活着。这句话听起来很简单，可我抱住她的时候，才真的相信。”\n\n“今晚我会留在农场。先确认伤势，吃饭，睡觉，再把彼此错过的路慢慢讲完。你不用陪着我们等，去做你该做的事吧。”",
+      "no": "梁知遥把背包重新整理好，眼下还有一点没睡够的痕迹，神情却比昨天轻松得多。\n\n“我们讲了很久，也真的按约定睡了一觉。玛雅会继续留在农场养伤，我可以继续跟你走。以后要说的事情还有很多，不必全挤在一个晚上。”"
+    },
     "responses": [
       {
         "text": "你们先休息。",
@@ -6115,5 +6165,59 @@
       "success_lie": "梁知遥摇了摇头。\n\n“我需要听见她亲口回答。只看到农场或听见同名传闻，都不能算找到玛雅。”",
       "failure": "“找不到不等于不存在。等有新的商路或消息，我们再继续问。”"
     }
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_LIANG_MAYA_RESTING",
+    "dynamic_line": {
+      "npc_compare_time_since_var": "travel_liang_maya_rest_start",
+      "type": "timer",
+      "context": "travel_liang",
+      "op": "<",
+      "time": "1 day",
+      "yes": "梁知遥朝楼上的方向看了一眼，又把背包重新放回墙边。\n\n“今晚我不走。我们还有太多话没有讲完，而且玛雅那条腿也需要有人盯着。你不用在这里等我，先去处理自己的事情吧。”\n\n她停了一下，像是终于允许自己把明天的路线从计划表里划掉。\n\n“至少今天，我想待在这里。”",
+      "no": "梁知遥已经把背包重新收好，六点半棍也拿回手边。\n\n“我们把该说的话说了不少，也真的睡了一觉。玛雅这里有人照顾，我可以继续和你走。”"
+    },
+    "responses": [
+      {
+        "text": "好，明天再见。",
+        "topic": "TALK_DONE",
+        "condition": {
+          "npc_compare_time_since_var": "travel_liang_maya_rest_start",
+          "type": "timer",
+          "context": "travel_liang",
+          "op": "<",
+          "time": "1 day"
+        }
+      },
+      {
+        "text": "休息够了就继续出发。",
+        "topic": "TALK_DONE",
+        "condition": {
+          "npc_compare_time_since_var": "travel_liang_maya_rest_start",
+          "type": "timer",
+          "context": "travel_liang",
+          "op": ">=",
+          "time": "1 day"
+        },
+        "effect": [
+          {
+            "npc_lose_trait": "NPC_HOLD_POSITION"
+          },
+          "follow_only",
+          {
+            "npc_lose_var": "travel_liang_maya_resting",
+            "type": "dialogue",
+            "context": "travel_liang"
+          },
+          {
+            "npc_add_var": "travel_liang_maya_rest_finished",
+            "type": "dialogue",
+            "context": "travel_liang",
+            "value": "yes"
+          }
+        ]
+      }
+    ]
   }
 ]
