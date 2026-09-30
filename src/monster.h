@@ -235,8 +235,11 @@ class monster : public Creature
          */
         void wander_to( const tripoint_abs_ms &p, int f );
 
-        // How good of a target is given creature (checks for visibility)
-        float rate_target( Creature &c, float best, bool smart = false ) const;
+        // How good of a target is given creature (checks for visibility).
+        // @param already_seen set when the caller has already verified that this
+        //        monster can see @p c, so the visibility test is not repeated.
+        float rate_target( Creature &c, float best, bool smart = false,
+                           bool already_seen = false ) const;
         void plan();
         void move(); // Actual movement
         void footsteps( const tripoint &p ); // noise made by movement

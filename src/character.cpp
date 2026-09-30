@@ -9969,9 +9969,21 @@ void Character::process_effects()
 
 void Character::gravity_check()
 {
-    if( get_map().tr_at( pos() ) == tr_ledge ) {
-        get_map().tr_at( pos() ).trigger( pos(), *this );
-        get_map().update_visibility_cache( pos().z );
+    map &here = get_map();
+    const tripoint ledge = pos();
+    if( here.tr_at( ledge ) != tr_ledge ) {
+        return;
+    }
+
+    const tripoint before = pos();
+    here.tr_at( ledge ).trigger( pos(), *this );
+    // Only actually falling to another level makes the level-wide visibility cache
+    // stale.  When the ledge does not move us - standing on a boardable vehicle
+    // part, levitation, wall clinging, flying, ... - trapfunc::ledge() returns
+    // without moving us, and recomputing the cache (one apparent_light_at() call
+    // for each of the 17424 map tiles) was pure waste that ran every single turn.
+    if( pos() != before ) {
+        here.update_visibility_cache( pos().z );
     }
 }
 

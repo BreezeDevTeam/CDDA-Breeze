@@ -1100,7 +1100,7 @@ bool monster::can_move_to( const tripoint &p ) const
     return can_reach_to( p ) && will_move_to( p );
 }
 
-float monster::rate_target( Creature &c, float best, bool smart ) const
+float monster::rate_target( Creature &c, float best, bool smart, bool already_seen ) const
 {
     const FastDistanceApproximation d = rl_dist_fast( pos(), c.pos() );
     if( d <= 0 ) {
@@ -1112,8 +1112,24 @@ float monster::rate_target( Creature &c, float best, bool smart ) const
         return FLT_MAX;
     }
 
-    if( !sees( c ) ) {
-        return FLT_MAX;
+    if( !already_seen ) {
+        // Smart planning rates weak targets above close ones, so the distance
+        // early-out above does not apply to it.  Nothing past the monster's own
+        // vision can be seen whatever the lighting is, and that bound is far
+        // cheaper than the line of sight test.
+        // Exceptions that Creature::sees() honours regardless of distance: the
+        // adjacent tile (hence the d >= 2 guard) and the two always-visible flags.
+        // MF_ALL_SEEING uses the raw vision values, which is what we bound with.
+        if( smart && d >= 2 ) {
+            const int max_sight_range = std::max( type->vision_day, type->vision_night );
+            if( d >= max_sight_range + 1 && !c.has_flag( MF_ALWAYS_VISIBLE ) &&
+                !( has_flag( MF_ALWAYS_SEES_YOU ) && c.is_avatar() ) ) {
+                return FLT_MAX;
+            }
+        }
+        if( !sees( c ) ) {
+            return FLT_MAX;
+        }
     }
 
     if( !smart ) {
@@ -1324,7 +1340,9 @@ void monster::plan()
     // If we can see the player, move toward them or flee.
     if( friendly == 0 && seen_levels.test( player_character.pos().z + OVERMAP_DEPTH ) &&
         sees( player_character ) ) {
-        dist = rate_target( player_character, dist, smart_planning );
+        // The visibility test above already answered what rate_target() would ask
+        // again, so don't pay for the same line of sight check twice.
+        dist = rate_target( player_character, dist, smart_planning, true );
         fleeing = fleeing || is_fleeing( player_character );
         target = &player_character;
         if( !fleeing && anger <= 20 ) {
@@ -3593,6 +3611,15 @@ bool monster::attack_at( const tripoint &p )
         Creature::Attitude attitude = attitude_to( mon );
         // MF_ATTACKMON == hulk behavior, whack everything in your way
         if( attitude == Attitude::HOSTILE || has_flag( MF_ATTACKMON ) ) {
+            // Same rule as the player branch above and as monster::melee_attack():
+            // attacking something this monster can not see is refused there.  Check
+            // it here so a z-level neighbour that is adjacent only by the floor
+            // opening rule (see Creature::is_adjacent) is not attacked through a
+            // wall, vehicle or floor: that used to cost the attack's moves and
+            // raised the "Z-Level view violation" debug message.
+            if( !mon.is_hallucination() && !sees( mon ) ) {
+                return false;
+            }
             return melee_attack( mon );
         }
 
@@ -3605,6 +3632,10 @@ bool monster::attack_at( const tripoint &p )
         // way. This is consistent with how it worked previously, but
         // later on not hitting allied NPCs would be cool.
         guy->on_attacked( *this ); // allow NPC hallucination to be one shot by monsters
+        if( !sees( *guy ) ) {
+            // Same visibility requirement as monster::melee_attack()
+            return false;
+        }
         return melee_attack( *guy );
     }
 

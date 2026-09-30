@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <map>
 #include <memory>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 #include "activity_type.h"
 #include "cached_options.h" // IWYU pragma: keep
@@ -33,6 +35,7 @@
 #include "npc.h"
 #include "output.h"
 #include "overmapbuffer.h"
+#include "pathfinding.h"
 #include "player_activity.h"
 #include "point.h"
 #include "rng.h"
@@ -330,16 +333,72 @@ bool is_vertical_sound_portal( map &here, const tripoint &candidate, int dz )
     return explicit_transition || open_shaft;
 }
 
+struct portal_scan_offset {
+    std::int16_t dx;
+    std::int16_t dy;
+    std::int32_t d2;
+};
+
+const std::vector<portal_scan_offset> &ordered_portal_offsets()
+{
+    static const std::vector<portal_scan_offset> offsets = [] {
+        const int radius = monster_sound_portal_search_radius;
+        std::vector<portal_scan_offset> result;
+        result.reserve( static_cast<std::size_t>( 2 * radius + 1 ) * ( 2 * radius + 1 ) );
+        for( int dy = -radius; dy <= radius; dy++ ) {
+            for( int dx = -radius; dx <= radius; dx++ ) {
+                result.push_back( { static_cast<std::int16_t>( dx ),
+                                    static_cast<std::int16_t>( dy ), dx * dx + dy * dy } );
+            }
+        }
+        std::sort( result.begin(), result.end(),
+        []( const portal_scan_offset & lhs, const portal_scan_offset & rhs ) {
+            if( lhs.d2 != rhs.d2 ) {
+                return lhs.d2 < rhs.d2;
+            }
+            return std::tie( lhs.dx, lhs.dy ) < std::tie( rhs.dx, rhs.dy );
+        } );
+        return result;
+    }();
+    return offsets;
+}
+
 std::optional<tripoint> nearest_vertical_sound_portal( map &here,
         const tripoint &origin, int dz )
 {
+    if( !here.inbounds_z( origin.z + dz ) ) {
+        return std::nullopt;
+    }
+
+    // Almost every tile of the scanned square is a plain floor that can not pass
+    // sound vertically, but the exact test needs several terrain and furniture
+    // flag lookups per tile.  The pathfinding cache already stores the relevant
+    // flags of both levels involved (and is invalidated whenever terrain,
+    // furniture, traps or fields change), so use it as a cheap superset filter:
+    // anything it rejects can not be a portal, so the exact test stays rare.
+    constexpr pf_special vertical_transition_mask =
+        PF_VERTICAL_UP | PF_VERTICAL_DOWN | PF_NO_FLOOR;
+    const pathfinding_cache &pf_origin = here.get_pathfinding_cache_ref( origin.z );
+    const pathfinding_cache &pf_next = here.get_pathfinding_cache_ref( origin.z + dz );
+
     std::optional<tripoint> best;
     int best_distance = monster_sound_portal_search_radius + 1;
 
-    for( const tripoint &candidate :
-         here.points_in_radius( origin, monster_sound_portal_search_radius ) ) {
-        if( candidate.z != origin.z ||
-            !is_vertical_sound_portal( here, candidate, dz ) ) {
+    for( const portal_scan_offset &offset : ordered_portal_offsets() ) {
+        if( best && offset.d2 >= ( best_distance + 1 ) * ( best_distance + 1 ) ) {
+            break;
+        }
+
+        const tripoint candidate( origin.x + offset.dx, origin.y + offset.dy, origin.z );
+        if( !here.inbounds( candidate ) ) {
+            continue;
+        }
+        if( ( ( pf_origin.special[candidate.x][candidate.y] |
+                pf_next.special[candidate.x][candidate.y] ) &
+              vertical_transition_mask ) == PF_NORMAL ) {
+            continue;
+        }
+        if( !is_vertical_sound_portal( here, candidate, dz ) ) {
             continue;
         }
 

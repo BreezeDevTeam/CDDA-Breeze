@@ -205,6 +205,9 @@ void map::generate( const tripoint &p, const time_point &when )
             // TODO: memory leak if the code below throws before the submaps get stored/deleted!
         }
     }
+    // Mapgen replaces submap content wholesale (sometimes by writing into submaps
+    // directly), so the whole z-level pathfinding cache has to be dropped here.
+    set_pathfinding_cache_dirty( p.z );
     // x, and y are submap coordinates, convert to overmap terrain coordinates
     // TODO: fix point types
     tripoint_abs_omt abs_omt( sm_to_omt_copy( p ) );
