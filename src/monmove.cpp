@@ -3611,6 +3611,15 @@ bool monster::attack_at( const tripoint &p )
         Creature::Attitude attitude = attitude_to( mon );
         // MF_ATTACKMON == hulk behavior, whack everything in your way
         if( attitude == Attitude::HOSTILE || has_flag( MF_ATTACKMON ) ) {
+            // Same rule as the player branch above and as monster::melee_attack():
+            // attacking something this monster can not see is refused there.  Check
+            // it here so a z-level neighbour that is adjacent only by the floor
+            // opening rule (see Creature::is_adjacent) is not attacked through a
+            // wall, vehicle or floor: that used to cost the attack's moves and
+            // raised the "Z-Level view violation" debug message.
+            if( !mon.is_hallucination() && !sees( mon ) ) {
+                return false;
+            }
             return melee_attack( mon );
         }
 
@@ -3623,6 +3632,10 @@ bool monster::attack_at( const tripoint &p )
         // way. This is consistent with how it worked previously, but
         // later on not hitting allied NPCs would be cool.
         guy->on_attacked( *this ); // allow NPC hallucination to be one shot by monsters
+        if( !sees( *guy ) ) {
+            // Same visibility requirement as monster::melee_attack()
+            return false;
+        }
         return melee_attack( *guy );
     }
 
