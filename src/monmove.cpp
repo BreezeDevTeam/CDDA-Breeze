@@ -1100,7 +1100,7 @@ bool monster::can_move_to( const tripoint &p ) const
     return can_reach_to( p ) && will_move_to( p );
 }
 
-float monster::rate_target( Creature &c, float best, bool smart ) const
+float monster::rate_target( Creature &c, float best, bool smart, bool already_seen ) const
 {
     const FastDistanceApproximation d = rl_dist_fast( pos(), c.pos() );
     if( d <= 0 ) {
@@ -1112,8 +1112,24 @@ float monster::rate_target( Creature &c, float best, bool smart ) const
         return FLT_MAX;
     }
 
-    if( !sees( c ) ) {
-        return FLT_MAX;
+    if( !already_seen ) {
+        // Smart planning rates weak targets above close ones, so the distance
+        // early-out above does not apply to it.  Nothing past the monster's own
+        // vision can be seen whatever the lighting is, and that bound is far
+        // cheaper than the line of sight test.
+        // Exceptions that Creature::sees() honours regardless of distance: the
+        // adjacent tile (hence the d >= 2 guard) and the two always-visible flags.
+        // MF_ALL_SEEING uses the raw vision values, which is what we bound with.
+        if( smart && d >= 2 ) {
+            const int max_sight_range = std::max( type->vision_day, type->vision_night );
+            if( d >= max_sight_range + 1 && !c.has_flag( MF_ALWAYS_VISIBLE ) &&
+                !( has_flag( MF_ALWAYS_SEES_YOU ) && c.is_avatar() ) ) {
+                return FLT_MAX;
+            }
+        }
+        if( !sees( c ) ) {
+            return FLT_MAX;
+        }
     }
 
     if( !smart ) {
@@ -1324,7 +1340,9 @@ void monster::plan()
     // If we can see the player, move toward them or flee.
     if( friendly == 0 && seen_levels.test( player_character.pos().z + OVERMAP_DEPTH ) &&
         sees( player_character ) ) {
-        dist = rate_target( player_character, dist, smart_planning );
+        // The visibility test above already answered what rate_target() would ask
+        // again, so don't pay for the same line of sight check twice.
+        dist = rate_target( player_character, dist, smart_planning, true );
         fleeing = fleeing || is_fleeing( player_character );
         target = &player_character;
         if( !fleeing && anger <= 20 ) {
