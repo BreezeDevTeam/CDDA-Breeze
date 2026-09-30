@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <map>
 #include <memory>
 #include <tuple>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 #include "activity_type.h"
 #include "cached_options.h" // IWYU pragma: keep
@@ -330,16 +332,70 @@ bool is_vertical_sound_portal( map &here, const tripoint &candidate, int dz )
     return explicit_transition || open_shaft;
 }
 
+// Ordered offsets covering the portal search area, sorted by ascending squared
+// distance from the origin.  points_in_radius yields an axis-aligned square, and
+// the scan used to walk all of its 61x61 tiles even after the closest portal had
+// already been found.  rl_dist is monotonic in squared distance, so walking this
+// table in order lets the scan stop as soon as no remaining candidate can beat
+// (or tie with) the best one found so far.
+struct portal_scan_offset {
+    std::int16_t dx;
+    std::int16_t dy;
+    std::int32_t d2; // dx * dx + dy * dy, used as both sort key and early exit test
+};
+
+const std::vector<portal_scan_offset> &ordered_portal_offsets()
+{
+    static const std::vector<portal_scan_offset> offsets = [] {
+        const int radius = monster_sound_portal_search_radius;
+        std::vector<portal_scan_offset> result;
+        result.reserve( static_cast<std::size_t>( 2 * radius + 1 ) * ( 2 * radius + 1 ) );
+        for( int dy = -radius; dy <= radius; dy++ ) {
+            for( int dx = -radius; dx <= radius; dx++ ) {
+                result.push_back( { static_cast<std::int16_t>( dx ),
+                                    static_cast<std::int16_t>( dy ), dx * dx + dy * dy } );
+            }
+        }
+        // Ties are broken on (dx, dy) so the traversal order stays consistent with
+        // the lexicographic tie break on (x, y, z) applied below.
+        std::sort( result.begin(), result.end(),
+        []( const portal_scan_offset & lhs, const portal_scan_offset & rhs ) {
+            if( lhs.d2 != rhs.d2 ) {
+                return lhs.d2 < rhs.d2;
+            }
+            return std::tie( lhs.dx, lhs.dy ) < std::tie( rhs.dx, rhs.dy );
+        } );
+        return result;
+    }();
+    return offsets;
+}
+
 std::optional<tripoint> nearest_vertical_sound_portal( map &here,
         const tripoint &origin, int dz )
 {
+    // The neighbour tile only differs in the z coordinate, so the bounds check on
+    // it is constant for the whole scan and can be hoisted out of the loop.
+    if( !here.inbounds_z( origin.z + dz ) ) {
+        return std::nullopt;
+    }
+
     std::optional<tripoint> best;
     int best_distance = monster_sound_portal_search_radius + 1;
+    int visited = 0;
 
-    for( const tripoint &candidate :
-         here.points_in_radius( origin, monster_sound_portal_search_radius ) ) {
-        if( candidate.z != origin.z ||
-            !is_vertical_sound_portal( here, candidate, dz ) ) {
+    for( const portal_scan_offset &offset : ordered_portal_offsets() ) {
+        // Squared distances are visited in ascending order, so once the current
+        // offset is ( best_distance + 1 )^2 or further away, no remaining tile can
+        // come closer than the current best, nor tie with it.
+        if( best && offset.d2 >= ( best_distance + 1 ) * ( best_distance + 1 ) ) {
+            break;
+        }
+        visited++;
+
+        const tripoint candidate( origin.x + offset.dx, origin.y + offset.dy, origin.z );
+        // Bounds are verified inside is_vertical_sound_portal, so tiles outside the
+        // map are rejected here exactly like the old clipped points_in_radius box.
+        if( !is_vertical_sound_portal( here, candidate, dz ) ) {
             continue;
         }
 
@@ -351,6 +407,17 @@ std::optional<tripoint> nearest_vertical_sound_portal( map &here,
             best = candidate;
             best_distance = distance;
         }
+    }
+
+    if( best ) {
+        add_msg_debug( debugmode::DF_SOUND,
+                       "vertical portal search: origin=(%d,%d,%d) dz=%d visited=%d hit=(%d,%d,%d) dist=%d",
+                       origin.x, origin.y, origin.z, dz, visited, best->x, best->y, best->z,
+                       best_distance );
+    } else {
+        add_msg_debug( debugmode::DF_SOUND,
+                       "vertical portal search: origin=(%d,%d,%d) dz=%d visited=%d hit=none",
+                       origin.x, origin.y, origin.z, dz, visited );
     }
     return best;
 }
