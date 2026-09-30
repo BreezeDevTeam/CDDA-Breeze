@@ -2,6 +2,8 @@
 #ifndef CATA_SRC_PATHFINDING_H
 #define CATA_SRC_PATHFINDING_H
 
+#include <bitset>
+#include <cstddef>
 #include <cstdint>
 
 #include "coordinates.h"
@@ -45,7 +47,15 @@ inline pf_special &operator &= ( pf_special &lhs, pf_special rhs )
 struct pathfinding_cache {
     pathfinding_cache();
 
+    // Whole z-level invalidation.  Used for events that can touch arbitrary tiles
+    // of the level: map generation, map window shift, vehicle changes.
     bool dirty = false;
+
+    // Submap-granular invalidation.  A single submap had its terrain, furniture,
+    // traps or fields changed, so only that 12x12 block has to be recomputed
+    // instead of the whole 121 submap (17424 tile) level.
+    // Bits are indexed by ( y / SEEY ) * my_MAPSIZE + ( x / SEEX ) of the map window.
+    std::bitset<MAPSIZE * MAPSIZE> submap_dirty;
 
     cata::mdarray<pf_special, point_bub_ms> special;
     cata::mdarray<int16_t, point_bub_ms> cost;

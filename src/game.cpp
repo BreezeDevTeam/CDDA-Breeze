@@ -12885,8 +12885,11 @@ point game::update_map( int &x, int &y, bool z_level_changed )
     load_npcs();
 
     // Make sure map cache is consistent since it may have shifted.
+    // The pathfinding cache is deliberately not dropped here: map::shift re-aligns
+    // its per-tile data with the new map window and only marks the freshly loaded
+    // submaps dirty, so invalidating all 21 z-levels would be pure waste.
     for( int zlev = -OVERMAP_DEPTH; zlev <= OVERMAP_HEIGHT; ++zlev ) {
-        m.invalidate_map_cache( zlev );
+        m.invalidate_map_cache( zlev, false );
     }
     m.build_map_cache( m.get_abs_sub().z() );
 

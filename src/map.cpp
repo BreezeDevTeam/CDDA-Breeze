@@ -306,7 +306,7 @@ void map::set_memory_seen_cache_dirty( const tripoint &p )
     }
 }
 
-void map::invalidate_map_cache( const int zlev )
+void map::invalidate_map_cache( const int zlev, const bool pathfinding )
 {
     if( inbounds_z( zlev ) ) {
         level_cache &ch = get_cache( zlev );
@@ -314,6 +314,12 @@ void map::invalidate_map_cache( const int zlev )
         ch.seen_cache_dirty = true;
         ch.outside_cache_dirty = true;
         set_transparency_cache_dirty( zlev );
+        if( pathfinding ) {
+            // This is the hook for "map content may have changed without going
+            // through the regular setters", so the pathfinding data of the level
+            // has to go as well.
+            set_pathfinding_cache_dirty( zlev );
+        }
     }
 }
 
@@ -1837,7 +1843,7 @@ bool map::furn_set( const tripoint &p, const furn_id &new_furniture, const bool 
     }
 
     // TODO: Limit to changes that affect move cost, traps and stairs
-    set_pathfinding_cache_dirty( p.z );
+    set_pathfinding_cache_dirty( p );
 
     // Make sure the furniture falls if it needs to
     support_dirty( p );
@@ -2282,7 +2288,7 @@ bool map::ter_set( const tripoint &p, const ter_id &new_terrain, bool avoid_crea
         set_visitable_zones_cache_dirty();
     }
     // TODO: Limit to changes that affect move cost, traps and stairs
-    set_pathfinding_cache_dirty( p.z );
+    set_pathfinding_cache_dirty( p );
 
     tripoint above( p.xy(), p.z + 1 );
     // Make sure that if we supported something and no longer do so, it falls down
@@ -6913,6 +6919,8 @@ void map::trap_set( const tripoint &p, const trap_id &type )
     if( type != tr_null ) {
         traplocs[type.to_i()].push_back( p );
     }
+    // Traps are part of the cached special flags (PF_TRAP)
+    set_pathfinding_cache_dirty( p );
 }
 
 void map::trap_set( const tripoint_bub_ms &p, const trap_id &type )
@@ -6945,6 +6953,8 @@ void map::remove_trap( const tripoint &p )
         if( iter != traps.end() ) {
             traps.erase( iter );
         }
+        // Traps are part of the cached special flags (PF_TRAP)
+        set_pathfinding_cache_dirty( p );
     }
 }
 
@@ -7221,7 +7231,7 @@ void map::clear_fields( const tripoint &p )
     point l;
     submap *const current_submap = unsafe_get_submap_at( p, l );
     current_submap->clear_fields( l );
-    set_pathfinding_cache_dirty( p.z );
+    set_pathfinding_cache_dirty( p );
 }
 
 void map::on_field_modified( const tripoint &p, const field_type &fd_type )
@@ -7245,7 +7255,7 @@ void map::on_field_modified( const tripoint &p, const field_type &fd_type )
         }
     }
     if( affects_move_cost ) {
-        set_pathfinding_cache_dirty( p.z );
+        set_pathfinding_cache_dirty( p );
     }
 
     // Ensure blood type fields don't hang in the air
@@ -8439,6 +8449,113 @@ shift_bitset_cache<MAPSIZE_X, SEEX>( std::bitset<MAPSIZE_X *MAPSIZE_X> &cache,
 template void
 shift_bitset_cache<MAPSIZE, 1>( std::bitset<MAPSIZE *MAPSIZE> &cache, const point &s );
 
+// Shifts a per-tile pathfinding array to follow a map window shift of @p sp submaps.
+// The window content moves the same way @ref map::copy_grid moves submaps, so tile
+// (x, y) of the new window holds what used to be at (x + sp.x * SEEX, y + sp.y * SEEY).
+template<typename T>
+static void shift_pathfinding_array( cata::mdarray<T, point_bub_ms> &arr, const point &sp )
+{
+    const int shift_x = sp.x * SEEX;
+    const int shift_y = sp.y * SEEY;
+    if( shift_x == 0 && shift_y == 0 ) {
+        return;
+    }
+
+    // Columns (fixed x) are contiguous in memory, so each of these copies is a memmove
+    if( shift_y > 0 ) {
+        for( int x = 0; x < MAPSIZE_X; ++x ) {
+            std::memmove( &arr[x][0], &arr[x][shift_y],
+                          sizeof( T ) * static_cast<size_t>( MAPSIZE_Y - shift_y ) );
+        }
+    } else if( shift_y < 0 ) {
+        const int n = -shift_y;
+        for( int x = 0; x < MAPSIZE_X; ++x ) {
+            std::memmove( &arr[x][n], &arr[x][0],
+                          sizeof( T ) * static_cast<size_t>( MAPSIZE_Y - n ) );
+        }
+    }
+
+    // Walk the columns in the direction that keeps the source data intact
+    if( shift_x > 0 ) {
+        for( int x = 0; x < MAPSIZE_X - shift_x; ++x ) {
+            std::memcpy( &arr[x][0], &arr[x + shift_x][0], sizeof( T ) * MAPSIZE_Y );
+        }
+    } else if( shift_x < 0 ) {
+        const int n = -shift_x;
+        for( int x = MAPSIZE_X - 1; x >= n; --x ) {
+            std::memcpy( &arr[x][0], &arr[x - n][0], sizeof( T ) * MAPSIZE_Y );
+        }
+    }
+}
+
+void map::shift_pathfinding_cache( const point &sp )
+{
+    if( sp == point_zero ) {
+        return;
+    }
+
+    for( int zlev = -OVERMAP_DEPTH; zlev <= OVERMAP_HEIGHT; zlev++ ) {
+        pathfinding_cache &cache = get_pathfinding_cache( zlev );
+        if( cache.dirty ) {
+            // A wholesale rebuild is already pending and will overwrite everything
+            continue;
+        }
+
+        const level_cache *lc = get_cache_lazy( zlev );
+        if( lc != nullptr && !lc->vehicle_list.empty() ) {
+            // Vehicle parts carry their own move cost and the vehicle caches are
+            // rebuilt as part of the shift, so stay conservative for such levels.
+            set_pathfinding_cache_dirty( zlev );
+            continue;
+        }
+
+        shift_pathfinding_array( cache.cost, sp );
+        shift_pathfinding_array( cache.special, sp );
+        // The granular dirty flags follow their submap into the new window:
+        // new( sm ) takes over the flag of old( sm + sp )
+        {
+            std::bitset<MAPSIZE * MAPSIZE> shifted;
+            for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
+                const int sy = smy + sp.y;
+                if( sy < 0 || sy >= my_MAPSIZE ) {
+                    continue;
+                }
+                for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
+                    const int sx = smx + sp.x;
+                    if( sx < 0 || sx >= my_MAPSIZE ) {
+                        continue;
+                    }
+                    if( cache.submap_dirty.test( static_cast<size_t>( sy ) * my_MAPSIZE + sx ) ) {
+                        shifted.set( static_cast<size_t>( smy ) * my_MAPSIZE + smx );
+                    }
+                }
+            }
+            cache.submap_dirty = shifted;
+        }
+
+        // Whatever wrapped around at the leading edge is stale data, and the
+        // submaps loaded there by map::shift may not have been marked yet.
+        if( sp.x > 0 ) {
+            for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
+                cache.submap_dirty.set( static_cast<size_t>( smy ) * my_MAPSIZE + my_MAPSIZE - 1 );
+            }
+        } else if( sp.x < 0 ) {
+            for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
+                cache.submap_dirty.set( static_cast<size_t>( smy ) * my_MAPSIZE );
+            }
+        }
+        if( sp.y > 0 ) {
+            for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
+                cache.submap_dirty.set( static_cast<size_t>( my_MAPSIZE - 1 ) * my_MAPSIZE + smx );
+            }
+        } else if( sp.y < 0 ) {
+            for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
+                cache.submap_dirty.set( smx );
+            }
+        }
+    }
+}
+
 void map::shift( const point &sp )
 {
 
@@ -8481,6 +8598,13 @@ void map::shift( const point &sp )
             veh->zones_dirty = true;
         }
     }
+
+    // Keep the per-tile pathfinding data aligned with the map window.  This has to
+    // happen before the submaps are copied/loaded below, and while the level vehicle
+    // caches are still populated (they are cleared just afterwards).
+    // Previously the whole z-level cache was dropped for all 21 levels on every map
+    // shift, which made every monster on every z-level pay a full level rebuild.
+    shift_pathfinding_cache( sp );
 
     // Shift the map sx submaps to the right and sy submaps down.
     // sx and sy should never be bigger than +/-1.
@@ -8689,7 +8813,8 @@ void map::loadn(const tripoint& grid, const bool update_vehicles)
     set_seen_cache_dirty( grid.z );
     set_outside_cache_dirty( grid.z );
     set_floor_cache_dirty( grid.z );
-    set_pathfinding_cache_dirty( grid.z );
+    // Only this submap was (re)loaded, so only it needs its pathfinding data rebuilt
+    set_pathfinding_cache_dirty( grid.z, grid.xy() );
     setsubmap( gridn, tmpsub );
     if( !tmpsub->active_items.empty() ) {
         submaps_with_active_items_dirty.emplace(grid_abs_sub);
@@ -10596,8 +10721,39 @@ pathfinding_cache &map::get_pathfinding_cache( int zlev ) const
 void map::set_pathfinding_cache_dirty( const int zlev )
 {
     if( inbounds_z( zlev ) ) {
-        get_pathfinding_cache( zlev ).dirty = true;
+        pathfinding_cache &cache = get_pathfinding_cache( zlev );
+        cache.dirty = true;
+        // A wholesale rebuild also covers everything listed as granular-dirty
+        cache.submap_dirty.reset();
     }
+}
+
+void map::set_pathfinding_cache_dirty( const int zlev, const point &sm )
+{
+    if( !inbounds_z( zlev ) ) {
+        return;
+    }
+    pathfinding_cache &cache = get_pathfinding_cache( zlev );
+    if( cache.dirty ) {
+        // The whole level is already invalidated, nothing more to remember
+        return;
+    }
+    if( sm.x < 0 || sm.x >= my_MAPSIZE || sm.y < 0 || sm.y >= my_MAPSIZE ) {
+        // Outside of the map window: be conservative and invalidate the whole level
+        set_pathfinding_cache_dirty( zlev );
+        return;
+    }
+    cache.submap_dirty.set( static_cast<size_t>( sm.y ) * my_MAPSIZE + sm.x );
+}
+
+void map::set_pathfinding_cache_dirty( const tripoint &p )
+{
+    if( !inbounds( p ) ) {
+        // The pathfinding cache only covers tiles inside the map window,
+        // so an out of bounds tile cannot invalidate anything
+        return;
+    }
+    set_pathfinding_cache_dirty( p.z, point( p.x / SEEX, p.y / SEEY ) );
 }
 
 void map::queue_main_cleanup()
@@ -10624,7 +10780,7 @@ const pathfinding_cache &map::get_pathfinding_cache_ref( int zlev ) const
         return *pathfinding_caches[ OVERMAP_DEPTH ];
     }
     pathfinding_cache &cache = get_pathfinding_cache( zlev );
-    if( cache.dirty ) {
+    if( cache.dirty || cache.submap_dirty.any() ) {
         update_pathfinding_cache( zlev );
     }
 
@@ -10634,83 +10790,113 @@ const pathfinding_cache &map::get_pathfinding_cache_ref( int zlev ) const
 void map::update_pathfinding_cache( int zlev ) const
 {
     pathfinding_cache &cache = get_pathfinding_cache( zlev );
-    if( !cache.dirty ) {
+    if( !cache.dirty && cache.submap_dirty.none() ) {
         return;
     }
 
-    std::uninitialized_fill_n( &cache.special[0][0], MAPSIZE_X * MAPSIZE_Y, PF_NORMAL );
-    cache.cost.fill( static_cast<int16_t>( -1 ) );
+    if( cache.dirty ) {
+        std::uninitialized_fill_n( &cache.special[0][0], MAPSIZE_X * MAPSIZE_Y, PF_NORMAL );
+        cache.cost.fill( static_cast<int16_t>( -1 ) );
 
-    for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
-        for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
-            const submap *cur_submap = get_submap_at_grid( { smx, smy, zlev } );
-            if( !cur_submap ) {
-                return;
+        for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
+            for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
+                update_pathfinding_cache_submap( zlev, smx, smy );
             }
-
-            tripoint p( 0, 0, zlev );
-
-            for( int sx = 0; sx < SEEX; ++sx ) {
-                p.x = sx + smx * SEEX;
-                for( int sy = 0; sy < SEEY; ++sy ) {
-                    p.y = sy + smy * SEEY;
-
-                    pf_special cur_value = PF_NORMAL;
-
-                    const_maptile tile( cur_submap, point( sx, sy ) );
-
-                    const ter_t &terrain = tile.get_ter_t();
-                    const furn_t &furniture = tile.get_furn_t();
-                    const field &field = tile.get_field();
-                    int part;
-                    const vehicle *veh = veh_at_internal( p, part );
-
-                    const int cost = move_cost_internal( furniture, terrain, field, veh, part );
-                    cache.cost[p.x][p.y] = static_cast<int16_t>( veh == nullptr ? cost :
-                                           move_cost_internal( furniture, terrain, field, nullptr, -1 ) );
-
-                    if( cost > 2 ) {
-                        cur_value |= PF_SLOW;
-                    } else if( cost <= 0 ) {
-                        cur_value |= PF_WALL;
-                        if( terrain.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ) {
-                            cur_value |= PF_CLIMBABLE;
-                        }
-                    }
-
-                    if( veh != nullptr ) {
-                        cur_value |= PF_VEHICLE;
-                    }
-
-                    for( const auto &fld : tile.get_field() ) {
-                        const field_entry &cur = fld.second;
-                        if( cur.is_dangerous() ) {
-                            cur_value |= PF_FIELD;
-                        }
-                    }
-
-                    if( !tile.get_trap_t().is_benign() || !terrain.trap.obj().is_benign() ) {
-                        cur_value |= PF_TRAP;
-                    }
-
-                    if( terrain.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ||
-                        terrain.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ||
-                        terrain.has_flag( ter_furn_flag::TFLAG_RAMP ) || terrain.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ||
-                        terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ) {
-                        cur_value |= PF_UPDOWN;
-                    }
-
-                    if( terrain.has_flag( ter_furn_flag::TFLAG_SHARP ) ) {
-                        cur_value |= PF_SHARP;
-                    }
-
-                    cache.special[p.x][p.y] = cur_value;
+        }
+        cache.dirty = false;
+    } else {
+        // Only the submaps whose content actually changed have to be recomputed
+        for( int smy = 0; smy < my_MAPSIZE; ++smy ) {
+            for( int smx = 0; smx < my_MAPSIZE; ++smx ) {
+                if( cache.submap_dirty.test( static_cast<size_t>( smy ) * my_MAPSIZE + smx ) ) {
+                    update_pathfinding_cache_submap( zlev, smx, smy );
                 }
             }
         }
     }
 
-    cache.dirty = false;
+    cache.submap_dirty.reset();
+}
+
+void map::update_pathfinding_cache_submap( int zlev, int smx, int smy ) const
+{
+    pathfinding_cache &cache = get_pathfinding_cache( zlev );
+    const submap *cur_submap = get_submap_at_grid( { smx, smy, zlev } );
+
+    tripoint p( 0, 0, zlev );
+
+    if( cur_submap == nullptr ) {
+        // Unloaded submap: store the "no cached value" marker so that
+        // cached_move_cost() falls back to a direct move_cost() query.
+        // Note: this must never leave the cache dirty forever.
+        for( int sx = 0; sx < SEEX; ++sx ) {
+            p.x = sx + smx * SEEX;
+            for( int sy = 0; sy < SEEY; ++sy ) {
+                p.y = sy + smy * SEEY;
+                cache.special[p.x][p.y] = PF_NORMAL;
+                cache.cost[p.x][p.y] = static_cast<int16_t>( -1 );
+            }
+        }
+        return;
+    }
+
+    for( int sx = 0; sx < SEEX; ++sx ) {
+        p.x = sx + smx * SEEX;
+        for( int sy = 0; sy < SEEY; ++sy ) {
+            p.y = sy + smy * SEEY;
+
+            pf_special cur_value = PF_NORMAL;
+
+            const_maptile tile( cur_submap, point( sx, sy ) );
+
+            const ter_t &terrain = tile.get_ter_t();
+            const furn_t &furniture = tile.get_furn_t();
+            const field &field = tile.get_field();
+            int part;
+            const vehicle *veh = veh_at_internal( p, part );
+
+            const int cost = move_cost_internal( furniture, terrain, field, veh, part );
+            cache.cost[p.x][p.y] = static_cast<int16_t>( veh == nullptr ? cost :
+                                   move_cost_internal( furniture, terrain, field, nullptr, -1 ) );
+
+            if( cost > 2 ) {
+                cur_value |= PF_SLOW;
+            } else if( cost <= 0 ) {
+                cur_value |= PF_WALL;
+                if( terrain.has_flag( ter_furn_flag::TFLAG_CLIMBABLE ) ) {
+                    cur_value |= PF_CLIMBABLE;
+                }
+            }
+
+            if( veh != nullptr ) {
+                cur_value |= PF_VEHICLE;
+            }
+
+            for( const auto &fld : tile.get_field() ) {
+                const field_entry &cur = fld.second;
+                if( cur.is_dangerous() ) {
+                    cur_value |= PF_FIELD;
+                }
+            }
+
+            if( !tile.get_trap_t().is_benign() || !terrain.trap.obj().is_benign() ) {
+                cur_value |= PF_TRAP;
+            }
+
+            if( terrain.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ||
+                terrain.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ||
+                terrain.has_flag( ter_furn_flag::TFLAG_RAMP ) || terrain.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ||
+                terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ) {
+                cur_value |= PF_UPDOWN;
+            }
+
+            if( terrain.has_flag( ter_furn_flag::TFLAG_SHARP ) ) {
+                cur_value |= PF_SHARP;
+            }
+
+            cache.special[p.x][p.y] = cur_value;
+        }
+    }
 }
 
 void map::clip_to_bounds( tripoint &p ) const

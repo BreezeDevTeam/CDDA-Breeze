@@ -355,6 +355,10 @@ class map
         void set_outside_cache_dirty( int zlev );
         void set_floor_cache_dirty( int zlev );
         void set_pathfinding_cache_dirty( int zlev );
+        // Invalidate a single submap of zlev, identified by its submap grid position
+        void set_pathfinding_cache_dirty( int zlev, const point &sm );
+        // Invalidate the submap containing p, without touching the rest of the level
+        void set_pathfinding_cache_dirty( const tripoint &p );
         void set_visitable_zones_cache_dirty(bool dirty = true) {
             visitable_cache_dirty = dirty;
         };
@@ -364,7 +368,7 @@ class map
         /*@}*/
 
         void set_memory_seen_cache_dirty( const tripoint &p );
-        void invalidate_map_cache( int zlev );
+        void invalidate_map_cache( int zlev, bool pathfinding = true );
 
         bool check_seen_cache( const tripoint &p ) const {
             std::bitset<MAPSIZE_X *MAPSIZE_Y> &memory_seen_cache =
@@ -1934,6 +1938,14 @@ class map
          */
         void shift_traps( const tripoint &shift );
 
+        /**
+         * Shift the per-tile pathfinding cache arrays of every z-level to match a map
+         * window shift of @p shift submaps.  The caches are indexed by map window
+         * position, so without this they would have to be invalidated wholesale on
+         * every map shift (map::loadn used to force that for all 21 z-levels).
+         */
+        void shift_pathfinding_cache( const point &shift );
+
         void copy_grid( const tripoint &to, const tripoint &from );
         void draw_map( mapgendata &dat );
 
@@ -2260,6 +2272,8 @@ class map
         const pathfinding_cache &get_pathfinding_cache_ref( int zlev ) const;
 
         void update_pathfinding_cache( int zlev ) const;
+        // Recompute the cached move cost and special flags of a single submap
+        void update_pathfinding_cache_submap( int zlev, int smx, int smy ) const;
 
         void update_visibility_cache( int zlev );
         const visibility_variables &get_visibility_variables_cache() const;
