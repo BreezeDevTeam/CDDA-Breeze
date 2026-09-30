@@ -35,6 +35,7 @@
 #include "npc.h"
 #include "output.h"
 #include "overmapbuffer.h"
+#include "pathfinding.h"
 #include "player_activity.h"
 #include "point.h"
 #include "rng.h"
@@ -369,6 +370,17 @@ std::optional<tripoint> nearest_vertical_sound_portal( map &here,
         return std::nullopt;
     }
 
+    // Almost every tile of the scanned square is a plain floor that can not pass
+    // sound vertically, but the exact test needs several terrain and furniture
+    // flag lookups per tile.  The pathfinding cache already stores the relevant
+    // flags of both levels involved (and is invalidated whenever terrain,
+    // furniture, traps or fields change), so use it as a cheap superset filter:
+    // anything it rejects can not be a portal, so the exact test stays rare.
+    constexpr pf_special vertical_transition_mask =
+        PF_VERTICAL_UP | PF_VERTICAL_DOWN | PF_NO_FLOOR;
+    const pathfinding_cache &pf_origin = here.get_pathfinding_cache_ref( origin.z );
+    const pathfinding_cache &pf_next = here.get_pathfinding_cache_ref( origin.z + dz );
+
     std::optional<tripoint> best;
     int best_distance = monster_sound_portal_search_radius + 1;
 
@@ -378,6 +390,14 @@ std::optional<tripoint> nearest_vertical_sound_portal( map &here,
         }
 
         const tripoint candidate( origin.x + offset.dx, origin.y + offset.dy, origin.z );
+        if( !here.inbounds( candidate ) ) {
+            continue;
+        }
+        if( ( ( pf_origin.special[candidate.x][candidate.y] |
+                pf_next.special[candidate.x][candidate.y] ) &
+              vertical_transition_mask ) == PF_NORMAL ) {
+            continue;
+        }
         if( !is_vertical_sound_portal( here, candidate, dz ) ) {
             continue;
         }

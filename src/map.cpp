@@ -10894,6 +10894,28 @@ void map::update_pathfinding_cache_submap( int zlev, int smx, int smy ) const
                 cur_value |= PF_SHARP;
             }
 
+            // Vertical transitions and open shafts, with the same terrain-or-furniture
+            // semantics as map::has_flag(), so that sound propagation can test them
+            // without any per-tile object lookups.
+            if( terrain.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ||
+                furniture.has_flag( ter_furn_flag::TFLAG_GOES_UP ) ||
+                terrain.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ||
+                furniture.has_flag( ter_furn_flag::TFLAG_RAMP_UP ) ) {
+                cur_value |= PF_VERTICAL_UP;
+            }
+
+            if( terrain.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ||
+                furniture.has_flag( ter_furn_flag::TFLAG_GOES_DOWN ) ||
+                terrain.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ||
+                furniture.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN ) ) {
+                cur_value |= PF_VERTICAL_DOWN;
+            }
+
+            if( terrain.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ||
+                furniture.has_flag( ter_furn_flag::TFLAG_NO_FLOOR ) ) {
+                cur_value |= PF_NO_FLOOR;
+            }
+
             cache.special[p.x][p.y] = cur_value;
         }
     }

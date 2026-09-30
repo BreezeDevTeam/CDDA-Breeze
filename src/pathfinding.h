@@ -17,9 +17,16 @@ enum pf_special : int {
     PF_VEHICLE = 0x04,   // Any vehicle tile (passable or not)
     PF_FIELD = 0x08,     // Dangerous field
     PF_TRAP = 0x10,      // Dangerous trap
-    PF_UPDOWN = 0x20,    // Stairs, ramp etc.
+    PF_UPDOWN = 0x20,    // Stairs, ramp etc. (terrain only)
     PF_CLIMBABLE = 0x40, // 0 move cost but can be climbed on examine
     PF_SHARP = 0x80,     // sharp items (barbed wire, etc)
+    // Vertical transitions and open shafts, with terrain-or-furniture semantics
+    // (i.e. matching map::has_flag()).  They are intentionally not part of the
+    // pathfinding "non normal" mask; the sound propagation code uses them as a
+    // cheap pre-filter for tiles that can pass sound between z-levels.
+    PF_VERTICAL_UP = 0x100,   // GOES_UP or RAMP_UP
+    PF_VERTICAL_DOWN = 0x200, // GOES_DOWN or RAMP_DOWN
+    PF_NO_FLOOR = 0x400,      // NO_FLOOR, an open shaft
 };
 
 constexpr pf_special operator | ( pf_special lhs, pf_special rhs )
