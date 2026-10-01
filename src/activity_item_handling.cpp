@@ -1210,6 +1210,11 @@ static activity_reason_info find_base_construction(
     return activity_reason_info::build( do_activity_reason::BLOCKING_TILE, false, idx );
 }
 
+static bool cargo_can_be_fetched( const activity_id &act )
+{
+    return act == ACT_MULTIPLE_CONSTRUCTION || act == ACT_MULTIPLE_DIS;
+}
+
 static bool are_requirements_nearby(
     const std::vector<tripoint_bub_ms> &loot_spots, const requirement_id &needed_things,
     Character &you, const activity_id &activity_to_restore, const bool in_loot_zones,
@@ -1276,7 +1281,7 @@ static bool are_requirements_nearby(
             temp_inv.add_item_ref( elem2 );
         }
 
-        if( !in_loot_zones ) {
+        if( !in_loot_zones && cargo_can_be_fetched( activity_to_restore ) ) {
             if( const std::optional<vpart_reference> vp = here.veh_at( elem ).part_with_feature( "CARGO",
                     false ) ) {
                 vehicle &src_veh = vp->vehicle();
@@ -1842,7 +1847,7 @@ static std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirements_map(
     map &here = get_map();
     tripoint_bub_ms src_loc = here.bub_from_abs( you.backlog.front().placement );
     for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc,
-            PICKUP_RANGE - 1, PICKUP_RANGE - 1 ) ) {
+            PICKUP_RANGE - 1, 0 ) ) {
         already_there_spots.push_back( elem );
         combined_spots.push_back( elem );
     }
@@ -1880,9 +1885,11 @@ static std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirements_map(
     }
     // a vector of every item in every tile that matches any part of the requirements.
     // will be filtered for amounts/charges afterwards.
+    const bool cargo_is_fetchable = !you.backlog.empty() &&
+                                    cargo_can_be_fetched( you.backlog.front().id() );
     for( const tripoint_bub_ms &point_elem : pickup_task ? loot_spots : combined_spots ) {
         std::map<itype_id, int> temp_map;
-        for( const item &stack_elem : here.i_at( point_elem ) ) {
+        const auto consider_stack = [&]( const item & stack_elem ) {
             for( std::vector<item_comp> &elem : req_comps ) {
                 for( item_comp &comp_elem : elem ) {
                     if( comp_elem.type == stack_elem.typeId() ) {
@@ -1931,6 +1938,17 @@ static std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirements_map(
                         }
                         temp_map[stack_elem.typeId()] += stack_elem.count();
                     }
+                }
+            }
+        };
+        for( const item &stack_elem : here.i_at( point_elem ) ) {
+            consider_stack( stack_elem );
+        }
+        if( cargo_is_fetchable ) {
+            if( const std::optional<vpart_reference> vp = here.veh_at( point_elem ).part_with_feature( "CARGO",
+                    false ) ) {
+                for( const item &stack_elem : vp->vehicle().get_items( vp->part_index() ) ) {
+                    consider_stack( stack_elem );
                 }
             }
         }
@@ -2224,7 +2242,7 @@ static bool fetch_activity(
         for( item &veh_elem : src_veh->get_items( src_part ) ) {
             for( auto elem : mental_map_2 ) {
                 if( std::get<0>( elem ) == src_loc && veh_elem.typeId() == std::get<1>( elem ) ) {
-                    if( !you.backlog.empty() && you.backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION ) {
+                    if( !you.backlog.empty() && cargo_can_be_fetched( you.backlog.front().id() ) ) {
                         move_item( you, veh_elem, veh_elem.count_by_charges() ? std::get<2>( elem ) : 1, src_loc,
                                    here.bub_from_abs( you.backlog.front().coords.back() ), src_veh, src_part, activity_to_restore );
                         return true;
@@ -3197,7 +3215,7 @@ static requirement_check_result generic_multi_activity_check_requirement(
         const tripoint_bub_ms nearby_center = act_id == ACT_MULTIPLE_CRAFT ?
                 tripoint_bub_ms( crafting_work_position( you, src_loc.raw() ) ) : src_loc;
         for( const tripoint_bub_ms &elem : here.points_in_radius( nearby_center, nearby_radius,
-                nearby_radius ) ) {
+                0 ) ) {
             combined_spots.push_back( elem );
         }
         add_basecamp_storage_to_loot_zone_list( mgr, src_loc, you, loot_zone_spots, combined_spots );
@@ -3326,7 +3344,7 @@ static requirement_check_result generic_multi_activity_check_requirement(
                     }
                     std::vector<tripoint_bub_ms> candidates;
                     for( const tripoint_bub_ms &point_elem : here.points_in_radius( nearby_center,
-                            nearby_radius, nearby_radius ) ) {
+                            nearby_radius, 0 ) ) {
                         // we don't want to place the components where they could interfere with our ( or someone else's ) construction spots
                         if( !you.sees( point_elem ) || ( std::find( local_src_set.begin(), local_src_set.end(),
                                                          point_elem ) != local_src_set.end() ) || !here.can_put_items_ter_furn( point_elem ) ) {

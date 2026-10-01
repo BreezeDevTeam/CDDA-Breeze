@@ -790,12 +790,31 @@ std::unordered_set<tripoint> zone_manager::get_point_set_loot( const tripoint_ab
 {
     std::unordered_set<tripoint> res;
     map &here = get_map();
-    for( const tripoint &elem : here.points_in_radius( here.getlocal( where ), radius, radius ) ) {
-        const zone_data *zone = get_zone_at( here.getglobal( elem ), true, fac );
-        if( zone == nullptr ) {
+    std::vector<const zone_data *> candidates;
+    for( const zone_data &z : zones ) {
+        if( z.get_faction() == fac && z.get_type().str().substr( 0, 4 ) == "LOOT" ) {
+            candidates.push_back( &z );
+        }
+    }
+    for( const zone_data *z : here.get_vehicle_zones( here.get_abs_sub().z() ) ) {
+        if( z->get_faction() == fac && z->get_type().str().substr( 0, 4 ) == "LOOT" ) {
+            candidates.push_back( z );
+        }
+    }
+
+    for( const tripoint &elem : here.points_in_radius( here.getlocal( where ), radius, 0 ) ) {
+        const tripoint_abs_ms abs_elem = here.getglobal( elem );
+        bool inside = false;
+        for( const zone_data *z : candidates ) {
+            if( z->has_inside( abs_elem ) ) {
+                inside = true;
+                break;
+            }
+        }
+        if( !inside ) {
             continue;
         }
-        if( npc_search && has( zone_type_NO_NPC_PICKUP, where ) ) {
+        if( npc_search && has( zone_type_NO_NPC_PICKUP, abs_elem ) ) {
             continue;
         }
         res.insert( elem );
