@@ -89,6 +89,7 @@
 #include "shadowcasting.h"
 #include "sounds.h"
 #include "string_formatter.h"
+#include "stuck_debug.h"
 #include "submap.h"
 #include "tileray.h"
 #include "timed_event.h"
@@ -1249,9 +1250,14 @@ bool map::check_vehicle_zones( const int zlev )
 
 std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
 {
-    std::vector<zone_data *> veh_zones;
+    level_cache &ch = get_cache( zlev );
+    std::vector<zone_data *> &veh_zones = ch.zone_vehicles_scratch;
+    veh_zones.clear();
     bool rebuild = false;
-    for( vehicle *veh : get_cache( zlev ).zone_vehicles ) {
+    stuck_debug::ensure_started();
+    stuck_debug::enter( stuck_debug::PH_GVZ );
+    stuck_debug::bump( stuck_debug::C_GVZ_CALLS );
+    for( vehicle *veh : ch.zone_vehicles ) {
         if( veh->refresh_zones() ) {
             rebuild = true;
         }
@@ -1259,6 +1265,7 @@ std::vector<zone_data *> map::get_vehicle_zones( const int zlev )
             veh_zones.emplace_back( &zone.second );
         }
     }
+    stuck_debug::bump( stuck_debug::C_GVZ_ZONES, static_cast<long long>( veh_zones.size() ) );
     if( rebuild ) {
         zone_manager::get_manager().cache_vzones();
     }

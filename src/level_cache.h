@@ -7,6 +7,7 @@
 #include <set>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "game_constants.h"
 #include "lightmap.h"
@@ -16,6 +17,7 @@
 #include "value_ptr.h"
 
 class vehicle;
+class zone_data;
 
 struct level_cache {
     public:
@@ -95,6 +97,8 @@ struct level_cache {
 
         std::set<vehicle *> vehicle_list;
         std::set<vehicle *> zone_vehicles;
+        // Reused buffer for map::get_vehicle_zones, keeps its capacity between calls
+        std::vector<zone_data *> zone_vehicles_scratch;
 
         bool get_veh_in_active_range() const;
         bool get_veh_exists_at( const tripoint &pt ) const;

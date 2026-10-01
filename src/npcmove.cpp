@@ -68,6 +68,7 @@
 #include "rng.h"
 #include "sounds.h"
 #include "stomach.h"
+#include "stuck_debug.h"
 #include "talker.h"
 #include "translations.h"
 #include "units.h"
@@ -3380,6 +3381,8 @@ bool npc::do_pulp()
 
 bool npc::do_player_activity()
 {
+    stuck_debug::ensure_started();
+    stuck_debug::enter( stuck_debug::PH_DOACT );
     int old_moves = moves;
     if( moves > 200 && activity && ( activity.is_multi_type() ||
                                      activity.id() == ACT_TIDY_UP ) ) {
@@ -3401,8 +3404,18 @@ bool npc::do_player_activity()
     // to satisfy the infinite loop counter.
     const bool multi_type = activity ? activity.is_multi_type() : false;
     const int moves_before = moves;
+    long long spin_iters = 0;
     while( moves > 0 && activity ) {
         activity.do_turn( *this );
+        stuck_debug::bump( stuck_debug::C_DOACT_ITERS );
+        ++spin_iters;
+        if( spin_iters == 300 || spin_iters % 3000 == 0 ) {
+            stuck_debug::log( "SPIN do_player_activity npc=" + get_name() +
+                              " iters=" + std::to_string( spin_iters ) +
+                              " moves=" + std::to_string( moves ) +
+                              " act=" + ( activity ? activity.id().str() : std::string( "null" ) ) +
+                              " backlog=" + std::to_string( backlog.size() ) );
+        }
         if( !is_active() ) {
             return true;
         }
