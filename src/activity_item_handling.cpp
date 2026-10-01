@@ -60,7 +60,6 @@
 #include "rng.h"
 #include "skill.h"
 #include "stomach.h"
-#include "stuck_debug.h"
 #include "temp_crafting_inventory.h"
 #include "translations.h"
 #include "trap.h"
@@ -1211,6 +1210,11 @@ static activity_reason_info find_base_construction(
     return activity_reason_info::build( do_activity_reason::BLOCKING_TILE, false, idx );
 }
 
+static bool cargo_can_be_fetched( const activity_id &act )
+{
+    return act == ACT_MULTIPLE_CONSTRUCTION || act == ACT_MULTIPLE_DIS;
+}
+
 static bool are_requirements_nearby(
     const std::vector<tripoint_bub_ms> &loot_spots, const requirement_id &needed_things,
     Character &you, const activity_id &activity_to_restore, const bool in_loot_zones,
@@ -1277,7 +1281,7 @@ static bool are_requirements_nearby(
             temp_inv.add_item_ref( elem2 );
         }
 
-        if( !in_loot_zones ) {
+        if( !in_loot_zones && cargo_can_be_fetched( activity_to_restore ) ) {
             if( const std::optional<vpart_reference> vp = here.veh_at( elem ).part_with_feature( "CARGO",
                     false ) ) {
                 vehicle &src_veh = vp->vehicle();
@@ -1842,22 +1846,6 @@ static std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirements_map(
     std::map<itype_id, int> total_map;
     map &here = get_map();
     tripoint_bub_ms src_loc = here.bub_from_abs( you.backlog.front().placement );
-    static long long probe_last_ms = 0;
-    static long long probe_n = 0;
-    const auto probe = [&]( const char *tag ) {
-        if( !stuck_debug::due( probe_last_ms, ++probe_n, 30, 1000 ) ) {
-            return;
-        }
-        stuck_debug::log( std::string( "reqmap[" ) + tag + "] for=" + activity_to_restore.str() +
-                          " need=" + things_to_fetch_id.str() +
-                          " qual=" + std::to_string( things_to_fetch.get_qualities().size() ) +
-                          " tool=" + std::to_string( things_to_fetch.get_tools().size() ) +
-                          " comp=" + std::to_string( things_to_fetch.get_components().size() ) +
-                          " already=" + std::to_string( already_there_spots.size() ) +
-                          " combined=" + std::to_string( combined_spots.size() ) +
-                          " loot=" + std::to_string( loot_spots.size() ) +
-                          " planned=" + std::to_string( final_map.size() ) );
-    };
     for( const tripoint_bub_ms &elem : here.points_in_radius( src_loc,
             PICKUP_RANGE - 1, 0 ) ) {
         already_there_spots.push_back( elem );
@@ -1887,21 +1875,18 @@ static std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirements_map(
     // if the requirements aren't available, then stop.
     if( !are_requirements_nearby( pickup_task ? loot_spots : combined_spots, things_to_fetch_id, you,
                                   activity_to_restore, pickup_task, src_loc ) ) {
-        probe( "A-reqs-not-nearby" );
         return requirement_map;
     }
     // if the requirements are already near the work spot and its a construction/crafting task, then no need to fetch anything more.
     if( !pickup_task &&
         are_requirements_nearby( already_there_spots, things_to_fetch_id, you, activity_to_restore,
                                  false, src_loc ) ) {
-        probe( "B-already-there" );
         return requirement_map;
     }
     // a vector of every item in every tile that matches any part of the requirements.
     // will be filtered for amounts/charges afterwards.
     const bool cargo_is_fetchable = !you.backlog.empty() &&
-                                    ( you.backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION ||
-                                      you.backlog.front().id() == ACT_MULTIPLE_DIS );
+                                    cargo_can_be_fetched( you.backlog.front().id() );
     for( const tripoint_bub_ms &point_elem : pickup_task ? loot_spots : combined_spots ) {
         std::map<itype_id, int> temp_map;
         const auto consider_stack = [&]( const item & stack_elem ) {
@@ -2121,7 +2106,6 @@ static std::vector<std::tuple<tripoint_bub_ms, itype_id, int>> requirements_map(
             }
         }
     }
-    probe( "C-planned" );
     for( const std::tuple<tripoint_bub_ms, itype_id, int> &elem : final_map ) {
         add_msg_debug( debugmode::DF_REQUIREMENTS_MAP, "%s is fetching %s from %s ",
                        you.disp_name(),
@@ -2258,8 +2242,7 @@ static bool fetch_activity(
         for( item &veh_elem : src_veh->get_items( src_part ) ) {
             for( auto elem : mental_map_2 ) {
                 if( std::get<0>( elem ) == src_loc && veh_elem.typeId() == std::get<1>( elem ) ) {
-                    if( !you.backlog.empty() && ( you.backlog.front().id() == ACT_MULTIPLE_CONSTRUCTION ||
-                                                  you.backlog.front().id() == ACT_MULTIPLE_DIS ) ) {
+                    if( !you.backlog.empty() && cargo_can_be_fetched( you.backlog.front().id() ) ) {
                         move_item( you, veh_elem, veh_elem.count_by_charges() ? std::get<2>( elem ) : 1, src_loc,
                                    here.bub_from_abs( you.backlog.front().coords.back() ), src_veh, src_part, activity_to_restore );
                         return true;
@@ -3122,9 +3105,6 @@ static requirement_check_result generic_multi_activity_check_requirement(
     const tripoint_abs_ms &src, const tripoint_bub_ms &src_loc,
     const std::unordered_set<tripoint_abs_ms> &src_set, const bool check_only = false )
 {
-    stuck_debug::ensure_started();
-    stuck_debug::enter( stuck_debug::PH_CHECKREQ );
-    stuck_debug::bump( stuck_debug::C_CHECKREQ_CALLS );
     map &here = get_map();
     const tripoint_abs_ms abspos = here.getglobal( you.pos() );
     zone_manager &mgr = zone_manager::get_manager();
@@ -3621,9 +3601,6 @@ static bool generic_multi_activity_do(
 
 bool generic_multi_activity_handler( player_activity &act, Character &you, bool check_only )
 {
-    stuck_debug::ensure_started();
-    stuck_debug::enter( stuck_debug::PH_MULTIACT );
-    stuck_debug::bump( stuck_debug::C_MULTIACT_CALLS );
     map &here = get_map();
     const tripoint_abs_ms abspos = here.getglobal( you.pos() );
     // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)

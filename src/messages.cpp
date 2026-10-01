@@ -15,7 +15,6 @@
 #include "point.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
-#include "stuck_debug.h"
 #include "translations.h"
 #include "ui_manager.h"
 #include "viewer.h"
@@ -179,9 +178,6 @@ class messages_impl
                 return;
             }
 
-            stuck_debug::ensure_started();
-            stuck_debug::bump( stuck_debug::C_MSG_ADDED );
-
             game_message m = game_message( std::move( msg ), type );
 
             refresh_cooldown( m, flags );
@@ -197,8 +193,6 @@ class messages_impl
             }
 
             messages.emplace_back( m );
-            stuck_debug::counter( stuck_debug::C_MSG_LOG_SIZE ).store(
-                static_cast<long long>( messages.size() ), std::memory_order_relaxed );
         }
 
         /** Check if the current message needs to be prevented (hidden) or not from being displayed in the side bar.

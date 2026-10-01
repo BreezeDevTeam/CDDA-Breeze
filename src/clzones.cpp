@@ -36,7 +36,6 @@
 #include "path_info.h"
 #include "string_formatter.h"
 #include "string_input_popup.h"
-#include "stuck_debug.h"
 #include "translations.h"
 #include "ui.h"
 #include "value_ptr.h"
@@ -791,10 +790,6 @@ std::unordered_set<tripoint> zone_manager::get_point_set_loot( const tripoint_ab
 {
     std::unordered_set<tripoint> res;
     map &here = get_map();
-    stuck_debug::ensure_started();
-    stuck_debug::enter( stuck_debug::PH_GPSL );
-    stuck_debug::bump( stuck_debug::C_GPSL_CALLS );
-    stuck_debug::bump( stuck_debug::C_GPSL_INSIDE );
     std::vector<const zone_data *> candidates;
     for( const zone_data &z : zones ) {
         if( z.get_faction() == fac && z.get_type().str().substr( 0, 4 ) == "LOOT" ) {
@@ -807,9 +802,7 @@ std::unordered_set<tripoint> zone_manager::get_point_set_loot( const tripoint_ab
         }
     }
 
-    int scanned = 0;
     for( const tripoint &elem : here.points_in_radius( here.getlocal( where ), radius, 0 ) ) {
-        scanned++;
         const tripoint_abs_ms abs_elem = here.getglobal( elem );
         bool inside = false;
         for( const zone_data *z : candidates ) {
@@ -826,8 +819,6 @@ std::unordered_set<tripoint> zone_manager::get_point_set_loot( const tripoint_ab
         }
         res.insert( elem );
     }
-    stuck_debug::bump( stuck_debug::C_GPSL_SCANNED, scanned );
-    stuck_debug::bump( stuck_debug::C_GPSL_INSIDE, -1 );
     return res;
 }
 
