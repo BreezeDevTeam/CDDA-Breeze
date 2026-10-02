@@ -69,9 +69,12 @@ struct mutation_branch;
 
 bool creature_damage_simulation = false;
 
-static void spawn_damage_effects( const std::string &id, const tripoint &p )
+static void spawn_damage_effects( const Creature &who, const std::string &id, const tripoint &p )
 {
-    if( creature_damage_simulation ) {
+    const Character &viewer = get_player_character();
+    if( creature_damage_simulation ||
+        rl_dist( viewer.pos(), who.pos() ) > MAX_VIEW_DISTANCE ||
+        !viewer.sees( who ) ) {
         return;
     }
     ParticleEffectManager::get_instance().create_effect( id, p );
@@ -1222,14 +1225,14 @@ void Creature::deal_damage_handle_type( const effect_source &source, const damag
             div = 5.0f;
             if( monster *mon = as_monster() ) {
                 if( mon->type->in_species( species_ROBOT ) ) {
-                    spawn_damage_effects( "spark_flash", pos() );
-                    spawn_damage_effects( "spark", pos() );
-                    spawn_damage_effects( "spark_ember", pos() );
+                    spawn_damage_effects( *this, "spark_flash", pos() );
+                    spawn_damage_effects( *this, "spark", pos() );
+                    spawn_damage_effects( *this, "spark_ember", pos() );
                 } else {
-                    spawn_damage_effects( "bleed", pos() );
+                    spawn_damage_effects( *this, "bleed", pos() );
                 }
             } else {
-                spawn_damage_effects( "bleed", pos() );
+                spawn_damage_effects( *this, "bleed", pos() );
             }
             break;
 
@@ -1277,14 +1280,14 @@ void Creature::deal_damage_handle_type( const effect_source &source, const damag
             div = 3.0f;
             if( monster *mon = as_monster() ) {
                 if( mon->type->in_species( species_ROBOT ) ) {
-                    spawn_damage_effects( "spark_flash", pos() );
-                    spawn_damage_effects( "spark", pos() );
-                    spawn_damage_effects( "spark_ember", pos() );
+                    spawn_damage_effects( *this, "spark_flash", pos() );
+                    spawn_damage_effects( *this, "spark", pos() );
+                    spawn_damage_effects( *this, "spark_ember", pos() );
                 } else {
-                    spawn_damage_effects( "bleed", pos() );
+                    spawn_damage_effects( *this, "bleed", pos() );
                 }
             } else {
-                spawn_damage_effects( "bleed", pos() );
+                spawn_damage_effects( *this, "bleed", pos() );
             }
             break;
 
@@ -1295,14 +1298,14 @@ void Creature::deal_damage_handle_type( const effect_source &source, const damag
             make_bleed( source, bp, 1_minutes * rng( 1, adjusted_damage ) );
             if( monster *mon = as_monster() ) {
                 if( mon->type->in_species( species_ROBOT ) ) {
-                    spawn_damage_effects( "spark_flash", pos() );
-                    spawn_damage_effects( "spark", pos() );
-                    spawn_damage_effects( "spark_ember", pos() );
+                    spawn_damage_effects( *this, "spark_flash", pos() );
+                    spawn_damage_effects( *this, "spark", pos() );
+                    spawn_damage_effects( *this, "spark_ember", pos() );
                 } else {
-                    spawn_damage_effects( "bleed", pos() );
+                    spawn_damage_effects( *this, "bleed", pos() );
                 }
             } else {
-                spawn_damage_effects( "bleed", pos() );
+                spawn_damage_effects( *this, "bleed", pos() );
             }
             break;
 
@@ -3045,6 +3048,18 @@ void Creature::process_particle_activity() {
         if( active_particle_effect != nullptr &&
             !ParticleEffectManager::get_instance().is_effect_alive( active_particle_effect ) ) {
             active_particle_effect = nullptr;
+        }
+
+        const Character &viewer = get_player_character();
+        const bool visible = viewer.pos() != pos() &&
+                             rl_dist( viewer.pos(), pos() ) <= MAX_VIEW_DISTANCE &&
+                             viewer.sees( *this );
+        if( !visible ) {
+            if( active_particle_effect != nullptr ) {
+                ParticleEffectManager::get_instance().destroy_effect( active_particle_effect );
+                active_particle_effect = nullptr;
+            }
+            return;
         }
 
         auto iter = monster_appearance_style_map.find(m->type->id.str());
