@@ -1,0 +1,239 @@
+[
+  {
+    "type": "npc",
+    "id": "travel_hub_ancilla_doctor",
+    "name_unique": "埃利亚斯·史蒂文斯",
+    "name_suffix": "义体医生",
+    "gender": "male",
+    "class": "NC_TRAVEL_HUB_ANCILLA_DOCTOR",
+    "attitude": 0,
+    "mission": 3,
+    "chat": "TALK_TRAVEL_HUB_ANCILLA_DOCTOR",
+    "faction": "robofac_auxiliaries"
+  },
+  {
+    "type": "npc_class",
+    "id": "NC_TRAVEL_HUB_ANCILLA_DOCTOR",
+    "name": {
+      "str": "Ancilla cybernetics doctor"
+    },
+    "job_description": "我负责这间诊所，也负责阻止有人把自己交给自动手术台乱切。",
+    "traits": [
+      {
+        "group": "NPC_starting_traits"
+      },
+      {
+        "group": "Appearance_demographics"
+      },
+      {
+        "trait": "RETURN_TO_START_POS"
+      }
+    ],
+    "common": false,
+    "bonus_int": {
+      "rng": [
+        3,
+        5
+      ]
+    },
+    "worn_override": "NC_TRAVEL_HUB_ANCILLA_DOCTOR_worn",
+    "shopkeeper_item_group": [
+      {
+        "group": "NC_TRAVEL_HUB_ANCILLA_DOCTOR_stock",
+        "rigid": true
+      }
+    ],
+    "shopkeeper_price_rules": [
+      {
+        "group": "NC_TRAVEL_HUB_ANCILLA_DOCTOR_stock",
+        "markup": 2.0
+      },
+      {
+        "item": "RobofacCoin",
+        "price": 5000,
+        "fixed_adj": 0
+      }
+    ],
+    "skills": [
+      {
+        "skill": "ALL",
+        "level": {
+          "mul": [
+            {
+              "one_in": 3
+            },
+            {
+              "sum": [
+                {
+                  "dice": [
+                    2,
+                    2
+                  ]
+                },
+                {
+                  "constant": -2
+                },
+                {
+                  "one_in": 4
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "skill": "firstaid",
+        "bonus": 7
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "NC_TRAVEL_HUB_ANCILLA_DOCTOR_worn",
+    "subtype": "collection",
+    "items": [
+      {
+        "item": "jeans"
+      },
+      {
+        "item": "boots_combat"
+      },
+      {
+        "item": "boxer_briefs"
+      },
+      {
+        "item": "tshirt"
+      },
+      {
+        "item": "apron_leather"
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "NC_TRAVEL_HUB_ANCILLA_DOCTOR_stock",
+    "subtype": "collection",
+    "entries": [
+      {
+        "item": "disinfectant",
+        "prob": 100,
+        "count": [
+          2,
+          6
+        ]
+      },
+      {
+        "item": "bandages",
+        "prob": 100,
+        "count": [
+          4,
+          10
+        ]
+      },
+      {
+        "item": "saline",
+        "prob": 100,
+        "count": [
+          1,
+          2
+        ]
+      },
+      {
+        "item": "anesthetic",
+        "prob": 100,
+        "count": [
+          1,
+          3
+        ]
+      },
+      {
+        "group": "drugs_emergency",
+        "prob": 100,
+        "count": [
+          2,
+          4
+        ]
+      },
+      {
+        "group": "drugs_analgesic",
+        "prob": 100,
+        "count": [
+          2,
+          4
+        ]
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_HUB_ANCILLA_DOCTOR",
+    "dynamic_line": [
+      "诊所开放。别自己乱碰自动手术台，带好义体和麻醉剂，有事先问我。",
+      "我能处理外伤，也能协助安装或拆除义体。机器很可靠，前提是操作者别自作聪明。",
+      "Ancilla负责维持秩序，HUB提供设备。我负责让你离开时零件没有装反。"
+    ],
+    "responses": [
+      {
+        "text": "[1枚HUB金币] 帮我处理伤势。",
+        "topic": "TALK_TRAVEL_HUB_ANCILLA_DOCTOR_AID_DONE",
+        "condition": {
+          "and": [
+            {
+              "npc_service": true
+            },
+            {
+              "u_has_items": {
+                "item": "RobofacCoin",
+                "count": 1
+              }
+            }
+          ]
+        },
+        "effect": [
+          {
+            "u_consume_item": "RobofacCoin",
+            "count": 1,
+            "popup": true
+          },
+          "give_aid"
+        ]
+      },
+      {
+        "text": "我有义体需要安装。",
+        "topic": "TALK_DONE",
+        "effect": "bionic_install",
+        "condition": {
+          "npc_service": true
+        }
+      },
+      {
+        "text": "我需要拆除一件义体。",
+        "topic": "TALK_DONE",
+        "effect": "bionic_remove",
+        "condition": {
+          "npc_service": true
+        }
+      },
+      {
+        "text": "让我看看医疗物资。",
+        "topic": "TALK_TRAVEL_HUB_ANCILLA_DOCTOR",
+        "effect": "start_trade"
+      },
+      {
+        "text": "先不用。",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_HUB_ANCILLA_DOCTOR_AID_DONE",
+    "dynamic_line": "处理好了。今天别再拿伤口测试运气。",
+    "responses": [
+      {
+        "text": "知道了。",
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
