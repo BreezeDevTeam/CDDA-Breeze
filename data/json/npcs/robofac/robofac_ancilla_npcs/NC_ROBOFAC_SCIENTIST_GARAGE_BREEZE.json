@@ -1,0 +1,209 @@
+[
+  {
+    "type": "npc",
+    "id": "travel_hub_garage_scientist",
+    "name_unique": "塞巴斯蒂安·史密斯",
+    "name_suffix": "HUB研究员",
+    "gender": "male",
+    "class": "NC_TRAVEL_HUB_GARAGE_SCIENTIST",
+    "attitude": 0,
+    "mission": 3,
+    "chat": "TALK_TRAVEL_HUB_GARAGE_SCIENTIST",
+    "faction": "robofac_auxiliaries"
+  },
+  {
+    "type": "npc_class",
+    "id": "NC_TRAVEL_HUB_GARAGE_SCIENTIST",
+    "name": {
+      "str": "Hub 01 garage scientist"
+    },
+    "job_description": "我负责拆解Exodii残骸，能回收的结构一件也不浪费。",
+    "traits": [
+      {
+        "group": "NPC_starting_traits"
+      },
+      {
+        "group": "Appearance_demographics"
+      },
+      {
+        "trait": "RETURN_TO_START_POS"
+      }
+    ],
+    "common": false,
+    "bonus_int": {
+      "rng": [
+        2,
+        4
+      ]
+    },
+    "bonus_per": {
+      "rng": [
+        0,
+        2
+      ]
+    },
+    "worn_override": "NC_ROBOFAC_SCIENTIST_worn",
+    "weapon_override": "NC_TRAVEL_HUB_GARAGE_SCIENTIST_wield",
+    "skills": [
+      {
+        "skill": "firstaid",
+        "bonus": 5
+      },
+      {
+        "skill": "electronics",
+        "bonus": 8
+      },
+      {
+        "skill": "mechanics",
+        "bonus": 8
+      }
+    ]
+  },
+  {
+    "type": "item_group",
+    "id": "NC_TRAVEL_HUB_GARAGE_SCIENTIST_wield",
+    "subtype": "collection",
+    "items": [
+      {
+        "item": "red_pen"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_HUB_GARAGE_SCIENTIST",
+    "dynamic_line": [
+      "车库刚整理好。这里不修普通轿车，我们拆的是更麻烦的东西。",
+      "HUB对Exodii硬件很感兴趣。你带完整的失活残骸来，我按类型付HUB金币。",
+      "别把还会动的东西推过来。至少先确认它不会突然从吊架上跳下来。"
+    ],
+    "responses": [
+      {
+        "text": "说说你们的残骸回收。",
+        "topic": "TALK_TRAVEL_HUB_GARAGE_BOUNTY"
+      },
+      {
+        "text": "我带来了Exodii残骸。",
+        "topic": "TALK_TRAVEL_HUB_GARAGE_TRADE"
+      },
+      {
+        "text": "先不打扰。",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_HUB_GARAGE_BOUNTY",
+    "dynamic_line": "我们需要能够完整拆解的失活结构。工蜂残骸支付1枚HUB金币，四足体和炮塔各2枚，狙击浮空体4枚。那些被义体撑起来的尸体不在回收范围内。",
+    "responses": [
+      {
+        "text": "明白了。",
+        "topic": "TALK_TRAVEL_HUB_GARAGE_SCIENTIST"
+      },
+      {
+        "text": "我先走了。",
+        "topic": "TALK_DONE"
+      }
+    ]
+  },
+  {
+    "type": "talk_topic",
+    "id": "TALK_TRAVEL_HUB_GARAGE_TRADE",
+    "dynamic_line": "放到检查区，我先看看型号。",
+    "responses": [
+      {
+        "text": "[获得1枚HUB金币] 交出失活Exodii工蜂。",
+        "topic": "TALK_DONE",
+        "condition": {
+          "u_has_items": {
+            "item": "broken_exodii_worker",
+            "count": 1
+          }
+        },
+        "effect": [
+          {
+            "u_consume_item": "broken_exodii_worker",
+            "count": 1,
+            "popup": true
+          },
+          {
+            "u_spawn_item": "RobofacCoin",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "text": "[获得2枚HUB金币] 交出失活Exodii四足体。",
+        "topic": "TALK_DONE",
+        "condition": {
+          "u_has_items": {
+            "item": "broken_exodii_quad",
+            "count": 1
+          }
+        },
+        "effect": [
+          {
+            "u_consume_item": "broken_exodii_quad",
+            "count": 1,
+            "popup": true
+          },
+          {
+            "u_spawn_item": "RobofacCoin",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "text": "[获得2枚HUB金币] 交出失活Exodii炮塔。",
+        "topic": "TALK_DONE",
+        "condition": {
+          "u_has_items": {
+            "item": "broken_exodii_turret",
+            "count": 1
+          }
+        },
+        "effect": [
+          {
+            "u_consume_item": "broken_exodii_turret",
+            "count": 1,
+            "popup": true
+          },
+          {
+            "u_spawn_item": "RobofacCoin",
+            "count": 2
+          }
+        ]
+      },
+      {
+        "text": "[获得4枚HUB金币] 交出失活Exodii狙击浮空体。",
+        "topic": "TALK_DONE",
+        "condition": {
+          "u_has_items": {
+            "item": "broken_exodii_sniper_drone",
+            "count": 1
+          }
+        },
+        "effect": [
+          {
+            "u_consume_item": "broken_exodii_sniper_drone",
+            "count": 1,
+            "popup": true
+          },
+          {
+            "u_spawn_item": "RobofacCoin",
+            "count": 4
+          }
+        ]
+      },
+      {
+        "text": "没有合适的残骸。",
+        "topic": "TALK_TRAVEL_HUB_GARAGE_SCIENTIST"
+      },
+      {
+        "text": "先算了。",
+        "topic": "TALK_DONE"
+      }
+    ]
+  }
+]
