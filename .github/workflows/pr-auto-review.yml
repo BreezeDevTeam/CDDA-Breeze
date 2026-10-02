@@ -50,6 +50,7 @@ jobs:
             if (has('src/')) categories.push('C++ 核心代码');
             if (has('data/json/')) categories.push('本体游戏数据');
             if (has('data/mods/')) categories.push('模组');
+            if (has('data/') && !has('data/json/') && !has('data/mods/')) categories.push('其他游戏数据');
             if (has('android/')) categories.push('Android');
             if (has('msvc-full-features/') || matches(/^\.github\/vcpkg_triplets\//)) categories.push('Windows/MSVC');
             if (has('.github/workflows/')) categories.push('GitHub Actions');
