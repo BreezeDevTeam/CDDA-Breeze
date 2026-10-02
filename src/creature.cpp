@@ -67,6 +67,16 @@
 
 struct mutation_branch;
 
+bool creature_damage_simulation = false;
+
+static void spawn_damage_effects( const std::string &id, const tripoint &p )
+{
+    if( creature_damage_simulation ) {
+        return;
+    }
+    ParticleEffectManager::get_instance().create_effect( id, p );
+}
+
 static const anatomy_id anatomy_human_anatomy( "human_anatomy" );
 
 static const efftype_id effect_blind( "blind" );
@@ -154,7 +164,15 @@ Creature::Creature( Creature && ) noexcept( map_is_noexcept &&list_is_noexcept )
 Creature &Creature::operator=( const Creature & ) = default;
 Creature &Creature::operator=( Creature && ) noexcept = default;
 
-Creature::~Creature() = default;
+Creature::~Creature()
+{
+    if( active_particle_effect != nullptr ) {
+        if( ParticleEffectManager::get_instance().is_effect_alive( active_particle_effect ) ) {
+            ParticleEffectManager::get_instance().destroy_effect( active_particle_effect );
+        }
+        active_particle_effect = nullptr;
+    }
+}
 
 tripoint Creature::pos() const
 {
@@ -1204,14 +1222,14 @@ void Creature::deal_damage_handle_type( const effect_source &source, const damag
             div = 5.0f;
             if( monster *mon = as_monster() ) {
                 if( mon->type->in_species( species_ROBOT ) ) {
-                    ParticleEffectManager::get_instance().create_effect( "spark_flash", pos() );
-                    ParticleEffectManager::get_instance().create_effect( "spark", pos() );
-                    ParticleEffectManager::get_instance().create_effect( "spark_ember", pos() );
+                    spawn_damage_effects( "spark_flash", pos() );
+                    spawn_damage_effects( "spark", pos() );
+                    spawn_damage_effects( "spark_ember", pos() );
                 } else {
-                    ParticleEffectManager::get_instance().create_effect( "bleed", pos() );
+                    spawn_damage_effects( "bleed", pos() );
                 }
             } else {
-                ParticleEffectManager::get_instance().create_effect( "bleed", pos() );
+                spawn_damage_effects( "bleed", pos() );
             }
             break;
 
@@ -1259,14 +1277,14 @@ void Creature::deal_damage_handle_type( const effect_source &source, const damag
             div = 3.0f;
             if( monster *mon = as_monster() ) {
                 if( mon->type->in_species( species_ROBOT ) ) {
-                    ParticleEffectManager::get_instance().create_effect( "spark_flash", pos() );
-                    ParticleEffectManager::get_instance().create_effect( "spark", pos() );
-                    ParticleEffectManager::get_instance().create_effect( "spark_ember", pos() );
+                    spawn_damage_effects( "spark_flash", pos() );
+                    spawn_damage_effects( "spark", pos() );
+                    spawn_damage_effects( "spark_ember", pos() );
                 } else {
-                    ParticleEffectManager::get_instance().create_effect( "bleed", pos() );
+                    spawn_damage_effects( "bleed", pos() );
                 }
             } else {
-                ParticleEffectManager::get_instance().create_effect( "bleed", pos() );
+                spawn_damage_effects( "bleed", pos() );
             }
             break;
 
@@ -1277,14 +1295,14 @@ void Creature::deal_damage_handle_type( const effect_source &source, const damag
             make_bleed( source, bp, 1_minutes * rng( 1, adjusted_damage ) );
             if( monster *mon = as_monster() ) {
                 if( mon->type->in_species( species_ROBOT ) ) {
-                    ParticleEffectManager::get_instance().create_effect( "spark_flash", pos() );
-                    ParticleEffectManager::get_instance().create_effect( "spark", pos() );
-                    ParticleEffectManager::get_instance().create_effect( "spark_ember", pos() );
+                    spawn_damage_effects( "spark_flash", pos() );
+                    spawn_damage_effects( "spark", pos() );
+                    spawn_damage_effects( "spark_ember", pos() );
                 } else {
-                    ParticleEffectManager::get_instance().create_effect( "bleed", pos() );
+                    spawn_damage_effects( "bleed", pos() );
                 }
             } else {
-                ParticleEffectManager::get_instance().create_effect( "bleed", pos() );
+                spawn_damage_effects( "bleed", pos() );
             }
             break;
 

@@ -8,6 +8,8 @@
 #include "path_info.h"
 #include "sdl_wrappers.h"
 
+extern float particle_frame_dt;
+
 ParticleEffectManager::ParticleEffectManager() {
 
 }
@@ -141,7 +143,19 @@ void ParticleEffectManager::update() {
     if (!is_initialized) {
         return;
     }
-    
+
+    static uint32_t last_update_ticks = 0;
+    uint32_t const now_ticks = SDL_GetTicks();
+    float dt = last_update_ticks == 0 ? 1.0f / 25.0f
+                                      : static_cast<float>( now_ticks - last_update_ticks ) / 1000.0f;
+    last_update_ticks = now_ticks;
+    if( dt < 0.0f ) {
+        dt = 0.0f;
+    } else if( dt > 0.1f ) {
+        dt = 0.1f;
+    }
+    particle_frame_dt = dt;
+
     // 更新所有活跃粒子效果
     for (auto it = active_effects.begin(); it != active_effects.end();) {
         Particle_Activity* effect = *it;
