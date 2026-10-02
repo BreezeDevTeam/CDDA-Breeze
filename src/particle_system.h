@@ -630,7 +630,7 @@ public:
     void setTexture(SDL_Texture* texture);
     void setInstanceTexture(SDL_Texture* texture);
     void draw();
-    void update( float dt );
+    void update();
 
 
     /** initializes a ParticleSystem*/

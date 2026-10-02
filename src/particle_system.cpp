@@ -17,6 +17,8 @@ std::map<std::string, std::string> monster_appearance_style_map = {
     {"mon_yrax_apeirogon","mon_yrax_apeirogon"}
 };
 
+float particle_frame_dt = 1.0f / 25.0f;
+
 void Particle_Activity::set_position(const tripoint& p) {
     point screen_pos = cata_tiles::pos_to_screen(p.xy());
     screen_pos.x += cata_tiles::get_tile_width() / 2;
@@ -338,8 +340,9 @@ bool Particle_Activity::isFull()
 }
 
 // Particle_Activity - MainLoop
-void Particle_Activity::update( float dt )
+void Particle_Activity::update()
 {
+    float dt = particle_frame_dt;
     if (_isActive && _emissionRate)
     {
         float rate = 1.0f / _emissionRate;
@@ -513,7 +516,11 @@ void Particle_Activity::draw()
             SDL_Color c = { Uint8(p.colorR * 255), Uint8(p.colorG * 255), Uint8(p.colorB * 255), Uint8(p.colorA * 255) };
             SDL_SetTextureColorMod(active_texture, c.r, c.g, c.b);
             SDL_SetTextureAlphaMod(active_texture, c.a);
-            SDL_RenderCopyEx(_renderer, active_texture, nullptr, &r, p.rotation, nullptr, SDL_FLIP_NONE);
+            if (p.rotation == 0.0f) {
+                SDL_RenderCopy(_renderer, active_texture, nullptr, &r);
+            } else {
+                SDL_RenderCopyEx(_renderer, active_texture, nullptr, &r, p.rotation, nullptr, SDL_FLIP_NONE);
+            }
         }
     }
 }

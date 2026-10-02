@@ -1981,8 +1981,23 @@ static constexpr std::array<double, 41> hits_by_accuracy = {
     9993, 9997, 9998, 9999, 10000 // 16 to 20
 };
 
+extern bool creature_damage_simulation;
+
+namespace
+{
+struct dps_sim_guard {
+    dps_sim_guard() {
+        creature_damage_simulation = true;
+    }
+    ~dps_sim_guard() {
+        creature_damage_simulation = false;
+    }
+};
+} // namespace
+
 double item::effective_dps( const Character &guy, Creature &mon ) const
 {
+    dps_sim_guard sim_guard;
     const float mon_dodge = mon.get_dodge();
     float base_hit = guy.get_dex() / 4.0f + guy.get_hit_weapon( *this );
     base_hit *= std::max( 0.25f, 1.0f - guy.avg_encumb_of_limb_type( body_part_type::type::torso ) /

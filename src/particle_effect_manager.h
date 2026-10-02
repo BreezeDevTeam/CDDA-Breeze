@@ -88,7 +88,6 @@ private:
     std::map<std::string, SDL_Texture*> texture_cache;
     
     bool is_initialized = false;
-    uint32_t last_update_ticks = 0;
 };
 
 #endif // CATA_SRC_PARTICLE_EFFECT_MANAGER_H
