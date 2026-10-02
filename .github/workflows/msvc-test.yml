@@ -25,6 +25,10 @@ jobs:
   preflight:
     name: 快速检查
     runs-on: ubuntu-latest
+    outputs:
+      run_msvc: ${{ steps.changes.outputs.run_msvc }}
+      run_android_gradle: ${{ steps.changes.outputs.run_android_gradle }}
+      run_android: ${{ steps.changes.outputs.run_android }}
     timeout-minutes: 10
     steps:
       - name: Checkout selected branch
@@ -52,9 +56,47 @@ jobs:
 
           echo "base=${BASE_SHA}" >> "${GITHUB_OUTPUT}"
           echo "head=${HEAD_SHA}" >> "${GITHUB_OUTPUT}"
-          git diff --name-only --diff-filter=ACMR "${BASE_SHA}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files.txt"
+          git diff --name-only --diff-filter=ACMRD "${BASE_SHA}" "${HEAD_SHA}" > "${RUNNER_TEMP}/changed-files.txt"
           echo "Changed files:"
           cat "${RUNNER_TEMP}/changed-files.txt"
+
+          run_msvc=false
+          run_android_gradle=false
+          run_android=false
+
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            # Manual runs are explicit full validation requests.
+            run_msvc=true
+            run_android_gradle=true
+            run_android=true
+          else
+            while IFS= read -r path; do
+              case "${path}" in
+                src/*|data/*|msvc-full-features/*|.github/vcpkg_triplets/*|tools/*|build-scripts/*|CMakeLists.txt|Makefile|meson.build)
+                  run_msvc=true
+                  ;;
+              esac
+
+              case "${path}" in
+                android/*)
+                  run_android_gradle=true
+                  run_android=true
+                  ;;
+                src/*|gfx/*)
+                  run_android=true
+                  ;;
+              esac
+            done < "${RUNNER_TEMP}/changed-files.txt"
+          fi
+
+          echo "run_msvc=${run_msvc}" >> "${GITHUB_OUTPUT}"
+          echo "run_android_gradle=${run_android_gradle}" >> "${GITHUB_OUTPUT}"
+          echo "run_android=${run_android}" >> "${GITHUB_OUTPUT}"
+
+          echo "Heavy test selection:"
+          echo "  Windows MSVC: ${run_msvc}"
+          echo "  Android Gradle: ${run_android_gradle}"
+          echo "  Android arm64: ${run_android}"
 
       - name: Check patch whitespace
         shell: bash
@@ -157,6 +199,7 @@ jobs:
   android-gradle-config:
     name: Android Gradle 快速检查
     needs: preflight
+    if: ${{ needs.preflight.outputs.run_android_gradle == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -184,7 +227,7 @@ jobs:
   msvc:
     name: Windows Tiles x64 MSVC
     needs: preflight
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ needs.preflight.outputs.run_msvc == 'true' && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: windows-2022
     # Keep a hung toolchain or runner from occupying Actions indefinitely.
     timeout-minutes: 60
@@ -324,7 +367,7 @@ jobs:
     needs:
       - preflight
       - android-gradle-config
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    if: ${{ always() && needs.preflight.result == 'success' && needs.preflight.outputs.run_android == 'true' && (needs.android-gradle-config.result == 'success' || needs.android-gradle-config.result == 'skipped') && (github.event_name != 'pull_request' || github.event.pull_request.draft == false) }}
     runs-on: ubuntu-latest
     # Keep a hung package mirror or Gradle process from occupying Actions indefinitely.
     timeout-minutes: 60
