@@ -71,7 +71,10 @@ bool creature_damage_simulation = false;
 
 static void spawn_damage_effects( const Creature &who, const std::string &id, const tripoint &p )
 {
-    if( creature_damage_simulation || !get_player_character().sees( who ) ) {
+    const Character &viewer = get_player_character();
+    if( creature_damage_simulation ||
+        rl_dist( viewer.pos(), who.pos() ) > MAX_VIEW_DISTANCE ||
+        !viewer.sees( who ) ) {
         return;
     }
     ParticleEffectManager::get_instance().create_effect( id, p );
