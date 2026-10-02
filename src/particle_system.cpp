@@ -338,9 +338,8 @@ bool Particle_Activity::isFull()
 }
 
 // Particle_Activity - MainLoop
-void Particle_Activity::update()
+void Particle_Activity::update( float dt )
 {
-    float dt = 1.0 / 25;
     if (_isActive && _emissionRate)
     {
         float rate = 1.0f / _emissionRate;
@@ -475,6 +474,14 @@ void Particle_Activity::draw()
     if (style != "") {
 
         double scale = (double)g->get_zoom() / 16;
+        map& m = get_map();
+        int const half_tile_w = cata_tiles::get_tile_width() / 2;
+        int const half_tile_h = cata_tiles::get_tile_height() / 2;
+        SDL_Rect viewport = { 0, 0, 0, 0 };
+        SDL_RenderGetViewport( _renderer, &viewport );
+        bool const have_viewport = viewport.w > 0 && viewport.h > 0;
+
+        SDL_SetTextureBlendMode(active_texture, SDL_BLENDMODE_BLEND);
 
         for (int i = 0; i < _particleCount; i++)
         {
@@ -484,30 +491,30 @@ void Particle_Activity::draw()
                 continue;
             }
 
-            float relative_x = p.posx;
-            float relative_y = p.posy;
+            float scaled_relative_x = p.posx * scale;
+            float scaled_relative_y = p.posy * scale;
 
-            float scaled_relative_x = relative_x * scale;
-            float scaled_relative_y = relative_y * scale;
-
-            map& m = get_map();
             point local_pos = m.getlocal(point(p.world_start_pos_x, p.world_start_pos_y));
             point world_start_pos_screen_pos = cata_tiles::pos_to_screen(local_pos);
-            world_start_pos_screen_pos.x += cata_tiles::get_tile_width() / 2;
-            world_start_pos_screen_pos.y += cata_tiles::get_tile_height() / 2;
+            world_start_pos_screen_pos.x += half_tile_w;
+            world_start_pos_screen_pos.y += half_tile_h;
 
-            int p_x = int(scaled_relative_x + world_start_pos_screen_pos.x - (p.size * scale) / 2);
-            int p_y = int(scaled_relative_y + world_start_pos_screen_pos.y - (p.size * scale) / 2);
             int p_size = int(p.size * scale);
+            int p_x = int(scaled_relative_x + world_start_pos_screen_pos.x - p_size / 2);
+            int p_y = int(scaled_relative_y + world_start_pos_screen_pos.y - p_size / 2);
+
+            if (have_viewport &&
+                (p_x + p_size < viewport.x || p_y + p_size < viewport.y ||
+                 p_x > viewport.x + viewport.w || p_y > viewport.y + viewport.h)) {
+                continue;
+            }
 
             SDL_Rect r = { p_x, p_y, p_size, p_size };
             SDL_Color c = { Uint8(p.colorR * 255), Uint8(p.colorG * 255), Uint8(p.colorB * 255), Uint8(p.colorA * 255) };
             SDL_SetTextureColorMod(active_texture, c.r, c.g, c.b);
             SDL_SetTextureAlphaMod(active_texture, c.a);
-            SDL_SetTextureBlendMode(active_texture, SDL_BLENDMODE_BLEND);
             SDL_RenderCopyEx(_renderer, active_texture, nullptr, &r, p.rotation, nullptr, SDL_FLIP_NONE);
         }
-        update();
     }
 }
 

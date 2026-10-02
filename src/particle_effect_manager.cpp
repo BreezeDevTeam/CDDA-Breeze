@@ -141,11 +141,21 @@ void ParticleEffectManager::update() {
     if (!is_initialized) {
         return;
     }
-    
+
+    uint32_t const now_ticks = SDL_GetTicks();
+    float dt = last_update_ticks == 0 ? 1.0f / 25.0f
+                                      : static_cast<float>( now_ticks - last_update_ticks ) / 1000.0f;
+    last_update_ticks = now_ticks;
+    if( dt < 0.0f ) {
+        dt = 0.0f;
+    } else if( dt > 0.1f ) {
+        dt = 0.1f;
+    }
+
     // 更新所有活跃粒子效果
     for (auto it = active_effects.begin(); it != active_effects.end();) {
         Particle_Activity* effect = *it;
-        effect->update();
+        effect->update( dt );
         
         // 如果效果已完成且设置了自动移除，或者效果不再活跃且没有粒子
         if ((effect->isAutoRemoveOnFinish() && !effect->isActive()) || 

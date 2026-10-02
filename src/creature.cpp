@@ -154,7 +154,15 @@ Creature::Creature( Creature && ) noexcept( map_is_noexcept &&list_is_noexcept )
 Creature &Creature::operator=( const Creature & ) = default;
 Creature &Creature::operator=( Creature && ) noexcept = default;
 
-Creature::~Creature() = default;
+Creature::~Creature()
+{
+    if( active_particle_effect != nullptr ) {
+        if( ParticleEffectManager::get_instance().is_effect_alive( active_particle_effect ) ) {
+            ParticleEffectManager::get_instance().destroy_effect( active_particle_effect );
+        }
+        active_particle_effect = nullptr;
+    }
+}
 
 tripoint Creature::pos() const
 {
