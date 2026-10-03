@@ -6845,7 +6845,7 @@ void overmap::place_specials( overmap_special_batch &enabled_specials )
 void overmap::place_mongroups()
 {
     const int city_spawn_threshold = get_option<int>( "SPAWN_CITY_HORDE_THRESHOLD" );
-    if( city_spawn_threshold > -1 ) {
+    if( get_option<bool>( "WANDER_SPAWNS" ) && city_spawn_threshold > -1 ) {
         const int city_spawn_chance = std::max( get_option<int>( "SPAWN_CITY_HORDE_SMALL_CITY_CHANCE" ), 1 );
         const float city_spawn_scalar = get_option<float>( "SPAWN_CITY_HORDE_SCALAR" );
         const float city_spawn_spread = get_option<float>( "SPAWN_CITY_HORDE_SPREAD" );
