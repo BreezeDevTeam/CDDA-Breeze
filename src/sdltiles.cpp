@@ -3420,29 +3420,6 @@ static void CheckMessages()
             }
         }
 
-        // Handle repeating inputs from touch + holds
-        if( !is_quick_shortcut_touch && !is_two_finger_touch && finger_down_time > 0 &&
-            ticks - finger_down_time > static_cast<uint32_t>
-            (android_initial_delay) ) {
-            if( ticks - finger_repeat_time > finger_repeat_delay ) {
-                handle_finger_input( ticks );
-                finger_repeat_time = ticks;
-                // Prevent repeating inputs on the next call to this function if there is a fingerup event
-                while( SDL_PollEvent( &ev ) ) {
-                    if( ev.type == SDL_FINGERUP ) {
-                        second_finger_down_x = second_finger_curr_x = finger_down_x = finger_curr_x = -1.0f;
-                        second_finger_down_y = second_finger_curr_y = finger_down_y = finger_curr_y = -1.0f;
-                        is_two_finger_touch = false;
-                        finger_down_time = 0;
-                        finger_repeat_time = 0;
-                        // let the next call decide if needupdate should be true
-                        break;
-                    }
-                }
-                return;
-            }
-        }
-
         if(is_extra_button_click) {
             last_input = cache_extra_button_input;
             is_extra_button_click = false;
@@ -3941,6 +3918,19 @@ static void CheckMessages()
             break;
         }
     }
+
+#if defined(__ANDROID__)
+    // 摇杆按住产生的重复输入必须放在事件轮询之后：这样用的是本帧最新的
+    // finger_curr，也不会吞掉队列里积压的 FINGERMOTION。
+    if( !is_quick_shortcut_touch && !is_two_finger_touch && finger_down_time > 0 &&
+        ticks - finger_down_time > static_cast<uint32_t>( android_initial_delay ) &&
+        ticks - finger_repeat_time > finger_repeat_delay &&
+        last_input.type == input_event_t::error ) {
+        handle_finger_input( ticks );
+        finger_repeat_time = ticks;
+    }
+#endif
+
     bool resized = false;
     if( resize_dims.has_value() ) {
         restore_on_out_of_scope<input_event> prev_last_input( last_input );
