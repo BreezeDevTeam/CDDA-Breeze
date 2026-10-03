@@ -1,4 +1,4 @@
-name: "微风 PR 自动审查"
+name: "微风 PR 通用自动审查"
 
 on:
   pull_request_target:
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   review:
-    name: 变更范围与风险审查
+    name: 变更范围、风险与测试建议
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -48,31 +48,46 @@ jobs:
 
             const categories = [];
             if (has('src/')) categories.push('C++ 核心代码');
-            if (has('data/')) categories.push('游戏数据/模组');
+            if (has('data/json/')) categories.push('本体游戏数据');
+            if (has('data/mods/')) categories.push('模组');
+            if (names.some((name) => name.startsWith('data/') && !name.startsWith('data/json/') && !name.startsWith('data/mods/'))) categories.push('其他游戏数据');
             if (has('android/')) categories.push('Android');
             if (has('msvc-full-features/') || matches(/^\.github\/vcpkg_triplets\//)) categories.push('Windows/MSVC');
             if (has('.github/workflows/')) categories.push('GitHub Actions');
             if (has('lang/')) categories.push('翻译');
             if (has('gfx/')) categories.push('贴图/图形资源');
-            if (has('tools/') || has('build-scripts/')) categories.push('工具/构建脚本');
+            if (has('tests/')) categories.push('测试');
+            if (has('doc/') || has('docs/')) categories.push('文档');
+            if (has('tools/') || has('build-scripts/') || matches(/(^|\/)(CMakeLists\.txt|Makefile|meson\.build)$/)) {
+              categories.push('工具/构建配置');
+            }
             if (categories.length === 0) categories.push('其他文件');
 
             const risks = [];
             if (files.length >= 80) risks.push(`变更文件较多（${files.length} 个），建议按提交或功能块审查。`);
-            if (changedLines >= 5000) risks.push(`改动行数较大（${changedLines} 行），建议确认不存在无意的大范围格式化。`);
-            if (has('.github/workflows/')) risks.push('修改了工作流，请重点检查权限、触发条件以及第三方 Action。');
-            if (has('android/')) risks.push('涉及 Android，请确认 Gradle 快速检查和 Android arm64 构建通过。');
-            if (has('msvc-full-features/') || matches(/^\.github\/vcpkg_triplets\//)) risks.push('涉及 Windows/MSVC，请确认 Windows Tiles x64 MSVC 构建通过。');
-            if (has('src/') && has('data/')) risks.push('同时修改核心代码和数据，建议确认 JSON 数据与新代码接口保持一致。');
-            if (matches(/^src\/(savegame|worldfactory|map|mapgen|vehicle|character|item|inventory)/)) risks.push('触及存档、地图、载具、角色或物品核心路径，属于较高回归风险区域。');
+            if (changedLines >= 5000) risks.push(`改动行数较大（${changedLines} 行），建议确认不存在无意的大范围格式化或生成文件变化。`);
+            if (deletions >= 2000 && deletions > additions * 2) {
+              risks.push(`删除量明显高于新增量（删除 ${deletions} 行，新增 ${additions} 行），建议确认没有误删内容。`);
+            }
+            if (categories.length >= 4) risks.push(`变更横跨 ${categories.length} 类文件，建议重点检查跨模块集成影响。`);
+            if (has('.github/workflows/')) risks.push('修改了 GitHub Actions，请重点检查权限、事件触发条件、并发策略以及第三方 Action 固定版本。');
+            if (has('android/')) risks.push('涉及 Android 专用代码或构建配置，请确认 Gradle 配置检查和 arm64 构建通过。');
+            if (has('msvc-full-features/') || matches(/^\.github\/vcpkg_triplets\//)) risks.push('涉及 Windows/MSVC 专用配置，请确认 x64 MSVC 构建和打包流程通过。');
+            if (has('src/') && has('data/')) risks.push('同时修改核心代码和游戏数据，建议确认 JSON 数据与代码接口、ID 和默认值保持一致。');
+            if (has('src/') && !has('tests/')) risks.push('修改了 C++ 核心代码但没有同步修改 tests/，建议确认现有测试是否已经覆盖本次行为变化。');
+            if (matches(/^src\/(savegame|worldfactory|map|mapgen|vehicle|character|item|inventory)/)) risks.push('触及存档、地图、载具、角色、物品或库存核心路径，属于较高回归风险区域。');
+            if (matches(/^data\/json\/(mapgen|overmap|npcs|items|effects_on_condition)\//)) risks.push('修改了地图生成、世界地图、NPC、物品或 EOC 数据，建议重点确认 JSON 加载和既有存档兼容。');
+            if (has('lang/') && !has('data/') && !has('src/')) risks.push('主要涉及翻译文件，请确认没有误改生成文件格式或消息键。');
             if (matches(/^data\/mods\/穆尔卡的武器工坊\//)) risks.push('修改了穆尔卡的武器工坊，请确认 Windows 构件中的内置模组文件仍然完整。');
-            if (/同步|上游|upstream|sync/i.test(pr.title)) risks.push('疑似上游同步 PR，建议保留可追溯的提交边界，避免一次性覆盖整文件。');
 
             const recommended = ['快速检查'];
-            if (has('src/') || has('msvc-full-features/') || has('data/') || has('tools/') || has('build-scripts/')) {
+            if (has('src/') || has('msvc-full-features/') || has('tools/') || has('build-scripts/') ||
+                matches(/(^|\/)(CMakeLists\.txt|Makefile|meson\.build)$/)) {
               recommended.push('Windows Tiles x64 MSVC', 'Windows 数据加载烟雾测试');
+            } else if (has('data/')) {
+              recommended.push('Windows 数据加载烟雾测试');
             }
-            if (has('src/') || has('android/') || has('data/') || has('gfx/')) {
+            if (has('src/') || has('android/') || has('gfx/')) {
               recommended.push('Android Gradle 快速检查', 'Android arm64');
             }
 
@@ -105,7 +120,7 @@ jobs:
             **建议测试内容：**
             ${testText}
 
-            这是免费的规则型自动审查，只负责快速发现范围、平台和集成风险，不替代人工代码审查。后续如果我们批量同步上游 PR，它会在每次推送后自动刷新这条摘要。`;
+            这是规则型自动审查，会依据本次 PR 的实际变更范围生成风险提示和测试建议，不假定 PR 的来源或用途，也不替代人工代码审查。每次推送后会自动更新这条摘要。`;
 
             const comments = await github.paginate(github.rest.issues.listComments, {
               owner,
