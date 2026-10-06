@@ -196,7 +196,7 @@ static bool get_liquid_target(Character& character, item &liquid, const item *co
         }
         const auto usable_capacity = [&liquid_copy]( const item_location &loc ) {
             item probe = liquid_copy;
-            probe.charges = probe.charges_per_volume( loc->get_remaining_capacity() );
+            probe.charges = item::INFINITE_CHARGES;
             const int standalone = loc->get_remaining_capacity_for_liquid( probe, true );
             return loc->all_pockets_rigid() ? standalone :
                    std::min( standalone, loc.max_charges_by_parent_recursive( probe ) );
