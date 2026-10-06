@@ -209,9 +209,8 @@ static bool get_liquid_target(Character& character, item &liquid, const item *co
         }
         else {
             std::stable_sort( containers_locations.begin(), containers_locations.end(),
-                              [&liquid_copy]( const item_location &lhs, const item_location &rhs ) {
-                return lhs->get_remaining_capacity_for_liquid( liquid_copy, true ) >
-                       rhs->get_remaining_capacity_for_liquid( liquid_copy, true );
+                              []( const item_location &lhs, const item_location &rhs ) {
+                return lhs->get_remaining_capacity() > rhs->get_remaining_capacity();
             } );
             target.item_loc = containers_locations[0];
             target.dest_opt = LD_ITEM;
