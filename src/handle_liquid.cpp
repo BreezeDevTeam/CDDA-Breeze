@@ -194,11 +194,17 @@ static bool get_liquid_target(Character& character, item &liquid, const item *co
         if (liquid_copy.has_var("crafter_id")) {
             liquid_copy.erase_var("crafter_id");
         }
+        const auto usable_capacity = [&liquid_copy]( const item_location &loc ) {
+            item probe = liquid_copy;
+            probe.charges = item::INFINITE_CHARGES;
+            const int standalone = loc->get_remaining_capacity_for_liquid( probe, true );
+            return loc->all_pockets_rigid() ? standalone :
+                   std::min( standalone, loc.max_charges_by_parent_recursive( probe ) );
+        };
         std::vector<item_location> containers_locations;
 
         for (item_location &loc : character.get_eligible_containers_locations_for_crafting()) {
-            item *const i = loc.get_item();
-            if( i != nullptr && i->get_remaining_capacity_for_liquid( liquid_copy, true ) > 0 ) {
+            if( loc.get_item() != nullptr && usable_capacity( loc ) > 0 ) {
                 containers_locations.push_back( loc );
             }
         }
@@ -208,6 +214,10 @@ static bool get_liquid_target(Character& character, item &liquid, const item *co
             target.dest_opt = LD_GROUND;
         }
         else {
+            std::stable_sort( containers_locations.begin(), containers_locations.end(),
+                              [&usable_capacity]( const item_location &lhs, const item_location &rhs ) {
+                return usable_capacity( lhs ) > usable_capacity( rhs );
+            } );
             target.item_loc = containers_locations[0];
             target.dest_opt = LD_ITEM;
         }
