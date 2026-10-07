@@ -1554,7 +1554,7 @@ void options_manager::add_options_general()
 
     add( "AUTO_FEATURES", "general", to_translation( "Additional auto features" ),
          to_translation( "If true, enables configured auto features below.  Disabled as long as any enemy monster is seen." ),
-         false
+         true
        );
 
     add( "AUTO_PULP_BUTCHER", "general", to_translation( "Auto pulp or butcher" ),
