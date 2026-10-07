@@ -3987,10 +3987,12 @@ int get_auto_consume_moves( Character &you, const bool food )
                 }
             }
         }
-        map_stack mapitems = here.i_at( p );
-        for( item &it : mapitems ) {
-            item_location i_loc( map_cursor( p ), &it );
-            visit_item_contents( i_loc, visit );
+        if( here.accessible_items( p ) ) {
+            map_stack mapitems = here.i_at( p );
+            for( item &it : mapitems ) {
+                item_location i_loc( map_cursor( p ), &it );
+                visit_item_contents( i_loc, visit );
+            }
         }
     }
 
