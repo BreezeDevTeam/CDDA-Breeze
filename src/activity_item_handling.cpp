@@ -3986,12 +3986,11 @@ int get_auto_consume_moves( Character &you, const bool food )
                     visit_item_contents( i_loc, visit );
                 }
             }
-        } else {
-            map_stack mapitems = here.i_at( p );
-            for( item &it : mapitems ) {
-                item_location i_loc( map_cursor( p ), &it );
-                visit_item_contents( i_loc, visit );
-            }
+        }
+        map_stack mapitems = here.i_at( p );
+        for( item &it : mapitems ) {
+            item_location i_loc( map_cursor( p ), &it );
+            visit_item_contents( i_loc, visit );
         }
     }
 
