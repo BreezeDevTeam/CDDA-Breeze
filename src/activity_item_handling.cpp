@@ -109,6 +109,7 @@ static const itype_id itype_soap( "soap" );
 static const itype_id itype_soldering_iron( "soldering_iron" );
 static const itype_id itype_water( "water" );
 static const itype_id itype_water_clean( "water_clean" );
+static const itype_id itype_water_faucet( "water_faucet" );
 static const itype_id itype_welder( "welder" );
 
 static const quality_id qual_AXE( "AXE" );
@@ -127,8 +128,6 @@ static const trait_id trait_SAPROVORE( "SAPROVORE" );
 static const trap_str_id tr_firewood_source( "tr_firewood_source" );
 
 static const zone_type_id zone_type_( "" );
-static const zone_type_id zone_type_AUTO_DRINK( "AUTO_DRINK" );
-static const zone_type_id zone_type_AUTO_EAT( "AUTO_EAT" );
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
 static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
 static const zone_type_id zone_type_CONSTRUCTION_BLUEPRINT( "CONSTRUCTION_BLUEPRINT" );
@@ -3924,62 +3923,59 @@ int get_auto_consume_moves( Character &you, const bool food )
         return 0;
     }
     const tripoint pos = you.pos();
-    const zone_manager &mgr = zone_manager::get_manager();
-    const zone_type_id zone_type = food ? zone_type_AUTO_EAT : zone_type_AUTO_DRINK;
     // NOLINTNEXTLINE(misc-const-correctness): map::i_at requires mutable map access on this baseline.
     map &here = get_map();
-    const std::unordered_set<tripoint_abs_ms> &dest_set =
-        mgr.get_near( zone_type, here.getglobal( pos ), ACTIVITY_SEARCH_DISTANCE, nullptr,
-                      _fac_id( you ) );
-    if( dest_set.empty() ) {
-        return 0;
-    }
     item_location best_comestible;
-    for( const tripoint_abs_ms &loc : dest_set ) {
-        if( loc.z() != you.pos().z ) {
-            continue;
-        }
 
-        const auto visit = [&]( item_location & it ) -> VisitResponse {
-            if( !you.can_consume_as_is( *it ) ) {
-                return VisitResponse::NEXT;
-            }
-            if( it->has_flag( json_flag_NO_AUTO_CONSUME ) ) {
-                return VisitResponse::NEXT;
-            }
-            if( it->is_null() || it->is_craft() || !it->is_food() || you.fun_for( *it ).first < -5 ) {
-                return VisitResponse::NEXT;
-            }
-            if( food && you.compute_effective_nutrients( *it ).kcal() < 50 ) {
-                return VisitResponse::NEXT;
-            }
-            if( !you.will_eat( *it, false ).success() ) {
-                return VisitResponse::NEXT;
-            }
-            if( !it->is_owned_by( you, true ) ) {
-                return VisitResponse::NEXT;
-            }
-            if( !food && it->get_comestible()->quench < 15 ) {
-                return VisitResponse::NEXT;
-            }
-            if( !food && it->is_watertight_container() && it->made_of( phase_id::SOLID ) ) {
-                return VisitResponse::NEXT;
-            }
-            const use_function *usef = it->type->get_use( "BLECH_BECAUSE_UNCLEAN" );
-            if( usef ) {
-                return VisitResponse::NEXT;
-            }
-            if( it->get_comestible()->add == STATIC( addiction_id( "alcohol" ) ) &&
-                !you.has_addiction( it->get_comestible()->add ) ) {
-                return VisitResponse::NEXT;
-            }
-            if( !best_comestible || comestible_sort_compare( you, it, best_comestible ) ) {
-                best_comestible = it;
-            }
+    const auto visit = [&]( item_location & it ) -> VisitResponse {
+        if( !you.can_consume_as_is( *it ) ) {
             return VisitResponse::NEXT;
-        };
+        }
+        if( it->has_flag( json_flag_NO_AUTO_CONSUME ) ) {
+            return VisitResponse::NEXT;
+        }
+        if( it->is_null() || it->is_craft() || !it->is_food() || you.fun_for( *it ).first < -5 ) {
+            return VisitResponse::NEXT;
+        }
+        if( food && you.compute_effective_nutrients( *it ).kcal() < 50 ) {
+            return VisitResponse::NEXT;
+        }
+        if( !you.will_eat( *it, false ).success() ) {
+            return VisitResponse::NEXT;
+        }
+        if( !it->is_owned_by( you, true ) ) {
+            return VisitResponse::NEXT;
+        }
+        if( !food && it->get_comestible()->quench < 15 ) {
+            return VisitResponse::NEXT;
+        }
+        if( !food && it->is_watertight_container() && it->made_of( phase_id::SOLID ) ) {
+            return VisitResponse::NEXT;
+        }
+        const use_function *usef = it->type->get_use( "BLECH_BECAUSE_UNCLEAN" );
+        if( usef ) {
+            return VisitResponse::NEXT;
+        }
+        if( it->get_comestible()->add == STATIC( addiction_id( "alcohol" ) ) &&
+            !you.has_addiction( it->get_comestible()->add ) ) {
+            return VisitResponse::NEXT;
+        }
+        if( !best_comestible || comestible_sort_compare( you, it, best_comestible ) ) {
+            best_comestible = it;
+        }
+        return VisitResponse::NEXT;
+    };
 
-        const optional_vpart_position vp = here.veh_at( here.getlocal( loc ) );
+    you.visit_items( [&]( item *it, item * ) -> VisitResponse {
+        if( !it ) {
+            return VisitResponse::NEXT;
+        }
+        item_location i_loc( you, it );
+        return visit( i_loc );
+    } );
+
+    for( const tripoint &p : here.points_in_radius( pos, 1 ) ) {
+        const optional_vpart_position vp = here.veh_at( p );
         if( vp ) {
             vehicle &veh = vp->vehicle();
             const int index = veh.part_with_feature( vp->part_index(), "CARGO", false );
@@ -3991,24 +3987,64 @@ int get_auto_consume_moves( Character &you, const bool food )
                 }
             }
         } else {
-            map_stack mapitems = here.i_at( here.getlocal( loc ) );
+            map_stack mapitems = here.i_at( p );
             for( item &it : mapitems ) {
-                item_location i_loc( map_cursor( here.getlocal( loc ) ), &it );
+                item_location i_loc( map_cursor( p ), &it );
                 visit_item_contents( i_loc, visit );
             }
         }
     }
 
     if( best_comestible ) {
-        int consume_moves = Pickup::cost_to_move_item( you, *best_comestible ) *
-                            std::max( rl_dist( you.pos(), here.getlocal( best_comestible.position() ) ), 1 );
+        int consume_moves = 0;
+        if( !best_comestible.held_by( you ) ) {
+            consume_moves += Pickup::cost_to_move_item( you, *best_comestible ) *
+                             std::max( rl_dist( pos, here.getlocal( best_comestible.position() ) ), 1 );
+        }
+        // Consume may delete the item (e.g. finishing the last charge), so capture
+        // everything needed from it beforehand and never dereference it afterwards.
+        const std::string consumed_name = best_comestible->tname();
+        const bool was_container = best_comestible->is_container();
         consume_moves += to_moves<int>( you.get_consume_time( *best_comestible ) );
-        you.consume( best_comestible );
-        if( best_comestible.get_item() && best_comestible->is_container() ) {
+        const trinary consumed = you.consume( best_comestible );
+        if( consumed != trinary::ALL && was_container ) {
             best_comestible->on_contents_changed();
+        }
+        if( food ) {
+            add_msg("自动进食：你吃了%s。", consumed_name );
+        } else {
+            add_msg("自动饮用：你喝了%s。", consumed_name );
         }
         return consume_moves;
     }
+
+    if( !food ) {
+        for( const tripoint &p : here.points_in_radius( pos, 1 ) ) {
+            const optional_vpart_position vp = here.veh_at( p );
+            if( !vp || !vp->part_with_tool( itype_water_faucet ) ) {
+                continue;
+            }
+            vehicle &veh = vp->vehicle();
+            for( const int i : veh.fuel_containers ) {
+                vehicle_part &tank = veh.part( i );
+                if( tank.ammo_current() != itype_water_clean ||
+                    !tank.get_base().only_item().made_of( phase_id::LIQUID ) ) {
+                    continue;
+                }
+                item_location base_loc( vehicle_cursor( veh, i ), &tank.get_base() );
+                item_location water_loc( base_loc, &tank.get_base().only_item() );
+                if( !you.can_consume_as_is( *water_loc ) ||
+                    !you.will_eat( *water_loc, false ).success() ) {
+                    continue;
+                }
+                int consume_moves = to_moves<int>( you.get_consume_time( *water_loc ) ) + 100;
+                you.consume( water_loc );
+                add_msg("自动饮用：你通过载具水龙头喝了净水。");
+                return consume_moves;
+            }
+        }
+    }
+
     return 0;
 }
 

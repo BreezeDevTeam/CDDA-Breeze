@@ -377,6 +377,8 @@ std::string action_ident( action_id act )
             return "toggle_show_creature_view_line";
         case ACTION_TOGGLE_AUTO_FORAGING:
             return "toggle_auto_foraging";
+        case ACTION_TOGGLE_AUTO_CONSUME:
+            return "toggle_auto_consume";
         case ACTION_TOGGLE_AUTO_PICKUP:
             return "toggle_auto_pickup";
         case ACTION_DISPLAY_ISO_WALLS:
@@ -503,6 +505,7 @@ bool can_action_change_worldstate( const action_id act )
         case ACTION_TOGGLE_AUTO_MINING:
         case ACTION_TOGGLE_SHOW_CREATURE_VIEW_LINE:
         case ACTION_TOGGLE_AUTO_FORAGING:
+        case ACTION_TOGGLE_AUTO_CONSUME:
             return false;
         default:
             return true;
@@ -1001,6 +1004,7 @@ action_id handle_action_menu()
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_PULP_BUTCHER );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_MINING );
             REGISTER_ACTION( ACTION_TOGGLE_AUTO_FORAGING );
+            REGISTER_ACTION( ACTION_TOGGLE_AUTO_CONSUME );
             REGISTER_ACTION(ACTION_TOGGLE_SHOW_CREATURE_VIEW_LINE);
         } else if( category == _( "Craft" ) ) {
             REGISTER_ACTION( ACTION_CRAFT );

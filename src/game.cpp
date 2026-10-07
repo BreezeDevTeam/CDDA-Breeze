@@ -2679,6 +2679,7 @@ input_context create_default_mode_input_context()
     ctxt.register_action( "toggle_auto_pulp_butcher" );
     ctxt.register_action( "toggle_auto_mining" );
     ctxt.register_action( "toggle_auto_foraging" );
+    ctxt.register_action( "toggle_auto_consume" );
     ctxt.register_action( "toggle_auto_pickup" );
     ctxt.register_action( "toggle_thief_mode" );
     ctxt.register_action( "toggle_iso_walls" );

@@ -1587,6 +1587,13 @@ void options_manager::add_options_general()
 
     get_option( "AUTO_FORAGING" ).setPrerequisite( "AUTO_FEATURES" );
 
+    add( "AUTO_CONSUME", "general", to_translation( "自动进食饮用" ),
+         to_translation( "开启后，进行长时间活动（制作、阅读、等待等）期间饿了或渴了时，会自动食用/饮用身上或身边的饮食；口渴时还会通过交互范围内的水龙头部件直接饮用载具水罐中的净水。" ),
+         false
+       );
+
+    get_option( "AUTO_CONSUME" ).setPrerequisite( "AUTO_FEATURES" );
+
     add_empty_line();
 
     add( "DANGEROUS_PICKUPS", "general", to_translation( "Dangerous pickups" ),
