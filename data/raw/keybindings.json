@@ -2866,6 +2866,12 @@
   },
   {
     "type": "keybinding",
+    "name": "切换自动进食饮用",
+    "category": "DEFAULTMODE",
+    "id": "toggle_auto_consume"
+  },
+  {
+    "type": "keybinding",
     "name": "Toggle auto pickup",
     "category": "DEFAULTMODE",
     "id": "toggle_auto_pickup"

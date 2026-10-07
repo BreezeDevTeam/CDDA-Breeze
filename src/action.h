@@ -324,6 +324,8 @@ enum action_id : int {
     ACTION_TOGGLE_AUTO_MINING,
     /** Turn auto foraging on/off */
     ACTION_TOGGLE_AUTO_FORAGING,
+    /** Turn auto eating/drinking during long activities on/off */
+    ACTION_TOGGLE_AUTO_CONSUME,
     /** Turn auto pickup on/off */
     ACTION_TOGGLE_AUTO_PICKUP,
     ACTION_TOGGLE_SHOW_CREATURE_VIEW_LINE,

@@ -50,8 +50,6 @@ static const item_category_id item_category_food( "food" );
 static const itype_id itype_disassembly( "disassembly" );
 static const itype_id itype_null( "null" );
 
-static const zone_type_id zone_type_AUTO_DRINK( "AUTO_DRINK" );
-static const zone_type_id zone_type_AUTO_EAT( "AUTO_EAT" );
 static const zone_type_id zone_type_CAMP_FOOD( "CAMP_FOOD" );
 static const zone_type_id zone_type_CAMP_STORAGE( "CAMP_STORAGE" );
 static const zone_type_id zone_type_CHOP_TREES( "CHOP_TREES" );
@@ -126,12 +124,6 @@ zone_manager::zone_manager()
     types.emplace( zone_type_CAMP_FOOD,
                    zone_type( to_translation( "Basecamp: Food" ),
                               to_translation( "Items in this zone will be added to a basecamp's food supply in the Distribute Food mission." ) ) );
-    types.emplace( zone_type_AUTO_EAT,
-                   zone_type( to_translation( "Auto Eat" ),
-                              to_translation( "Items in this zone will be automatically eaten during a long activity if you get hungry." ) ) );
-    types.emplace( zone_type_AUTO_DRINK,
-                   zone_type( to_translation( "Auto Drink" ),
-                              to_translation( "Items in this zone will be automatically consumed during a long activity if you get thirsty." ) ) );
     types.emplace(zone_type_trade_area,
         zone_type(to_translation("交易区域"),
             to_translation("从其他派系来的想要交易的人会优先前往此区域。")));

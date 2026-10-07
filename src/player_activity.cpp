@@ -15,6 +15,7 @@
 #include "item.h"
 #include "itype.h"
 #include "map.h"
+#include "options.h"
 #include "rng.h"
 #include "skill.h"
 #include "sounds.h"
@@ -281,6 +282,7 @@ void player_activity::do_turn( Character &you )
     // Only do once every two minutes to loosely simulate consume times,
     // the exact amount of time is added correctly below, here we just want to prevent eating something every second
     if( calendar::once_every( 2_minutes ) && *this && !you.is_npc() && type->valid_auto_needs() &&
+        get_option<bool>( "AUTO_FEATURES" ) && get_option<bool>( "AUTO_CONSUME" ) &&
         !you.has_effect( effect_nausea ) ) {
         if( you.stomach.contains() <= you.stomach.capacity( you ) / 4 && you.get_kcal_percent() < 0.95f &&
             !no_food_nearby_for_auto_consume ) {

@@ -1,5 +1,19 @@
 [
   {
+    "id": "AUTO_EAT",
+    "type": "LOOT_ZONE",
+    "name": "Auto Eat (Deprecated)",
+    "description": "This zone type is deprecated and no longer has any effect.  Auto eating during long activities has been reworked: it now automatically consumes edible food you are carrying or food lying right around you, no zone required.",
+    "hidden": true
+  },
+  {
+    "id": "AUTO_DRINK",
+    "type": "LOOT_ZONE",
+    "name": "Auto Drink (Deprecated)",
+    "description": "This zone type is deprecated and no longer has any effect.  Auto drinking during long activities has been reworked: it now automatically consumes drinks you are carrying or drinks lying right around you, and can even drink clean water from vehicle water tanks through a water faucet part within reach, no zone required.",
+    "hidden": true
+  },
+  {
     "id": "zone_disassemble",
     "type": "LOOT_ZONE",
     "name": "Disassembly Work",

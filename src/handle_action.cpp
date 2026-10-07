@@ -5193,6 +5193,14 @@ bool game::do_regular_action(action_id& act, avatar& player_character,
             get_option<bool>("AUTO_MINING") ? _("ON") : _("OFF"));
         break;
 
+    case ACTION_TOGGLE_AUTO_CONSUME:
+        get_options().get_option("AUTO_CONSUME").setNext();
+        get_options().save();
+        add_msg("%s已%s。",
+            get_options().get_option("AUTO_CONSUME").getMenuText(),
+            get_option<bool>("AUTO_CONSUME") ? "开启" : "关闭");
+        break;
+
     case ACTION_TOGGLE_SHOW_CREATURE_VIEW_LINE:
         get_options().get_option("显示生物视线").setNext();
         get_options().save();
