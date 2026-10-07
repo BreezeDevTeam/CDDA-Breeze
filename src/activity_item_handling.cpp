@@ -4010,9 +4010,9 @@ int get_auto_consume_moves( Character &you, const bool food )
             best_comestible->on_contents_changed();
         }
         if( food ) {
-            add_msg("自动进食：你吃了%s。", consumed_name );
+            add_msg("已触发自动进食：%s。", consumed_name );
         } else {
-            add_msg("自动饮用：你喝了%s。", consumed_name );
+            add_msg("已触发自动饮用：%s。", consumed_name );
         }
         return consume_moves;
     }
@@ -4038,7 +4038,7 @@ int get_auto_consume_moves( Character &you, const bool food )
                 }
                 int consume_moves = to_moves<int>( you.get_consume_time( *water_loc ) ) + 100;
                 you.consume( water_loc );
-                add_msg("自动饮用：你通过载具水龙头喝了净水。");
+                add_msg("已触发自动饮用：净水（通过水龙头）。");
                 return consume_moves;
             }
         }
