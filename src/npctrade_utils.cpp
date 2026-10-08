@@ -105,6 +105,14 @@ void add_fallback_zone( npc &guy )
                 << "Restored missing loot zone for NPC trader " << guy.name
                 << " at " << abs_pt.x() << "," << abs_pt.y() << "," << abs_pt.z();
     }
+
+    if( !zmgr.has_near( zone_type_LOOT_UNSORTED, loc, PICKUP_RANGE, fac_id ) ) {
+        zmgr.add( fallback_name, zone_type_LOOT_UNSORTED, fac_id, false, true,
+                  loc.raw() + tripoint_north_west, loc.raw() + tripoint_south_east,
+                  nullptr, false, true );
+        DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME )
+                << "Added fallback loot zone for NPC trader " << guy.name;
+    }
 }
 
 std::list<item> distribute_items_to_npc_zones( std::list<item> &items, npc &guy )
