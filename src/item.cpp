@@ -3986,6 +3986,12 @@ void item::ammo_info( std::vector<iteminfo> &info, const iteminfo_query *parts, 
         if( parts->test( iteminfo_parts::AMMO_DAMAGE_AP ) ) {
             info.emplace_back( "AMMO", space + _( "Armor-pierce: " ), get_ranged_pierce( ammo ) );
         }
+        if( !ammo.damage.empty() && ammo.damage.damage_units.front().res_mult != 1.0f &&
+            parts->test( iteminfo_parts::AMMO_DAMAGE_AP ) ) {
+            info.emplace_back( "AMMO", space + _( "Armor multiplier: " ), "<num>",
+                               iteminfo::is_decimal | iteminfo::lower_is_better,
+                               ammo.damage.damage_units.front().res_mult );
+        }
         if( parts->test( iteminfo_parts::AMMO_DAMAGE_RANGE ) ) {
             info.emplace_back( "AMMO", _( "Range: " ), "<num>" + space,
                                iteminfo::no_newline, ammo.range );
