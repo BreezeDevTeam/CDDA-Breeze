@@ -129,6 +129,25 @@ static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
 static const proficiency_id proficiency_prof_bow_master( "prof_bow_master" );
 
 static const skill_id skill_archery( "archery" );
+
+// 弓或弩：使用射箭技能，或使用箭矢/弩箭弹药
+static bool is_bow_or_crossbow( const item &gun )
+{
+    static const ammotype ammo_arrow( "arrow" );
+    static const ammotype ammo_bolt( "bolt" );
+    if( !gun.is_gun() ) {
+        return false;
+    }
+    if( gun.gun_skill() == skill_archery ) {
+        return true;
+    }
+    const itype *const ammo_data = gun.ammo_data();
+    if( ammo_data == nullptr ) {
+        return false;
+    }
+    const ammotype atype = ammo_data->ammo->type;
+    return atype == ammo_arrow || atype == ammo_bolt;
+}
 static const skill_id skill_dodge( "dodge" );
 static const skill_id skill_driving( "driving" );
 static const skill_id skill_gun( "gun" );
@@ -1193,18 +1212,8 @@ int Character::fire_gun( const tripoint &target, int shots, item &gun )
         weakpoint_attack wp_attack;
         wp_attack.weapon = &gun;
         projectile proj = make_gun_projectile( gun );
-        // 弓类武器：目标未发现射手时，本次命中判定占据优势（目标闪避骰投两次取较低的一次）
-        if( gun_skill == skill_archery ) {
-            Creature *const aimed = get_creature_tracker().creature_at<Creature>( aim );
-            if( aimed != nullptr && aimed != this ) {
-                d20_roll_state hit_state = get_d20_roll_state( *this, *aimed );
-                if( hit_state == d20_roll_state::normal && !aimed->sees( *this ) ) {
-                    hit_state = d20_roll_state::advantage;
-                    add_msg_if_player( m_good, _( "目标没发现你，这一箭占据优势。" ) );
-                }
-                proj.hit_roll_state = hit_state;
-            }
-        }
+        // 玩家用弓弩射出的一箭：命中判定在弹道结算时按优势/劣势投两次取较好或较差的一次
+        proj.advantage_roll = is_bow_or_crossbow( gun ) && is_avatar();
         dispersion_sources dispersion = get_weapon_dispersion( gun );
         dispersion.add_range( recoil_total() );
         dispersion.add_spread( proj.shot_spread );
@@ -1669,6 +1678,8 @@ dealt_projectile_attack Character::throw_item( const tripoint &target, const ite
     // This should generally have values below ~20*sqrt(skill_lvl)
     const float final_xp_mult = range_factor * damage_factor;
 
+    // 玩家投出的一击同样按优势/劣势结算命中判定
+    proj.advantage_roll = is_avatar();
     weakpoint_attack wp_attack;
     wp_attack.weapon = &to_throw;
     wp_attack.is_thrown = true;
@@ -4282,6 +4293,44 @@ void target_ui::panel_target_info( int &text_y, bool fill_with_blank_if_no_targe
         // when the cursor moves.
         text_y += max_lines;
         // TODO: print info about tile?
+    }
+
+    // 弓弩与投掷：显示本次命中判定的优势/劣势来源，始终占一行以免布局跳动
+    const bool roll_state_mode =
+        mode == TargetMode::Throw || mode == TargetMode::ThrowBlind ||
+        ( mode == TargetMode::Fire && relevant != nullptr && is_bow_or_crossbow( *relevant ) );
+    if( roll_state_mode ) {
+        std::string reasons_text;
+        nc_color reasons_color = c_light_gray;
+        if( dst_critter != nullptr ) {
+            const bool unseen = !dst_critter->sees( *you );
+            const std::vector<std::string> adv =
+                get_roll_advantage_reasons( *you, *dst_critter, unseen );
+            const std::vector<std::string> dis = get_roll_disadvantage_reasons( *you );
+            const auto join_reasons = []( const std::vector<std::string> &reasons ) {
+                std::string joined;
+                for( const std::string &reason : reasons ) {
+                    if( !joined.empty() ) {
+                        joined += "、";
+                    }
+                    joined += reason;
+                }
+                return joined;
+            };
+            if( !adv.empty() && !dis.empty() ) {
+                reasons_text = _( "优势与劣势抵消" );
+            } else if( !adv.empty() ) {
+                reasons_text = string_format( _( "优势：%s" ), join_reasons( adv ) );
+                reasons_color = c_green;
+            } else if( !dis.empty() ) {
+                reasons_text = string_format( _( "劣势：%s" ), join_reasons( dis ) );
+                reasons_color = c_red;
+            }
+        }
+        if( !reasons_text.empty() ) {
+            mvwprintz( w_target, point( 1, text_y ), reasons_color, reasons_text );
+        }
+        text_y++;
     }
 }
 

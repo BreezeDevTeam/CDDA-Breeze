@@ -780,7 +780,8 @@ void Creature::deal_melee_hit( Creature *source, int hit_spread, bool critical_h
     dealt_dam.bp_hit = bp_hit;
 }
 
-d20_roll_state get_d20_roll_state( const Character &you, const Creature &target )
+d20_roll_state get_d20_roll_state( const Character &you, const Creature &target,
+                                   const bool unseen_bonus )
 {
     const bool target_disadvantaged =
         target.has_effect( effect_downed ) ||
@@ -788,27 +789,64 @@ d20_roll_state get_d20_roll_state( const Character &you, const Creature &target 
         target.has_effect( effect_blind ) ||
         target.has_effect( effect_no_sight );
     const bool player_disadvantaged =
+        you.has_effect( effect_downed ) ||
         you.has_effect( effect_stunned ) ||
         you.has_effect( effect_blind ) ||
         you.has_effect( effect_no_sight ) ||
         you.get_perceived_pain() >= 40;
 
-    if( target_disadvantaged == player_disadvantaged ) {
+    // 优势与劣势都只按“有/无”计：多个优势只算一个，任意一个劣势即可抵消全部优势
+    const bool advantage_source = target_disadvantaged || unseen_bonus;
+    const bool disadvantage_source = player_disadvantaged;
+
+    if( advantage_source == disadvantage_source ) {
         return d20_roll_state::normal;
     }
-    return target_disadvantaged ? d20_roll_state::advantage :
+    return advantage_source ? d20_roll_state::advantage :
            d20_roll_state::disadvantage;
+}
+
+std::vector<std::string> get_roll_advantage_reasons( const Character &/*you*/, const Creature &target,
+        const bool unseen_bonus )
+{
+    std::vector<std::string> reasons;
+    if( unseen_bonus ) {
+        reasons.emplace_back( _( "偷袭" ) );
+    }
+    if( target.has_effect( effect_downed ) ) {
+        reasons.emplace_back( _( "目标倒地" ) );
+    }
+    if( target.has_effect( effect_stunned ) ) {
+        reasons.emplace_back( _( "目标眩晕" ) );
+    }
+    if( target.has_effect( effect_blind ) || target.has_effect( effect_no_sight ) ) {
+        reasons.emplace_back( _( "目标失明" ) );
+    }
+    return reasons;
+}
+
+std::vector<std::string> get_roll_disadvantage_reasons( const Character &you )
+{
+    std::vector<std::string> reasons;
+    if( you.has_effect( effect_downed ) ) {
+        reasons.emplace_back( _( "倒地" ) );
+    }
+    if( you.has_effect( effect_stunned ) ) {
+        reasons.emplace_back( _( "眩晕" ) );
+    }
+    if( you.has_effect( effect_blind ) || you.has_effect( effect_no_sight ) ) {
+        reasons.emplace_back( _( "失明" ) );
+    }
+    if( you.get_perceived_pain() >= 40 ) {
+        reasons.emplace_back( _( "疼痛" ) );
+    }
+    return reasons;
 }
 
 double Creature::accuracy_projectile_attack( dealt_projectile_attack &attack ) const
 {
-    int avoid_roll = dodge_roll();
-    // 弓类武器的隐蔽射击：优势时目标闪避骰投两次取较低的一次，劣势时取较高的一次
-    if( attack.proj.hit_roll_state != d20_roll_state::normal ) {
-        const int second_roll = dodge_roll();
-        avoid_roll = attack.proj.hit_roll_state == d20_roll_state::advantage ?
-                     std::min( avoid_roll, second_roll ) : std::max( avoid_roll, second_roll );
-    }
+
+    const int avoid_roll = dodge_roll();
     // Do dice(10, speed) instead of dice(speed, 10) because speed could potentially be > 10000
     const int diff_roll = dice( 10, attack.proj.speed );
     // Partial dodge, capped at [0.0, 1.0], added to missed_by
