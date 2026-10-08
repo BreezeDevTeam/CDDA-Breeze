@@ -36,6 +36,7 @@
 #include "creature_throw.h"
 #include "cursesdef.h"
 #include "cursesport.h"
+#include "d20_roll.h"
 #include "damage.h"
 #include "debug.h"
 #include "debug_menu.h"
@@ -932,12 +933,6 @@ static void close()
 namespace
 {
 
-enum class d20_roll_state {
-    normal,
-    advantage,
-    disadvantage
-};
-
 Creature *find_player_grabbed_creature( avatar &you )
 {
     if( !you.has_effect( effect_grabbing ) ) {
@@ -982,38 +977,6 @@ void release_player_creature_grab( avatar &you, Creature *target )
         target->remove_effect( effect_grabbed );
     }
     you.remove_effect( effect_grabbing );
-}
-
-d20_roll_state get_d20_roll_state( const avatar &you, const Creature &target )
-{
-    const bool target_disadvantaged =
-        target.has_effect( effect_downed ) ||
-        target.has_effect( effect_stunned ) ||
-        target.has_effect( effect_blind ) ||
-        target.has_effect( effect_no_sight );
-    const bool player_disadvantaged =
-        you.has_effect( effect_stunned ) ||
-        you.has_effect( effect_blind ) ||
-        you.has_effect( effect_no_sight ) ||
-        you.get_perceived_pain() >= 40;
-
-    if( target_disadvantaged == player_disadvantaged ) {
-        return d20_roll_state::normal;
-    }
-    return target_disadvantaged ? d20_roll_state::advantage :
-           d20_roll_state::disadvantage;
-}
-
-int roll_contact_d20( const d20_roll_state state )
-{
-    const int first = rng( 1, 20 );
-    if( state == d20_roll_state::normal ) {
-        return first;
-    }
-
-    const int second = rng( 1, 20 );
-    return state == d20_roll_state::advantage ?
-           std::max( first, second ) : std::min( first, second );
 }
 
 int d20_dex_modifier( const int dex )
@@ -1071,7 +1034,7 @@ contact_roll_result contact_d20_result( const avatar &you, const Creature &targe
         }
     }
 
-    const int roll = roll_contact_d20( state );
+    const int roll = roll_d20( state );
     if( roll == 1 ) {
         return contact_roll_result::inaccurate;
     }

@@ -21,6 +21,7 @@
 #include "color.h"
 #include "creature_tracker.h"
 #include "cursesdef.h"
+#include "d20_roll.h"
 #include "damage.h"
 #include "debug.h"
 #include "effect.h"
@@ -779,10 +780,35 @@ void Creature::deal_melee_hit( Creature *source, int hit_spread, bool critical_h
     dealt_dam.bp_hit = bp_hit;
 }
 
+d20_roll_state get_d20_roll_state( const Character &you, const Creature &target )
+{
+    const bool target_disadvantaged =
+        target.has_effect( effect_downed ) ||
+        target.has_effect( effect_stunned ) ||
+        target.has_effect( effect_blind ) ||
+        target.has_effect( effect_no_sight );
+    const bool player_disadvantaged =
+        you.has_effect( effect_stunned ) ||
+        you.has_effect( effect_blind ) ||
+        you.has_effect( effect_no_sight ) ||
+        you.get_perceived_pain() >= 40;
+
+    if( target_disadvantaged == player_disadvantaged ) {
+        return d20_roll_state::normal;
+    }
+    return target_disadvantaged ? d20_roll_state::advantage :
+           d20_roll_state::disadvantage;
+}
+
 double Creature::accuracy_projectile_attack( dealt_projectile_attack &attack ) const
 {
-
-    const int avoid_roll = dodge_roll();
+    int avoid_roll = dodge_roll();
+    // 弓类武器的隐蔽射击：优势时目标闪避骰投两次取较低的一次，劣势时取较高的一次
+    if( attack.proj.hit_roll_state != d20_roll_state::normal ) {
+        const int second_roll = dodge_roll();
+        avoid_roll = attack.proj.hit_roll_state == d20_roll_state::advantage ?
+                     std::min( avoid_roll, second_roll ) : std::max( avoid_roll, second_roll );
+    }
     // Do dice(10, speed) instead of dice(speed, 10) because speed could potentially be > 10000
     const int diff_roll = dice( 10, attack.proj.speed );
     // Partial dodge, capped at [0.0, 1.0], added to missed_by

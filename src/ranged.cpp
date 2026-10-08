@@ -31,6 +31,7 @@
 
 #include "creature_tracker.h"
 #include "cursesdef.h"
+#include "d20_roll.h"
 #include "damage.h"
 #include "debug.h"
 #include "dispersion.h"
@@ -1192,6 +1193,18 @@ int Character::fire_gun( const tripoint &target, int shots, item &gun )
         weakpoint_attack wp_attack;
         wp_attack.weapon = &gun;
         projectile proj = make_gun_projectile( gun );
+        // 弓类武器：目标未发现射手时，本次命中判定占据优势（目标闪避骰投两次取较低的一次）
+        if( gun_skill == skill_archery ) {
+            Creature *const aimed = get_creature_tracker().creature_at<Creature>( aim );
+            if( aimed != nullptr && aimed != this ) {
+                d20_roll_state hit_state = get_d20_roll_state( *this, *aimed );
+                if( hit_state == d20_roll_state::normal && !aimed->sees( *this ) ) {
+                    hit_state = d20_roll_state::advantage;
+                    add_msg_if_player( m_good, _( "目标没发现你，这一箭占据优势。" ) );
+                }
+                proj.hit_roll_state = hit_state;
+            }
+        }
         dispersion_sources dispersion = get_weapon_dispersion( gun );
         dispersion.add_range( recoil_total() );
         dispersion.add_spread( proj.shot_spread );

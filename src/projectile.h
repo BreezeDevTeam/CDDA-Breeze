@@ -7,6 +7,7 @@
 #include <set>
 
 #include "compatibility.h"
+#include "d20_roll.h"
 #include "damage.h"
 #include "point.h"
 
@@ -27,6 +28,8 @@ struct projectile {
         // Damage dealt by a single shot.
         damage_instance shot_impact;
         float critical_multiplier = 0.0f;
+        // 本次命中判定的投骰状态：弓类武器在目标未发现射手时占据优势（默认普通）
+        d20_roll_state hit_roll_state = d20_roll_state::normal;
 
         std::set<std::string> proj_effects;
 
