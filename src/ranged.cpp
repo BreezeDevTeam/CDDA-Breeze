@@ -129,25 +129,6 @@ static const proficiency_id proficiency_prof_bow_expert( "prof_bow_expert" );
 static const proficiency_id proficiency_prof_bow_master( "prof_bow_master" );
 
 static const skill_id skill_archery( "archery" );
-
-// 弓或弩：使用射箭技能，或使用箭矢/弩箭弹药
-static bool is_bow_or_crossbow( const item &gun )
-{
-    static const ammotype ammo_arrow( "arrow" );
-    static const ammotype ammo_bolt( "bolt" );
-    if( !gun.is_gun() ) {
-        return false;
-    }
-    if( gun.gun_skill() == skill_archery ) {
-        return true;
-    }
-    const itype *const ammo_data = gun.ammo_data();
-    if( ammo_data == nullptr ) {
-        return false;
-    }
-    const ammotype atype = ammo_data->ammo->type;
-    return atype == ammo_arrow || atype == ammo_bolt;
-}
 static const skill_id skill_dodge( "dodge" );
 static const skill_id skill_driving( "driving" );
 static const skill_id skill_gun( "gun" );
@@ -1213,7 +1194,7 @@ int Character::fire_gun( const tripoint &target, int shots, item &gun )
         wp_attack.weapon = &gun;
         projectile proj = make_gun_projectile( gun );
         // 玩家用弓弩射出的一箭：命中判定在弹道结算时按优势/劣势投两次取较好或较差的一次
-        proj.advantage_roll = is_bow_or_crossbow( gun ) && is_avatar();
+        proj.advantage_roll = gun.is_bow_or_crossbow() && is_avatar();
         dispersion_sources dispersion = get_weapon_dispersion( gun );
         dispersion.add_range( recoil_total() );
         dispersion.add_spread( proj.shot_spread );
@@ -4298,7 +4279,7 @@ void target_ui::panel_target_info( int &text_y, bool fill_with_blank_if_no_targe
     // 弓弩与投掷：显示本次命中判定的优势/劣势来源，始终占一行以免布局跳动
     const bool roll_state_mode =
         mode == TargetMode::Throw || mode == TargetMode::ThrowBlind ||
-        ( mode == TargetMode::Fire && relevant != nullptr && is_bow_or_crossbow( *relevant ) );
+        ( mode == TargetMode::Fire && relevant != nullptr && relevant->is_bow_or_crossbow() );
     if( roll_state_mode ) {
         std::string reasons_text;
         nc_color reasons_color = c_light_gray;

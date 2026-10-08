@@ -11973,6 +11973,21 @@ skill_id item::gun_skill() const
     return type->gun->skill_used;
 }
 
+bool item::is_bow_or_crossbow() const
+{
+    static const skill_id skill_archery( "archery" );
+    static const ammotype ammo_arrow( "arrow" );
+    static const ammotype ammo_bolt( "bolt" );
+    if( !is_gun() ) {
+        return false;
+    }
+    if( gun_skill() == skill_archery ) {
+        return true;
+    }
+    const std::set<ammotype> types = ammo_types();
+    return types.count( ammo_arrow ) > 0 || types.count( ammo_bolt ) > 0;
+}
+
 gun_type_type item::gun_type() const
 {
     static skill_id skill_archery( "archery" );
