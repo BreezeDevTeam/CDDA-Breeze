@@ -300,7 +300,7 @@
     "longest_side": "76 cm",
     "bashing": 1,
     "ammo_type": "arrow",
-    "damage": { "damage_type": "stab", "armor_multiplier": 0.7, "constant_damage_multiplier": 1.75 },
+    "damage": { "damage_type": "stab", "armor_penetration": 2, "armor_multiplier": 0.7, "constant_damage_multiplier": 1.75 },
     "range": 4,
     "dispersion": 50,
     "loudness": 0,
