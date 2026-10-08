@@ -81,9 +81,9 @@ constexpr int stray_min_stacks = 2;
 void add_fallback_zone( npc &guy )
 {
     zone_manager &zmgr = zone_manager::get_manager();
-    map &here = get_map();
     tripoint_abs_ms const loc = guy.get_location();
     faction_id const &fac_id = guy.get_fac_id();
+    map &here = get_map();
 
     std::unordered_set<tripoint> const looted =
         zmgr.get_point_set_loot( loc, PICKUP_RANGE, fac_id );

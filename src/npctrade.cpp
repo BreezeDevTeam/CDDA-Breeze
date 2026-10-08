@@ -16,7 +16,6 @@
 #include "item_category.h" // IWYU pragma: keep
 #include "item_location.h"
 #include "item_pocket.h"
-#include "map.h"
 #include "npc.h"
 #include "npctrade_utils.h"
 #include "ret_val.h"
@@ -308,10 +307,7 @@ bool npc_trading::trade( npc &np, int cost, const std::string &deal,
         npc_trading::transfer_items( trade_result.items_trader, np, player_character, from_map, false );
         // Now move items from escrow to the npc. Keep the weapon wielded.
         if( np.is_shopkeeper() ) {
-            std::list<item> const leftovers = distribute_items_to_npc_zones( escrow, np );
-            for( item const &i : leftovers ) {
-                get_map().add_item_or_charges( np.pos(), i, true );
-            }
+            distribute_items_to_npc_zones( escrow, np );
         } else {
             for( const item &i : escrow ) {
                 np.i_add( i, true, nullptr, nullptr, true, false );

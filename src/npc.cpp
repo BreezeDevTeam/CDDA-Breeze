@@ -2428,10 +2428,7 @@ void npc::shop_restock()
 
     add_fallback_zone( *this );
     consume_items_in_zones( *this, elapsed );
-    std::list<item> const leftovers = distribute_items_to_npc_zones( ret, *this );
-    for( item const &it : leftovers ) {
-        get_map().add_item_or_charges( pos(), it, true );
-    }
+    distribute_items_to_npc_zones( ret, *this );
 }
 
 bool npc::is_shopkeeper() const
