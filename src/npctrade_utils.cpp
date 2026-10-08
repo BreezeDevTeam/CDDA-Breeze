@@ -5,6 +5,7 @@
 
 #include "calendar.h"
 #include "clzones.h"
+#include "map_iterator.h"
 #include "npc.h"
 #include "npc_class.h"
 #include "rng.h"
@@ -73,44 +74,37 @@ bool _to_veh( item const &it, std::optional<vpart_reference> const &vp )
     return true;
 }
 
+constexpr int stray_min_stacks = 2;
+
 } // namespace
 
 void add_fallback_zone( npc &guy )
 {
     zone_manager &zmgr = zone_manager::get_manager();
+    map &here = get_map();
     tripoint_abs_ms const loc = guy.get_location();
     faction_id const &fac_id = guy.get_fac_id();
-    map &here = get_map();
 
-    if( zmgr.has_near( zone_type_LOOT_UNSORTED, loc, PICKUP_RANGE, fac_id ) ) {
-        return;
-    }
+    std::unordered_set<tripoint> const looted =
+        zmgr.get_point_set_loot( loc, PICKUP_RANGE, fac_id );
 
-    std::vector<tripoint_abs_ms> points;
-    for( tripoint_abs_ms const &t : closest_points_first( loc, PICKUP_RANGE ) ) {
-        tripoint_bub_ms const t_here = here.bub_from_abs( t );
-        if( here.has_furn( t_here ) &&
-            ( here.furn( t_here )->max_volume > t_floor->max_volume ||
-              here.furn( t_here )->has_flag( ter_furn_flag::TFLAG_CONTAINER ) ) &&
-            here.can_put_items_ter_furn( t_here ) &&
-            !here.route( guy.pos_bub(), t_here, guy.get_pathfinding_settings(),
-                         guy.get_path_avoid() )
-            .empty() ) {
-            points.emplace_back( t );
+    for( tripoint const &pt : here.points_in_radius( here.getlocal( loc ), PICKUP_RANGE ) ) {
+        if( looted.count( pt ) > 0 ) {
+            continue;
         }
-    }
-
-    if( points.empty() ) {
+        std::list<item_location> const stack = here.items_with( pt, [&guy]( item const & it ) {
+            return it.birthday() != calendar::start_of_cataclysm && it.is_owned_by( guy );
+        } );
+        if( static_cast<int>( stack.size() ) < stray_min_stacks ) {
+            continue;
+        }
+        tripoint_abs_ms const abs_pt = here.getglobal( pt );
         zmgr.add( fallback_name, zone_type_LOOT_UNSORTED, fac_id, false, true,
-                  loc.raw() + tripoint_north_west, loc.raw() + tripoint_south_east );
-    } else {
-        for( tripoint_abs_ms const &t : points ) {
-            zmgr.add( fallback_name, zone_type_LOOT_UNSORTED, fac_id, false, true, t.raw(),
-                      t.raw() );
-        }
+                  abs_pt.raw(), abs_pt.raw(), nullptr, false, true );
+        DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME )
+                << "Restored missing loot zone for NPC trader " << guy.name
+                << " at " << abs_pt.x() << "," << abs_pt.y() << "," << abs_pt.z();
     }
-    DebugLog( DebugLevel::D_WARNING, DebugClass::D_GAME )
-            << "Added fallack loot zones for NPC trader " << guy.name;
 }
 
 std::list<item> distribute_items_to_npc_zones( std::list<item> &items, npc &guy )
