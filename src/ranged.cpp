@@ -1953,6 +1953,20 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
         aim_types = you.get_aim_types( weapon );
     }
 
+    // 弓弩与投掷的优势/劣势会投两次取较好或较差的一次；命中率估算按等效散布折算
+    // （均匀分布下“两次取较好”的期望由 1/2 降到 1/3，取较差升到 2/3）
+    d20_roll_state roll_state = d20_roll_state::normal;
+    const bool roll_state_applies =
+        mode == target_ui::TargetMode::Throw || mode == target_ui::TargetMode::ThrowBlind ||
+        ( mode == target_ui::TargetMode::Fire && weapon.is_bow_or_crossbow() );
+    if( roll_state_applies ) {
+        Creature *const critter = get_creature_tracker().creature_at<Creature>( pos );
+        if( critter != nullptr && critter != &you ) {
+            const bool unseen = !critter->sees( you );
+            roll_state = get_d20_roll_state( you, *critter, unseen );
+        }
+    }
+
     for( const aim_type &aim_type : aim_types ) {
         const std::vector<input_event> keys = ctxt.keys_bound_to( aim_type.action.empty() ? "FIRE" :
                                               aim_type.action, /*maximum_modifier_count=*/1 );
@@ -1999,6 +2013,11 @@ static std::vector<aim_type_prediction> calculate_ranged_chances(
         dispersion_sources current_dispersion = dispersion;
         current_dispersion.add_range( aim_type.has_threshold ? aim_type.threshold :
                                       aim_to_selected.recoil );
+        if( roll_state == d20_roll_state::advantage ) {
+            current_dispersion.add_multiplier( 2.0 / 3.0 );
+        } else if( roll_state == d20_roll_state::disadvantage ) {
+            current_dispersion.add_multiplier( 4.0 / 3.0 );
+        }
 
         // this loop fills in the "confidence" values; the chances of great/good/graze outcomes
         prediction.confidence = confidence_estimate( target, current_dispersion );
