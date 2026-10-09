@@ -3988,7 +3988,8 @@ void item::ammo_info( std::vector<iteminfo> &info, const iteminfo_query *parts, 
         }
         if( !ammo.damage.empty() && ammo.damage.damage_units.front().res_mult != 1.0f &&
             parts->test( iteminfo_parts::AMMO_DAMAGE_AP ) ) {
-            info.emplace_back( "AMMO", space + _( "Armor multiplier: " ), "<num>",
+            // 独立一行，故不加续行用的前导空格，与“伤害加成”“射程”等左对齐
+            info.emplace_back( "AMMO", _( "Armor multiplier: " ), "<num>",
                                iteminfo::is_decimal | iteminfo::lower_is_better,
                                ammo.damage.damage_units.front().res_mult );
         }
