@@ -711,6 +711,7 @@ class target_ui
         void draw_controls_list( int text_y );
 
         void panel_cursor_info( int &text_y );
+        void panel_roll_state_info( int &text_y );
         void panel_gun_info( int &text_y );
         void panel_recoil( int &text_y );
         void panel_spell_info( int &text_y );
@@ -3916,6 +3917,8 @@ void target_ui::draw_ui_window()
     int text_y = 1; // Skip top border
 
     panel_cursor_info( text_y );
+    // 弓弩与投掷的优势/劣势紧跟光标信息，填掉与射击模式之间原本的空行
+    panel_roll_state_info( text_y );
     text_y += compact ? 0 : 1;
 
     if( mode == TargetMode::Fire || mode == TargetMode::TurretManual ) {
@@ -4294,44 +4297,48 @@ void target_ui::panel_target_info( int &text_y, bool fill_with_blank_if_no_targe
         text_y += max_lines;
         // TODO: print info about tile?
     }
+}
 
+void target_ui::panel_roll_state_info( int &text_y )
+{
     // 弓弩与投掷：显示本次命中判定的优势/劣势来源，始终占一行以免布局跳动
     const bool roll_state_mode =
         mode == TargetMode::Throw || mode == TargetMode::ThrowBlind ||
         ( mode == TargetMode::Fire && relevant != nullptr && relevant->is_bow_or_crossbow() );
-    if( roll_state_mode ) {
-        std::string reasons_text;
-        nc_color reasons_color = c_light_gray;
-        if( dst_critter != nullptr ) {
-            const bool unseen = !dst_critter->sees( *you );
-            const std::vector<std::string> adv =
-                get_roll_advantage_reasons( *you, *dst_critter, unseen );
-            const std::vector<std::string> dis = get_roll_disadvantage_reasons( *you );
-            const auto join_reasons = []( const std::vector<std::string> &reasons ) {
-                std::string joined;
-                for( const std::string &reason : reasons ) {
-                    if( !joined.empty() ) {
-                        joined += "、";
-                    }
-                    joined += reason;
-                }
-                return joined;
-            };
-            if( !adv.empty() && !dis.empty() ) {
-                reasons_text = _( "优势与劣势抵消" );
-            } else if( !adv.empty() ) {
-                reasons_text = string_format( _( "优势：%s" ), join_reasons( adv ) );
-                reasons_color = c_green;
-            } else if( !dis.empty() ) {
-                reasons_text = string_format( _( "劣势：%s" ), join_reasons( dis ) );
-                reasons_color = c_red;
-            }
-        }
-        if( !reasons_text.empty() ) {
-            mvwprintz( w_target, point( 1, text_y ), reasons_color, reasons_text );
-        }
-        text_y++;
+    if( !roll_state_mode ) {
+        return;
     }
+    std::string reasons_text;
+    nc_color reasons_color = c_light_gray;
+    if( dst_critter != nullptr ) {
+        const bool unseen = !dst_critter->sees( *you );
+        const std::vector<std::string> adv =
+            get_roll_advantage_reasons( *you, *dst_critter, unseen );
+        const std::vector<std::string> dis = get_roll_disadvantage_reasons( *you );
+        const auto join_reasons = []( const std::vector<std::string> &reasons ) {
+            std::string joined;
+            for( const std::string &reason : reasons ) {
+                if( !joined.empty() ) {
+                    joined += "、";
+                }
+                joined += reason;
+            }
+            return joined;
+        };
+        if( !adv.empty() && !dis.empty() ) {
+            reasons_text = _( "优势与劣势抵消" );
+        } else if( !adv.empty() ) {
+            reasons_text = string_format( _( "优势：%s" ), join_reasons( adv ) );
+            reasons_color = c_green;
+        } else if( !dis.empty() ) {
+            reasons_text = string_format( _( "劣势：%s" ), join_reasons( dis ) );
+            reasons_color = c_red;
+        }
+    }
+    if( !reasons_text.empty() ) {
+        mvwprintz( w_target, point( 1, text_y ), reasons_color, reasons_text );
+    }
+    text_y++;
 }
 
 void target_ui::panel_turret_list( int &text_y )
