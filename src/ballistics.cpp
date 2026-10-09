@@ -223,8 +223,13 @@ dealt_projectile_attack projectile_attack( const projectile &proj_arg, const tri
             const bool unseen = !target_critter->sees( *origin );
             const d20_roll_state roll_state = get_d20_roll_state( *shooter, *target_critter, unseen );
             if( roll_state != d20_roll_state::normal ) {
-                // 优势投两次取较好的一次，劣势取较差的一次
-                projectile_attack_aim second_aim = projectile_attack_roll( dispersion, range, target_size );
+                // 优势投两次取较好的一次，劣势取较差的一次。
+                // dispersion_sources 会缓存投骰结果，必须用清掉缓存的副本来取得真正的第二次投骰，
+                // 否则第二次 roll() 会直接返回第一次的结果，优势/劣势形同虚设。
+                dispersion_sources second_dispersion = dispersion;
+                second_dispersion.reset_roll();
+                projectile_attack_aim second_aim =
+                    projectile_attack_roll( second_dispersion, range, target_size );
                 const bool want_better = roll_state == d20_roll_state::advantage;
                 if( want_better ? second_aim.missed_by < aim.missed_by :
                     second_aim.missed_by > aim.missed_by ) {
