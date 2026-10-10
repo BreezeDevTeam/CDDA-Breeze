@@ -12209,12 +12209,16 @@ int item::gun_range( const Character *p ) const
         return 0;
     }
 
-    // 拉弓类武器（STR_DRAW）：力量每超出有效最低力量 1 点，射程 +1 格
+    // 拉弓类武器（STR_DRAW）：力量超出有效最低力量时增加射程，并设软上限
+    // 前 4 点每点 +1 格，其后每点 +0.5 格，总加成最多 +8 格
     if( has_flag( flag_STR_DRAW ) ) {
-        ret += std::max( 0, p->get_str() - get_min_str() );
+        const int surplus = std::max( 0, p->get_str() - get_min_str() );
+        const int full_bonus = std::min( surplus, 4 );
+        const int half_bonus = std::min( std::max( 0, surplus - 4 ), 8 ) / 2;
+        ret += full_bonus + half_bonus;
     }
 
-    return std::max( 0, ret );
+    return std::min( std::max( 0, ret ), RANGE_HARD_CAP );
 }
 
 units::energy item::energy_remaining() const
