@@ -278857,7 +278857,7 @@ msgstr "弓术基础"
 msgid ""
 "You have grasped some basic understanding on archery, and find handling bows"
 " easier."
-msgstr "你已经掌握了射箭的一些基本知识，这让操作弓箭变得更容易。"
+msgstr "你已经掌握了射箭的一些基本知识，这让操作弓箭变得更容易。\n\n“挽弓当挽强，用箭当用长。”"
 
 #. ~ Proficiency name
 #: data/json/proficiencies/wilderness.json
@@ -278870,7 +278870,7 @@ msgid ""
 "After significant practice, you have become an expert in the movements used "
 "in drawing and firing a bow, and have strengthened those muscles "
 "considerably."
-msgstr "经过大量的练习，你已经成为拉弓射箭的专家，并且大大锻炼了相关肌肉群。"
+msgstr "经过大量的练习，你已经成为拉弓射箭的专家，并且大大锻炼了相关肌肉群。\n\n“仰手接飞猱，俯身散马蹄。”"
 
 #. ~ Proficiency name
 #: data/json/proficiencies/wilderness.json
