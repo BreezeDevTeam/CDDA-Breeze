@@ -12211,7 +12211,7 @@ int item::gun_range( const Character *p ) const
 
     // 拉弓类武器（STR_DRAW）：力量每超出有效最低力量 1 点，射程 +1 格
     if( has_flag( flag_STR_DRAW ) ) {
-        ret += std::max( 0.0, p->get_str() - get_min_str() );
+        ret += std::max( 0, p->get_str() - get_min_str() );
     }
 
     return std::max( 0, ret );
