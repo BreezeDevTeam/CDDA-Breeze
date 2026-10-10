@@ -563,6 +563,7 @@
   },
   {
     "id": "compbow_high",
+    "range": 20,
     "copy-from": "compbow",
     "type": "GUN",
     "name": { "str": "compound hunting bow (high)", "str_pl": "compound hunting bows (high)" },
@@ -645,7 +646,7 @@
     "reload_noise_volume": 3,
     "loudness": 6,
     "ranged_damage": { "damage_type": "stab", "amount": 22 },
-    "range": 12,
+    "range": 20,
     "dispersion": 650,
     "sight_dispersion": 3000,
     "durability": 6,
@@ -928,7 +929,7 @@
     "reload_noise_volume": 3,
     "loudness": 8,
     "ranged_damage": { "damage_type": "stab", "amount": 18 },
-    "range": 18,
+    "range": 20,
     "dispersion": 700,
     "sight_dispersion": 3000,
     "durability": 6,
@@ -964,7 +965,7 @@
     "durability": 8,
     "loudness": 16,
     "ranged_damage": { "damage_type": "stab", "amount": 32 },
-    "range": 20
+    "range": 24
   },
   {
     "id": "compgreatbow",
@@ -991,7 +992,7 @@
     "loudness": 20,
     "durability": 8,
     "ranged_damage": { "damage_type": "stab", "amount": 34 },
-    "range": 22,
+    "range": 26,
     "dispersion": 700,
     "sight_dispersion": 3000,
     "clip_size": 1,
