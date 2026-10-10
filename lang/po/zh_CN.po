@@ -278883,7 +278883,7 @@ msgid ""
 "You have drawn and fired a bow so many times, you probably have a bit of a "
 "twist in your spine from it.  You've developed what would once have been a "
 "world class understanding of the pose and motion of effective archery."
-msgstr "你已经拉了无数次弓，射了无数次箭，已经形成了脊椎反射。你对如何有效射箭的姿势和动作有了世界级的了解。"
+msgstr "你已经拉了无数次弓，射了无数次箭，已经形成了脊椎反射。你对如何有效射箭的姿势和动作有了世界级的了解。\n\n“会挽雕弓如满月，西北望，射天狼。”"
 
 #. ~ Proficiency name
 #: data/json/proficiencies/woodworking.json
