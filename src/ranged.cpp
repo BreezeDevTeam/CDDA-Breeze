@@ -491,6 +491,8 @@ class target_ui
         item *relevant = nullptr;
         // Source tile for grabbed creatures, furniture, and vehicles.
         tripoint throw_origin = tripoint_zero;
+        // 投掷来源是否为载具：载具投掷走载具碰撞结算、不经过 D20，因此不显示优势/劣势行
+        bool throw_from_vehicle = false;
         // Cached selection range from player's position
         int range = 0;
         // Cached current ammo to display
@@ -764,12 +766,13 @@ target_handler::trajectory target_handler::mode_throw_creature( avatar &you,
 }
 
 target_handler::trajectory target_handler::mode_throw_object( avatar &you,
-        const tripoint &source, int range )
+        const tripoint &source, int range, bool from_vehicle )
 {
     target_ui ui = target_ui();
     ui.you = &you;
     ui.mode = target_ui::TargetMode::ThrowObject;
     ui.throw_origin = source;
+    ui.throw_from_vehicle = from_vehicle;
     ui.range = range;
 
     restore_on_out_of_scope<tripoint> view_offset_prev( you.view_offset );
@@ -4302,9 +4305,10 @@ void target_ui::panel_target_info( int &text_y, bool fill_with_blank_if_no_targe
 void target_ui::panel_roll_state_info( int &text_y )
 {
     // 弓弩与投掷：显示本次命中判定的优势/劣势来源，始终占一行以免布局跳动
+    // 载具投掷走载具碰撞结算、不经过 D20，故不显示该行
     const bool roll_state_mode =
         mode == TargetMode::Throw || mode == TargetMode::ThrowBlind ||
-        mode == TargetMode::ThrowObject ||
+        ( mode == TargetMode::ThrowObject && !throw_from_vehicle ) ||
         ( mode == TargetMode::Fire && relevant != nullptr && relevant->is_bow_or_crossbow() );
     if( !roll_state_mode ) {
         return;

@@ -1803,7 +1803,7 @@ bool throw_grabbed_vehicle( avatar &you )
     const tripoint source = veh->global_part_pos3( grabbed_part );
 
     const target_handler::trajectory trajectory = target_handler::mode_throw_object(
-                you, source, range );
+                you, source, range, true );
 
     if( trajectory.empty() ) {
         return true;

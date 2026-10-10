@@ -228,7 +228,7 @@ dealt_projectile_attack projectile_attack( const projectile &proj_arg, const tri
                 // 否则第二次 roll() 会直接返回第一次的结果，优势/劣势形同虚设。
                 dispersion_sources second_dispersion = dispersion;
                 second_dispersion.reset_roll();
-                projectile_attack_aim second_aim =
+                const projectile_attack_aim second_aim =
                     projectile_attack_roll( second_dispersion, range, target_size );
                 const bool want_better = roll_state == d20_roll_state::advantage;
                 if( want_better ? second_aim.missed_by < aim.missed_by :

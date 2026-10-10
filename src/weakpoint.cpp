@@ -409,8 +409,12 @@ void weakpoint_attack::compute_wp_skill()
     }
     // Combine attacker skill and proficiency boni.
     wp_skill = attacker_skill + proficiency_skill;
-    // 偷袭与劣势同样影响弱点命中：优势 +2、劣势 −2（与优势/劣势判定同源）
-    if( chr_att != nullptr && target != nullptr ) {
+    // 优势与劣势同样影响弱点命中：优势 +2、劣势 −2。
+    // 仅对“能获得优势投骰”的攻击生效（玩家用弓弩射击或投掷），与 ranged.cpp 里 advantage_roll 的资格一致，
+    // 避免普通枪械、NPC 攻击或近战仅凭可见性白拿加成。
+    const bool advantage_eligible = chr_att != nullptr && chr_att->is_avatar() &&
+                                    type == attack_type::PROJECTILE;
+    if( advantage_eligible && target != nullptr ) {
         const bool unseen = !target->sees( *chr_att );
         const d20_roll_state roll_state = get_d20_roll_state( *chr_att, *target, unseen );
         if( roll_state == d20_roll_state::advantage ) {
