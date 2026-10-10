@@ -236,9 +236,6 @@ dealt_projectile_attack projectile_attack( const projectile &proj_arg, const tri
                     aim = second_aim;
                 }
             }
-            if( first && unseen && roll_state == d20_roll_state::advantage ) {
-                shooter->add_msg_if_player( m_good, _( "目标没发现你，这一箭占据优势。" ) );
-            }
         }
     }
 
