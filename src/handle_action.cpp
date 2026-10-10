@@ -1025,7 +1025,9 @@ contact_roll_result contact_d20_result( const avatar &you, const Creature &targe
                                        const int flat_bonus,
                                        const bool show_state_message )
 {
-    const d20_roll_state state = get_d20_roll_state( you, target );
+    // 未被目标发现时同样占据优势（与射击、弱点判定同源）
+    const bool unseen = !target.sees( you );
+    const d20_roll_state state = get_d20_roll_state( you, target, unseen );
     if( show_state_message ) {
         if( state == d20_roll_state::advantage ) {
             add_msg( m_good, _( "你在这次抓取中占据优势。" ) );

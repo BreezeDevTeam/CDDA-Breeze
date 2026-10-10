@@ -4304,6 +4304,7 @@ void target_ui::panel_roll_state_info( int &text_y )
     // 弓弩与投掷：显示本次命中判定的优势/劣势来源，始终占一行以免布局跳动
     const bool roll_state_mode =
         mode == TargetMode::Throw || mode == TargetMode::ThrowBlind ||
+        mode == TargetMode::ThrowObject ||
         ( mode == TargetMode::Fire && relevant != nullptr && relevant->is_bow_or_crossbow() );
     if( !roll_state_mode ) {
         return;
