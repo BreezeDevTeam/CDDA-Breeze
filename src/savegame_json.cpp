@@ -3421,13 +3421,22 @@ void vehicle_part::deserialize( const JsonObject &data )
     data.read( "enabled", enabled );
     data.read( "flags", flags );
     data.read( "passenger_id", passenger_id );
+    if( data.has_int( "mount_z" ) ) {
+        mount_z = data.get_int( "mount_z" );
+        if( mount_z < 0 || mount_z >= MAX_VEHICLE_DECK ) {
+            data.throw_error_at( "mount_z", "mount_z out of range" );
+        }
+    }
     if( data.has_int( "z_offset" ) ) {
         int z_offset = data.get_int( "z_offset" );
         if( std::abs( z_offset ) > 10 ) {
             data.throw_error_at( "z_offset", "z_offset out of range" );
         }
-        precalc[0].z = z_offset;
-        precalc[1].z = z_offset;
+        precalc[0].z = mount_z + z_offset;
+        precalc[1].z = mount_z + z_offset;
+    } else if( mount_z ) {
+        precalc[0].z = mount_z;
+        precalc[1].z = mount_z;
     }
 
     // load legacy bike rack data
@@ -3509,8 +3518,11 @@ void vehicle_part::serialize( JsonOut &json ) const
     }
     json.member( "passenger_id", passenger_id );
     json.member( "crew_id", crew_id );
-    if( precalc[0].z ) {
-        json.member( "z_offset", precalc[0].z );
+    if( mount_z ) {
+        json.member( "mount_z", mount_z );
+    }
+    if( precalc[0].z - mount_z ) {
+        json.member( "z_offset", precalc[0].z - mount_z );
     }
     json.member( "items", items );
     json.member("tools", tools);
@@ -3593,6 +3605,7 @@ void vehicle_work_progress::deserialize( const JsonObject &data )
     data.read( "operation", operation_string );
     operation = operation_string.empty() ? 0 : operation_string.front();
     data.read( "mount", mount );
+    data.read( "mount_z", mount_z );
     data.read( "part_id", part_id );
     data.read( "variant", variant );
     data.read( "part_index", part_index );
@@ -3607,6 +3620,7 @@ void vehicle_work_progress::serialize( JsonOut &json ) const
     json.start_object();
     json.member( "operation", std::string( 1, operation ) );
     json.member( "mount", mount );
+    json.member( "mount_z", mount_z );
     json.member( "part_id", part_id );
     json.member( "variant", variant );
     json.member( "part_index", part_index );

@@ -3813,9 +3813,10 @@ static bool check_ladder_path_obstacles(const tripoint_bub_ms& start, int dist, 
 }
 
 // 向下攀爬绳梯的路径与着陆点计算
-// 逐层向下寻找第一个"可着陆点"作为目标：
+// 绳梯是从安装格垂直垂下的实体绳，逐层向下寻找第一个"可着陆点"：
+//   - 该层同格有载具部件 → 绳梯到此为止：可登车且可通过就落在这一层，否则绳梯被挡住（下不去）
 //   - 地形非空气且可通过 → 可着陆
-//   - 地形为空气但有可登车且可通过的载具部件 → 可着陆（踩到载具甲板）
+//   - 地形为空气且没有部件 → 继续往下；到绳梯末端仍无支撑则提示后下到该层
 // 中途遇生物或不可通过地形则阻挡。返回 nullopt 表示被阻挡（已输出警告）。
 struct ladder_descent_result {
     int dist;               // 向下移动的层数
@@ -3842,6 +3843,15 @@ static std::optional<ladder_descent_result> check_ladder_descent(
             return std::nullopt;
         }
 
+        // 该层同格有载具部件：绳梯垂到这里为止，站得上去就落在这层，站不上去就下不去
+        if( here.veh_at( pt ) ) {
+            if( here.passable( pt ) ) {
+                return ladder_descent_result{ i, true, true };
+            }
+            add_msg( m_warning, "绳梯被下面的载具部件挡住了！" );
+            return std::nullopt;
+        }
+
         const bool open_air = here.ter( pt ).id().str() == "t_open_air";
         if( !open_air ) {
             // 非空气地形：不可通过则阻挡，可通过则为着陆点
@@ -3852,16 +3862,9 @@ static std::optional<ladder_descent_result> check_ladder_descent(
             return ladder_descent_result{ i, false, false };
         }
 
-        // 空气地形：检查是否有可登车且可通过的载具部件作为着陆点
-        const optional_vpart_position vp = here.veh_at( pt );
-        const bool boardable = vp && vp->part_with_feature( VPFLAG_BOARDABLE, true );
-        if( boardable && here.passable( pt ) ) {
-            return ladder_descent_result{ i, true, true };
-        }
-
-        // 空气且无可着陆部件：继续往下；若是最后一层则目标无支撑
+        // 空气且没有部件：继续往下；若是最后一层则目标无支撑
         if( is_last ) {
-            return ladder_descent_result{ i, true, boardable && here.passable( pt ) };
+            return ladder_descent_result{ i, true, false };
         }
     }
     // 理论不可达

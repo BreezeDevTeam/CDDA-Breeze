@@ -614,11 +614,12 @@ void map::destroy_vehicle( vehicle *veh )
 
 void map::on_vehicle_moved( const int smz )
 {
-    set_outside_cache_dirty( smz );
-    set_transparency_cache_dirty( smz );
-    set_floor_cache_dirty( smz );
-    set_floor_cache_dirty( smz + 1 );
-    set_pathfinding_cache_dirty( smz );
+    for( int z = smz; z <= smz + MAX_VEHICLE_DECK; ++z ) {
+        set_outside_cache_dirty( z );
+        set_transparency_cache_dirty( z );
+        set_floor_cache_dirty( z );
+        set_pathfinding_cache_dirty( z );
+    }
 }
 
 void map::vehmove()
@@ -2603,8 +2604,9 @@ bool map::valid_move( const tripoint &from, const tripoint &to,
         // 只有可登上的车辆部件提供可行走的表面。
         // 不可登上的部件（气球、旋翼、框架等）不应阻止从边缘坠落。
         bool has_boardable = false;
-        const point mount = veh_up->part( part_up ).mount;
-        for( const int pid : veh_up->parts_at_relative( mount, true ) ) {
+        const vehicle_part &up_part = veh_up->part( part_up );
+        for( const int pid : veh_up->parts_at_relative( up_part.mount, true, false,
+                up_part.mount_z ) ) {
             if( veh_up->part_flag( pid, VPFLAG_BOARDABLE ) ) {
                 has_boardable = true;
                 break;
@@ -2682,6 +2684,20 @@ int map::climb_difficulty( const tripoint &p ) const
     return std::max( 0, best_difficulty - blocks_movement );
 }
 
+// 绳梯是从安装格垂直垂下的实体绳：中间任一层同格只要存在载具部件，绳梯就垂不过去。
+// 两个端点不算（安装层是起点，目的层是绳梯末端或落脚处）。
+static bool rope_line_blocked( const map &here, const point &xy, int z_from, int z_to )
+{
+    const int lo = std::min( z_from, z_to );
+    const int hi = std::max( z_from, z_to );
+    for( int z = lo + 1; z < hi; ++z ) {
+        if( here.veh_at( tripoint( xy, z ) ) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::pair<bool, tripoint_bub_ms> map::has_rope_at( tripoint_bub_ms pt, bool find_up ) const
 {
     std::vector<tripoint_bub_ms> candidates;
@@ -2696,6 +2712,10 @@ std::pair<bool, tripoint_bub_ms> map::has_rope_at( tripoint_bub_ms pt, bool find
         const int part = entry.second.second;
         const int ladder_len = veh->part( part ).info().ladder_length();
         if( std::abs( pos.z() - pt.z() ) + 1 > ladder_len ) {
+            continue;
+        }
+        // 绳梯的垂落线被中间层的部件挡住时，够不到 pt
+        if( rope_line_blocked( *this, pt.xy().raw(), pos.z(), pt.z() ) ) {
             continue;
         }
         if( find_up && pos.z() > pt.z() ) {
@@ -2753,7 +2773,7 @@ std::optional<tripoint_bub_ms> map::rope_ladder_hanging_at( const tripoint_bub_m
     const int dist = rope_top.z() - pt.z();
 
     // 静态障碍检查（参考 check_ladder_path_obstacles，但不查生物以避免渲染闪烁）
-    // 从绳梯顶部往下到 pt（含 pt），中途有不可通过地形或可登车载具部件则被阻挡
+    // 从绳梯顶部往下到 pt（含 pt），中途有不可通过地形或任何载具部件则被挡住
     for( int i = 1; i <= dist; i++ ) {
         tripoint_bub_ms check_pt = rope_top;
         check_pt.z() -= i;
@@ -2762,12 +2782,9 @@ std::optional<tripoint_bub_ms> map::rope_ladder_hanging_at( const tripoint_bub_m
         if( impassable_ter_furn( check_pt.raw() ) ) {
             return std::nullopt;
         }
-        // 可登车载具部件（仅中途，不含目标点）
-        if( !is_destination ) {
-            const optional_vpart_position vp = veh_at( check_pt );
-            if( vp && vp->part_with_feature( VPFLAG_BOARDABLE, true ) ) {
-                return std::nullopt;
-            }
+        // 载具部件（仅中途，不含目标点）：绳梯垂不到这一层以下
+        if( !is_destination && veh_at( check_pt ) ) {
+            return std::nullopt;
         }
     }
     return rope_top;
@@ -3687,7 +3704,7 @@ bool map::terrain_moppable( const tripoint_bub_ms &p )
     // Moppable vehicles ( blood splatter )
     if( const optional_vpart_position vp = veh_at( p ) ) {
         vehicle *const veh = &vp->vehicle();
-        std::vector<int> parts_here = veh->parts_at_relative( vp->mount(), true );
+        std::vector<int> parts_here = veh->parts_at_relative( vp->mount(), true, false, vp->mount_z() );
         for( int elem : parts_here ) {
             if( veh->part( elem ).blood > 0 ) {
                 return true;
@@ -3732,7 +3749,7 @@ bool map::mop_spills( const tripoint_bub_ms &p )
 
     if( const optional_vpart_position vp = veh_at( p ) ) {
         vehicle *const veh = &vp->vehicle();
-        std::vector<int> parts_here = veh->parts_at_relative( vp->mount(), true );
+        std::vector<int> parts_here = veh->parts_at_relative( vp->mount(), true, false, vp->mount_z() );
         for( int &elem : parts_here ) {
             if( veh->part( elem ).blood > 0 ) {
                 veh->part( elem ).blood = 0;
@@ -7273,7 +7290,7 @@ void map::add_splatter( const field_type_id &type, const tripoint &where, int in
         if( const optional_vpart_position vp = veh_at( where ) ) {
             vehicle *const veh = &vp->vehicle();
             // Might be -1 if all the vehicle's parts at where are marked for removal
-            const int part = veh->part_displayed_at( vp->mount(), true );
+            const int part = veh->part_displayed_at( vp->mount(), true, true, true, vp->mount_z() );
             if( part != -1 ) {
                 veh->part( part ).blood += 200 * std::min( intensity, 3 ) / 3;
                 return;

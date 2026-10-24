@@ -3874,6 +3874,9 @@ bool cata_tiles::draw_vpart_no_roof( const tripoint &p, lit_level ll, int &heigh
 bool cata_tiles::draw_vpart_roof( const tripoint &p, lit_level ll, int &height_3d,
                                   const std::array<bool, 5> &invisible )
 {
+    if( get_map().veh_at( p + tripoint_above ) ) {
+        return false;
+    }
     return draw_vpart( p, ll, height_3d, invisible, true );
 }
 
@@ -3911,7 +3914,7 @@ bool cata_tiles::draw_vpart( const tripoint &p, lit_level ll, int &height_3d,
                                             !veh.get_items( cargopart->part_index() ).empty();
 
                 int height_3d_temp = 0;
-                pending_part_tint_ = get_vpart_tint( veh, vp->mount(), roof );
+                pending_part_tint_ = get_vpart_tint( veh, vp->mount(), roof, vp->mount_z() );
                 const bool ret =
                     draw_from_id_string( vpname, TILE_CATEGORY::VEHICLE_PART, empty_string, p,
                                          subtile, rotation, ll, nv_goggles_activated, height_3d_temp );

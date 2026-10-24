@@ -698,6 +698,11 @@
     "info": "该部件为梯子，可让您从载具上爬下。"
   },
   {
+    "id": "SUPPORTS_ABOVE",
+    "type": "json_flag",
+    "info": "该部件可以承载上方层级的结构，可用来在其上起头搭建更高一层。"
+  },
+  {
     "id": "WALL_MOUNTED",
     "type": "json_flag",
     "info": "该部件固定在墙上，不能直接拖动。"

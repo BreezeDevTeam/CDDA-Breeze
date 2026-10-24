@@ -577,7 +577,8 @@ class cata_tiles
                                  const std::array<bool, 5> &invisible );
         bool draw_vpart( const tripoint &p, lit_level ll, int &height_3d,
                          const std::array<bool, 5> &invisible, bool roof );
-        std::optional<RGBColor> get_vpart_tint( const vehicle &veh, const point &mount, bool roof ) const;
+        std::optional<RGBColor> get_vpart_tint( const vehicle &veh, const point &mount, bool roof,
+                                                int z = -1 ) const;
         bool draw_vpart_no_roof( const tripoint &p, lit_level ll, int &height_3d,
                                  const std::array<bool, 5> &invisible );
         bool draw_vpart_roof( const tripoint &p, lit_level ll, int &height_3d,

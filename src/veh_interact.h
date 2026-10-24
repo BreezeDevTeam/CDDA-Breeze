@@ -67,6 +67,8 @@ class veh_interact
         item_location target;
 
         point dd = point_zero;
+        /* 当前正在编辑的层级，0 为最低层 */
+        int edit_deck = 0;
         /* starting offset for vehicle parts description display and max offset for scrolling */
         int start_at = 0;
         int start_limit = 0;

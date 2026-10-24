@@ -1293,17 +1293,19 @@ void uilist::set_category_filter(const
 
 struct pointmenu_cb::impl_t {
     const std::vector< tripoint > &points;
+    bool keep_z;
     int last; // to suppress redrawing
     tripoint last_view; // to reposition the view after selecting
     shared_ptr_fast<game::draw_callback_t> terrain_draw_cb;
 
-    explicit impl_t( const std::vector<tripoint> &pts );
+    explicit impl_t( const std::vector<tripoint> &pts, bool keep_z_offset );
     ~impl_t();
 
     void select( uilist *menu );
 };
 
-pointmenu_cb::impl_t::impl_t( const std::vector<tripoint> &pts ) : points( pts )
+pointmenu_cb::impl_t::impl_t( const std::vector<tripoint> &pts, bool keep_z_offset )
+    : points( pts ), keep_z( keep_z_offset )
 {
     last = INT_MIN;
     avatar &player_character = get_avatar();
@@ -1333,13 +1335,20 @@ void pointmenu_cb::impl_t::select( uilist *const menu )
     } else {
         const tripoint &center = points[menu->selected];
         player_character.view_offset = center - player_character.pos();
-        // TODO: Remove this line when it's safe
-        player_character.view_offset.z = 0;
+        if( !keep_z ) {
+            // TODO: Remove this line when it's safe
+            player_character.view_offset.z = 0;
+        }
     }
     g->invalidate_main_ui_adaptor();
 }
 
-pointmenu_cb::pointmenu_cb( const std::vector<tripoint> &pts ) : impl( pts )
+pointmenu_cb::pointmenu_cb( const std::vector<tripoint> &pts ) : pointmenu_cb( pts, false )
+{
+}
+
+pointmenu_cb::pointmenu_cb( const std::vector<tripoint> &pts, bool keep_z_offset )
+    : impl( pts, keep_z_offset )
 {
 }
 

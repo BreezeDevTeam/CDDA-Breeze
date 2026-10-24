@@ -497,7 +497,7 @@ void vehicle::turrets_set_targeting()
         }
     }
 
-    pointmenu_cb callback( locations );
+    pointmenu_cb callback( locations, true );
 
     int sel = 0;
     while( true ) {
@@ -553,7 +553,7 @@ void vehicle::turrets_set_mode()
         }
     }
 
-    pointmenu_cb callback( locations );
+    pointmenu_cb callback( locations, true );
 
     int sel = 0;
     while( true ) {

@@ -2238,7 +2238,8 @@ void activity_handlers::vehicle_start( player_activity *act, Character *you, con
             act->set_to_null();
             return;
         }
-    } else if( !veh->can_mount( mount, vpart_id( part_id ) ) ) {
+    } else if( !veh->can_mount( mount, vpart_id( part_id ),
+                                act->values.size() > 7 ? act->values[7] : 0 ) ) {
         if( work != nullptr ) {
             veh->erase_work_progress( operation, mount, part_id, variant );
         }
@@ -2327,7 +2328,8 @@ void activity_handlers::vehicle_do_turn( player_activity *act, Character *you )
 
     const int part_index = operation == 'i' ? -1 : find_vehicle_work_part( *veh, *work );
     if( ( operation != 'i' && part_index < 0 ) ||
-        ( operation == 'i' && !veh->can_mount( mount, vpart_id( part_id ) ) ) ||
+        ( operation == 'i' && !veh->can_mount( mount, vpart_id( part_id ),
+                act->values.size() > 7 ? act->values[7] : 0 ) ) ||
         ( operation == 'r' && work->initial_damage >= 0 &&
           veh->part( part_index ).damage() != work->initial_damage ) ) {
         veh->erase_work_progress( operation, mount, part_id, variant );
@@ -2378,7 +2380,8 @@ void activity_handlers::vehicle_canceled( player_activity *act, Character *you )
     if( work != nullptr ) {
         const int part_index = operation == 'i' ? -1 : find_vehicle_work_part( *veh, *work );
         if( ( operation != 'i' && part_index < 0 ) ||
-            ( operation == 'i' && !veh->can_mount( mount, vpart_id( part_id ) ) ) ||
+            ( operation == 'i' && !veh->can_mount( mount, vpart_id( part_id ),
+                    act->values.size() > 7 ? act->values[7] : 0 ) ) ||
             ( operation == 'r' && work->initial_damage >= 0 &&
               veh->part( part_index ).damage() != work->initial_damage ) ) {
             veh->erase_work_progress( operation, mount, part_id, variant );

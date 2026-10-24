@@ -458,6 +458,7 @@ player_activity veh_interact::serialize_activity()
     res.values.push_back( -dd.x );   // values[4]
     res.values.push_back( -dd.y );   // values[5]
     res.values.push_back( veh->index_of_part( vpt ) ); // values[6]
+    res.values.push_back( edit_deck ); // values[7]
     res.str_values.push_back( vp->get_id().str() );
     // Existing vehicle parts carry their orientation in vehicle_part::variant.
     // The interaction state may still contain the variant chosen for a prior
@@ -549,6 +550,8 @@ veh_interact::veh_interact( vehicle &veh, const point &p )
     main_context.register_action( "FILTER" );
     main_context.register_action("ZOOM_IN");
     main_context.register_action("ZOOM_OUT");
+    main_context.register_action( "DECK_UP" );
+    main_context.register_action( "DECK_DOWN" );
     main_context.register_action( "ANY_INPUT" );
 
     count_durability();
@@ -681,8 +684,12 @@ shared_ptr_fast<ui_adaptor> veh_interact::create_or_get_ui_adaptor()
             display_veh();
 
             werase( w_parts );
-            veh->print_part_list( w_parts, 0, getmaxy( w_parts ) - 1, getmaxx( w_parts ), cpart, highlight_part,
-                                  true, false );
+            const std::string deck_label = string_format( "层级 %d/%d", edit_deck + 1,
+                                           MAX_VEHICLE_DECK );
+            mvwprintz( w_parts, point( getmaxx( w_parts ) - utf8_width( deck_label ) - 2, 0 ),
+                       c_light_gray, deck_label );
+            veh->print_part_list( w_parts, 1, getmaxy( w_parts ) - 1, getmaxx( w_parts ), cpart,
+                                  highlight_part, true, false );
             wnoutrefresh( w_parts );
 
             werase( w_msg );
@@ -848,6 +855,18 @@ void veh_interact::do_main_loop()
             move_cursor( point_zero, description_scroll_lines );
         } else if( action == "PAGE_UP" ) {
             move_cursor( point_zero, -description_scroll_lines );
+        }
+        else if( action == "DECK_UP" ) {
+            if( edit_deck + 1 < MAX_VEHICLE_DECK ) {
+                edit_deck++;
+                move_cursor( point_zero );
+            }
+        }
+        else if( action == "DECK_DOWN" ) {
+            if( edit_deck > 0 ) {
+                edit_deck--;
+                move_cursor( point_zero );
+            }
         }
         else if (action=="ZOOM_IN") {
             if (veh_interact_tile_zoom == 64) {
@@ -2676,7 +2695,7 @@ std::pair<bool, std::string> veh_interact::calc_lift_requirements( const vpart_i
 int veh_interact::part_at( const point &d )
 {
     const point vd = -dd + d.rotate( 1 );
-    return veh->part_displayed_at( vd );
+    return veh->part_displayed_at( vd, false, true, true, edit_deck );
 }
 
 /**
@@ -2739,7 +2758,7 @@ void veh_interact::move_cursor( const point &d, int dstart_at )
             if( has_critter && vp.has_flag( VPFLAG_OBSTACLE ) ) {
                 continue;
             }
-            if( veh->can_mount( vd, vp.get_id() ) ) {
+            if( veh->can_mount( vd, vp.get_id(), edit_deck ) ) {
                 if( vp.has_flag( VPFLAG_APPLIANCE ) ) {
                     // exclude "appliances" from vehicle part list
                     continue;
@@ -2766,7 +2785,8 @@ void veh_interact::move_cursor( const point &d, int dstart_at )
     need_repair.clear();
     parts_here.clear();
     if( cpart >= 0 ) {
-        parts_here = veh->parts_at_relative( veh->part( cpart ).mount, true );
+        parts_here = veh->parts_at_relative( veh->part( cpart ).mount, true, false,
+                                             veh->part( cpart ).mount_z );
         for( size_t i = 0; i < parts_here.size(); i++ ) {
             vehicle_part &pt = veh->part( parts_here[i] );
 
@@ -2915,6 +2935,9 @@ void veh_interact::display_veh()
             continue;
         }
         if (part.is_fake) {
+            continue;
+        }
+        if (part.mount_z != edit_deck) {
             continue;
         }
         const point mount = part.mount;
@@ -3717,6 +3740,7 @@ void veh_interact::complete_vehicle( Character &you )
 
     point d( you.activity.values[4], you.activity.values[5] );
     int vehicle_part = you.activity.values[6];
+    const int work_deck = you.activity.values.size() > 7 ? you.activity.values[7] : 0;
     cata_assert( !you.activity.str_values.empty() );
     const vpart_id part_id( you.activity.str_values[0] );
     const std::string variant_id = you.activity.str_values.size() > 1 ?
@@ -3807,7 +3831,7 @@ void veh_interact::complete_vehicle( Character &you )
 
             you.invalidate_crafting_inventory();
             int partnum = !base.is_null() ? veh->install_part( d, part_id,
-                          std::move( base ), variant_id ) : -1;
+                          std::move( base ), variant_id, false, work_deck ) : -1;
             if( partnum < 0 ) {
                 debugmsg( "complete_vehicle install part fails dx=%d dy=%d id=%s",
                           d.x, d.y, part_id.c_str() );
@@ -4054,7 +4078,7 @@ void veh_interact::complete_vehicle( Character &you )
                                           part_id.str(), variant_id );
                 // part_removal_cleanup calls refresh, so parts_at_relative is valid
                 veh->part_removal_cleanup();
-                if( veh->parts_at_relative( mount, true ).empty() ) {
+                if( veh->parts_at_relative( mount, true, false, work_deck ).empty() ) {
                     get_map().clear_vehicle_point_from_cache( veh, part_pos );
                 }
             }

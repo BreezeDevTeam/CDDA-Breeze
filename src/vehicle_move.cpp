@@ -813,7 +813,7 @@ veh_collision vehicle::part_collision( int part, const tripoint &p,
 {
     // Vertical collisions need to be handled differently
     // All collisions have to be either fully vertical or fully horizontal for now
-    const bool vert_coll = bash_floor || p.z != sm_pos.z;
+    const bool vert_coll = bash_floor || p.z != global_pos3().z + parts[part].mount_z;
     Character &player_character = get_player_character();
     const bool pl_ctrl = player_in_control( player_character );
     Creature *critter = get_creature_tracker().creature_at( p, true );
@@ -1825,8 +1825,14 @@ vehicle *vehicle::act_on_map()
     }
     Character &player_character = get_player_character();
     const bool pl_ctrl = player_in_control( player_character );
-    // TODO: Remove this hack, have vehicle sink a z-level
     if( is_floating && !can_float() ) {
+        if( sm_pos.z > -OVERMAP_DEPTH ) {
+            if( pl_ctrl ) {
+                add_msg( m_bad, _( "Your %s sank." ), name );
+            }
+            here.displace_vehicle( *this, tripoint_below );
+            return this;
+        }
         add_msg( m_bad, _( "Your %s sank." ), name );
         if( pl_ctrl ) {
             unboard_all();
@@ -2097,18 +2103,23 @@ void vehicle::check_falling_or_floating()
 
     size_t deep_water_tiles = 0;
     size_t water_tiles = 0;
+    size_t hull_tiles = 0;
+    const int hull_z = global_pos3().z;
     for( const tripoint &position : pts ) {
-        deep_water_tiles += here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, position ) ? 1 : 0;
-        water_tiles += here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, position ) ? 1 : 0;
+        if( position.z == hull_z ) {
+            ++hull_tiles;
+            deep_water_tiles += here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, position ) ? 1 : 0;
+            water_tiles += here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, position ) ? 1 : 0;
+        }
         if( !is_falling ) {
             continue;
         }
         is_falling = !has_support( position, true );
     }
-    // floating if 2/3rds of the vehicle is in deep water
-    is_floating = 3 * deep_water_tiles >= 2 * pts.size();
-    // in_water if 1/2 of the vehicle is in water at all
-    in_water =  2 * water_tiles >= pts.size();
+    // floating if 2/3rds of the hull is in deep water
+    is_floating = hull_tiles > 0 && 3 * deep_water_tiles >= 2 * hull_tiles;
+    // in_water if 1/2 of the hull is in water at all
+    in_water =  hull_tiles > 0 && 2 * water_tiles >= hull_tiles;
 }
 
 float map::vehicle_wheel_traction( const vehicle &veh,

@@ -598,7 +598,7 @@ std::optional<int> paint_vehicle::use( Character &p, item &it, bool t,
     const int available_paint = it.ammo_remaining( &p );
     std::vector<tripoint> paint_targets;
     paint_targets.reserve( std::min<int>( available_paint, 128 ) );
-    std::set<point> handled_mounts;
+    std::set<tripoint> handled_mounts;
 
     for( const tripoint &pt : here.points_in_rectangle( first.position.value(),
             second.position.value() ) ) {
@@ -611,7 +611,7 @@ std::optional<int> paint_vehicle::use( Character &p, item &it, bool t,
         }
 
         const point mount = ovp->mount();
-        if( !handled_mounts.insert( mount ).second ) {
+        if( !handled_mounts.insert( tripoint( mount, ovp->mount_z() ) ).second ) {
             continue;
         }
 
@@ -619,7 +619,7 @@ std::optional<int> paint_vehicle::use( Character &p, item &it, bool t,
         const int displayed_index = displayed ? static_cast<int>( displayed->part_index() ) : -1;
         bool needs_paint = false;
 
-        for( const int index : target->parts_at_relative( mount, true ) ) {
+        for( const int index : target->parts_at_relative( mount, true, false, ovp->mount_z() ) ) {
             vehicle_part &vp = target->part( index );
             if( vp.removed || vp.info().has_flag( "NO_PAINT" ) ) {
                 continue;
@@ -4891,7 +4891,7 @@ std::optional<int> link_up_actor::use(Character& p, item& it, bool t, const trip
                     return true;
                 }
                 const vehicle& veh = ovp->vehicle();
-                for (const int p : veh.parts_at_relative(ovp->mount(), /* use_cache = */ false)) {
+                for (const int p : veh.parts_at_relative(ovp->mount(), /* use_cache = */ false, false, ovp->mount_z())) {
                     const vehicle_part& vp_here = veh.part(p);
                     if (vp_here.is_battery() && !vp_here.is_broken()) {
                         return true;
