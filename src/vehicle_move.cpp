@@ -1826,17 +1826,21 @@ vehicle *vehicle::act_on_map()
     Character &player_character = get_player_character();
     const bool pl_ctrl = player_in_control( player_character );
     if( is_floating && !can_float() ) {
-        if( sm_pos.z > -OVERMAP_DEPTH ) {
+        // 下面还是深水才继续往下沉；水见底了就按"沉底"处理，不再穿过水底岩层
+        const bool water_below = sm_pos.z > -OVERMAP_DEPTH &&
+                                 here.has_flag_ter( ter_furn_flag::TFLAG_DEEP_WATER,
+                                         global_pos3() + tripoint_below );
+        if( water_below ) {
             if( pl_ctrl ) {
                 add_msg( m_bad, _( "Your %s sank." ), name );
             }
+            // 一回合只沉一层，否则 vehproceed 的循环会把它一路送穿地图
+            of_turn = 0;
             here.displace_vehicle( *this, tripoint_below );
             return this;
         }
         add_msg( m_bad, _( "Your %s sank." ), name );
-        if( pl_ctrl ) {
-            unboard_all();
-        }
+        unboard_all();
         if( g->remoteveh() == this ) {
             g->setremoteveh( nullptr );
         }
