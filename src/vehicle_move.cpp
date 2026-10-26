@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>
+#include <map>
 #include <memory>
 #include <ostream>
 #include <set>
@@ -1380,12 +1381,25 @@ bool vehicle::check_heli_descend( Character &p ) const
     int air_count = 0;
     map &here = get_map();
     creature_tracker &creatures = get_creature_tracker();
-    for( const tripoint &pt : get_points( true ) ) {
-        tripoint below( pt.xy(), pt.z - 1 );
-        if( pt.z < -OVERMAP_DEPTH || !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, pt ) ) {
+    const std::set<tripoint> &pts = get_points( true );
+    // 净空按"列"算：同 (x,y) 只看最底部的部件，否则上层部件的下方是本车自己的甲板
+    std::map<point, int> column_bottom;
+    for( const tripoint &pt : pts ) {
+        auto it = column_bottom.find( pt.xy() );
+        if( it == column_bottom.end() ) {
+            column_bottom.emplace( pt.xy(), pt.z );
+        } else if( pt.z < it->second ) {
+            it->second = pt.z;
+        }
+    }
+    for( const auto &col : column_bottom ) {
+        const tripoint bottom( col.first, col.second );
+        if( col.second < -OVERMAP_DEPTH ||
+            !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, bottom ) ) {
             p.add_msg_if_player( _( "You are already landed!" ) );
             return false;
         }
+        const tripoint below( col.first, col.second - 1 );
         const optional_vpart_position ovp = here.veh_at( below );
         if( here.impassable_ter_furn( below ) || ovp || creatures.creature_at( below ) ) {
             p.add_msg_if_player( m_bad,
@@ -1415,22 +1429,36 @@ bool vehicle::check_heli_ascend( Character &p ) const
         p.add_msg_if_player( m_bad, _( "It would be unsafe to try and take off while you are moving." ) );
         return false;
     }
-    if( sm_pos.z + 1 >= OVERMAP_HEIGHT ) {
-        return false; // don't allow trying to ascend to max zlevel
-    }
     map &here = get_map();
     creature_tracker &creatures = get_creature_tracker();
-    for( const tripoint &pt : get_points( true ) ) {
-        tripoint above( pt.xy(), pt.z + 1 );
-        const optional_vpart_position ovp = here.veh_at( above );
-        if( here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, pt ) ||
-            here.impassable_ter_furn( above ) ||
-            ovp ||
-            creatures.creature_at( above ) ) {
-            p.add_msg_if_player( m_bad,
-                                 _( "It would be unsafe to try and ascend when there are obstacles above you." ) );
-            return false;
+    const std::set<tripoint> &pts = get_points( true );
+    // 净空按"列"算：顶层只覆盖部分格子时，露出来的低层屋顶上方也要检查
+    std::map<point, int> column_top;
+    int top_z = -OVERMAP_DEPTH;
+    for( const tripoint &pt : pts ) {
+        top_z = std::max( top_z, pt.z );
+        auto it = column_top.find( pt.xy() );
+        if( it == column_top.end() ) {
+            column_top.emplace( pt.xy(), pt.z );
+        } else if( pt.z > it->second ) {
+            it->second = pt.z;
         }
+    }
+    if( top_z + 1 >= OVERMAP_HEIGHT ) {
+        return false; // don't allow trying to ascend to max zlevel
+    }
+    bool blocked = std::any_of( pts.begin(), pts.end(), [&here]( const tripoint &pt ) {
+        return here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_INDOORS, pt );
+    } );
+    for( auto it = column_top.begin(); !blocked && it != column_top.end(); ++it ) {
+        const tripoint above( it->first, it->second + 1 );
+        const optional_vpart_position ovp = here.veh_at( above );
+        blocked = here.impassable_ter_furn( above ) || ovp || creatures.creature_at( above );
+    }
+    if( blocked ) {
+        p.add_msg_if_player( m_bad,
+                             _( "It would be unsafe to try and ascend when there are obstacles above you." ) );
+        return false;
     }
     return true;
 }
@@ -1990,7 +2018,51 @@ vehicle *vehicle::act_on_map()
         }
     }
 
-    return here.move_vehicle( *this, dp, mdir );
+    // 记录"站在本车车顶（每列最高部件）上"的生物位置；升空时带着它们一起上去，
+    // 否则它们会被留在原来的高度、嵌进车体里。下降/坠落仍按原版：留在原地自己掉下去。
+    std::vector<tripoint> roof_standers;
+    if( dp.z > 0 ) {
+        std::map<point, int> column_top;
+        for( const tripoint &pt : get_points() ) {
+            auto it = column_top.find( pt.xy() );
+            if( it == column_top.end() ) {
+                column_top.emplace( pt.xy(), pt.z );
+            } else if( pt.z > it->second ) {
+                it->second = pt.z;
+            }
+        }
+        creature_tracker &creatures = get_creature_tracker();
+        for( const auto &col : column_top ) {
+            const tripoint stand( col.first, col.second );
+            const Creature *critter = creatures.creature_at( stand );
+            const Character *boarded = dynamic_cast<const Character *>( critter );
+            if( critter != nullptr && ( boarded == nullptr || !boarded->in_vehicle ) ) {
+                roof_standers.push_back( stand );
+            }
+        }
+    }
+
+    vehicle *const result = here.move_vehicle( *this, dp, mdir );
+    bool move_avatar = false;
+    for( const tripoint &pt : roof_standers ) {
+        Creature *critter = get_creature_tracker().creature_at( pt );
+        if( critter == nullptr ) {
+            continue;
+        }
+        const Character *boarded = dynamic_cast<const Character *>( critter );
+        if( boarded != nullptr && boarded->in_vehicle ) {
+            continue;
+        }
+        if( critter->is_avatar() ) {
+            move_avatar = true;
+        } else {
+            critter->setpos( pt + tripoint( 0, 0, dp.z ) );
+        }
+    }
+    if( move_avatar ) {
+        g->vertical_move( dp.z, true );
+    }
+    return result;
 }
 
 bool vehicle::level_vehicle()
