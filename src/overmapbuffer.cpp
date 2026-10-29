@@ -932,7 +932,22 @@ overmap_path_params overmap_path_params::for_watercraft()
 overmap_path_params overmap_path_params::for_aircraft()
 {
     overmap_path_params ret;
-    ret.air_cost = 10;
+    // 飞机/飞艇是从天上越过地表的，地表任何地形都应当可通行。
+    // 只设 air_cost（上游原样）时，除"纯空气格"外全部地形都是 -1 = 不可通行，
+    // 在地表层规划路线会直接得到空路线（表现为"没有可走的路线"）。
+    constexpr int over_cost = 10;
+    ret.highway_cost = over_cost;
+    ret.road_cost = over_cost;
+    ret.field_cost = over_cost;
+    ret.dirt_road_cost = over_cost;
+    ret.trail_cost = over_cost;
+    ret.forest_cost = over_cost;
+    ret.small_building_cost = over_cost;
+    ret.shore_cost = over_cost;
+    ret.swamp_cost = over_cost;
+    ret.water_cost = over_cost;
+    ret.other_cost = over_cost;
+    ret.air_cost = over_cost;
     return ret;
 }
 
