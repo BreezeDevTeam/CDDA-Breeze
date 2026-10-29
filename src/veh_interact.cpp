@@ -2853,7 +2853,7 @@ void veh_interact::display_grid()
 
 void draw_vpart_tile( const vehicle &veh, const point &mount, const bool roof,
                       const std::string &vp_id_str, const point &rel_pos, const int part_mod,
-                      const int rotation_degrees ) {
+                      const int rotation_degrees, const int deck ) {
     if (vp_id_str.empty()) {
         return;
     }
@@ -2875,7 +2875,7 @@ void draw_vpart_tile( const vehicle &veh, const point &mount, const bool roof,
     // Use lit_level::LIT instead of BRIGHT to ensure consistent lighting
     tilecontext->draw_from_id_string_public( vpname, TILE_CATEGORY::VEHICLE_PART, "",
             tripoint( rel_pos, 0 ), subtile, rotation_degrees, lit_level::LIT, false, height_3d,
-            veh, mount, roof );
+            veh, mount, roof, deck );
 }
 
 
@@ -2947,15 +2947,15 @@ void veh_interact::display_veh()
         
         const std::string& vp_id_str1 = veh->part_id_string(i, part_mod, true, false);
         if (!vp_id_str1.empty()) {
-            draw_vpart_tile( *veh, mount, false, vp_id_str1, rel, part_mod, rotation );
+            draw_vpart_tile( *veh, mount, false, vp_id_str1, rel, part_mod, rotation, edit_deck );
         } else {
-            draw_vpart_tile( *veh, mount, false, part.id.str(), rel, 0, rotation );
+            draw_vpart_tile( *veh, mount, false, part.id.str(), rel, 0, rotation, edit_deck );
         }
         
         part_mod = 0;
         const std::string& vp_id_str2 = veh->part_id_string(i, part_mod, false, true);
         if (!vp_id_str2.empty() && vp_id_str2 != vp_id_str1) {
-            draw_vpart_tile( *veh, mount, true, vp_id_str2, rel, part_mod, rotation );
+            draw_vpart_tile( *veh, mount, true, vp_id_str2, rel, part_mod, rotation, edit_deck );
         }
     }
 
@@ -2970,7 +2970,7 @@ void veh_interact::display_veh()
         }
         const point rel = ( work.mount + dd ).rotate( 3 ) + offset;
         if( work.operation == 'i' ) {
-            draw_vpart_tile( *veh, work.mount, false, work.part_id, rel, 2, rotation );
+            draw_vpart_tile( *veh, work.mount, false, work.part_id, rel, 2, rotation, edit_deck );
             tilecontext->draw_vehicle_work_highlight_public( tripoint( rel, 0 ) );
             continue;
         }
