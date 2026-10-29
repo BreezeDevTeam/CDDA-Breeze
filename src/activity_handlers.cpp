@@ -2003,6 +2003,8 @@ void activity_handlers::vehicle_finish( player_activity *act, Character *you )
     map &here = get_map();
     //Grab this now, in case the vehicle gets shifted
     vehicle *const veh = vehicle_for_activity( *act, *you );
+    // values[7] 是施工时所在层级，完成后重新打开界面要沿用，否则会跳回最底层
+    const int deck = act->values.size() > 7 ? act->values[7] : 0;
     veh_interact::complete_vehicle( *you );
     // A durable vehicle record can outlive the legacy timer.  If the final
     // turn reached this callback before the record was marked complete, the
@@ -2038,7 +2040,7 @@ void activity_handlers::vehicle_finish( player_activity *act, Character *you )
                     if( veh->is_appliance() ) {
                         g->exam_appliance( *veh, int_p );
                     } else {
-                        g->exam_vehicle( *veh, int_p );
+                        g->exam_vehicle( *veh, int_p, deck );
                     }
                 }
                 return;

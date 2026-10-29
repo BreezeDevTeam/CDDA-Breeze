@@ -835,7 +835,7 @@ class game
         void exam_appliance( vehicle &veh, const point &cp = point_zero );
 
         /** open vehicle interaction screen */
-        void exam_vehicle( vehicle &veh, const point &cp = point_zero );
+        void exam_vehicle( vehicle &veh, const point &cp = point_zero, int deck = 0 );
 
         // Forcefully close a door at p.
         // The function checks for creatures/items/vehicles at that point and

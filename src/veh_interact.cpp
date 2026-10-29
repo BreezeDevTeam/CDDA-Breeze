@@ -472,9 +472,9 @@ player_activity veh_interact::serialize_activity()
     return res;
 }
 
-player_activity veh_interact::run( vehicle &veh, const point &p )
+player_activity veh_interact::run( vehicle &veh, const point &p, int deck )
 {
-    veh_interact vehint( veh, p );
+    veh_interact vehint( veh, p, deck );
     vehint.do_main_loop();
     return vehint.serialize_activity();
 }
@@ -510,9 +510,12 @@ vehicle_part &veh_interact::select_part( const vehicle &veh, const part_selector
 /**
  * Creates a blank veh_interact window.
  */
-veh_interact::veh_interact( vehicle &veh, const point &p )
+veh_interact::veh_interact( vehicle &veh, const point &p, int deck )
     : dd( p ), veh( &veh ), main_context( "VEH_INTERACT", keyboard_mode::keycode )
 {
+    // 回到交互界面时沿用上次所在的层级（安装/拆卸完成后重新打开界面用）
+    edit_deck = std::max( 0, std::min( deck, MAX_VEHICLE_DECK - 1 ) );
+
     // Only build the shapes map and the wheel list once
     for( const auto &e : vpart_info::all() ) {
         const vpart_info &vp = e.second;
