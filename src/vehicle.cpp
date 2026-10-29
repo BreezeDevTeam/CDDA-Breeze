@@ -141,8 +141,14 @@ void DefaultRemovePartHandler::removed( vehicle &veh, const int part )
     const player_activity &act = player_character.activity;
     map &here = get_map();
     if( act.id() == ACT_VEHICLE && act.moves_left > 0 && act.values.size() > 6 ) {
-        if( veh_pointer_or_null( here.veh_at( tripoint( act.values[0], act.values[1],
-                                              player_character.posz() ) ) ) == &veh ) {
+        // values[0]/[1] 是绝对平面坐标，部件所在的层级不一定是玩家所在层（多层载具），
+        // 所以先按玩家层查，再退回活动记录里带 z 的坐标集合
+        vehicle *act_veh = veh_pointer_or_null( here.veh_at( here.getlocal(
+                               tripoint( act.values[0], act.values[1], player_character.posz() ) ) ) );
+        for( auto it = act.coord_set.begin(); act_veh == nullptr && it != act.coord_set.end(); ++it ) {
+            act_veh = veh_pointer_or_null( here.veh_at( here.getlocal( *it ) ) );
+        }
+        if( act_veh == &veh ) {
             if( act.values[6] >= part ) {
                 player_character.cancel_activity();
                 add_msg( m_info, _( "The vehicle part you were working on has gone!" ) );

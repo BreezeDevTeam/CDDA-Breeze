@@ -1977,13 +1977,32 @@ void activity_handlers::train_finish( player_activity *act, Character *you )
     act->set_to_null();
 }
 
+// 活动里只存了平面坐标（values[0]/[1]）：多层载具上人可能站在别的层级、或干脆在车外操作，
+// 只按玩家所在层查会查不到，所以再退回活动记录的完整坐标集合（coord_set 带 z）
+static vehicle *vehicle_for_activity( const player_activity &act, const Character &you )
+{
+    map &here = get_map();
+    if( act.values.size() >= 2 ) {
+        optional_vpart_position vp = here.veh_at( here.getlocal( tripoint( act.values[0], act.values[1],
+                                               you.posz() ) ) );
+        if( vp ) {
+            return &vp->vehicle();
+        }
+    }
+    for( const tripoint &pt : act.coord_set ) {
+        optional_vpart_position vp = here.veh_at( here.getlocal( pt ) );
+        if( vp ) {
+            return &vp->vehicle();
+        }
+    }
+    return nullptr;
+}
+
 void activity_handlers::vehicle_finish( player_activity *act, Character *you )
 {
     map &here = get_map();
     //Grab this now, in case the vehicle gets shifted
-    const optional_vpart_position vp = here.veh_at( here.getlocal( tripoint( act->values[0],
-                                       act->values[1],
-                                       you->posz() ) ) );
+    vehicle *const veh = vehicle_for_activity( *act, *you );
     veh_interact::complete_vehicle( *you );
     // A durable vehicle record can outlive the legacy timer.  If the final
     // turn reached this callback before the record was marked complete, the
@@ -2010,16 +2029,16 @@ void activity_handlers::vehicle_finish( player_activity *act, Character *you )
             debugmsg( "process_activity invalid ACT_VEHICLE values:%d",
                       act->values.size() );
         } else {
-            if( vp ) {
+            if( veh ) {
                 here.invalidate_map_cache( here.get_abs_sub().z() );
                 // TODO: Z (and also where the activity is queued)
                 // Or not, because the vehicle coordinates are dropped anyway
                 if( !resume_for_multi_activities( *you ) ) {
                     point int_p( act->values[ 2 ], act->values[ 3 ] );
-                    if( vp->vehicle().is_appliance() ) {
-                        g->exam_appliance( vp->vehicle(), int_p );
+                    if( veh->is_appliance() ) {
+                        g->exam_appliance( *veh, int_p );
                     } else {
-                        g->exam_vehicle( vp->vehicle(), int_p );
+                        g->exam_vehicle( *veh, int_p );
                     }
                 }
                 return;
@@ -2036,25 +2055,6 @@ namespace {
 static bool is_persistent_vehicle_operation( const char operation )
 {
     return operation == 'i' || operation == 'r' || operation == 'o' || operation == 'O';
-}
-
-static vehicle *vehicle_for_activity( const player_activity &act, const Character &you )
-{
-    map &here = get_map();
-    if( act.values.size() >= 2 ) {
-        optional_vpart_position vp = here.veh_at( here.getlocal( tripoint( act.values[0], act.values[1],
-                                               you.posz() ) ) );
-        if( vp ) {
-            return &vp->vehicle();
-        }
-    }
-    for( const tripoint &pt : act.coord_set ) {
-        optional_vpart_position vp = here.veh_at( here.getlocal( pt ) );
-        if( vp ) {
-            return &vp->vehicle();
-        }
-    }
-    return nullptr;
 }
 
 static point vehicle_work_mount( const player_activity &act, const vehicle &veh, const char operation )
