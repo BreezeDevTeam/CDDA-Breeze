@@ -121,12 +121,12 @@ const texture *tileset::get_tinted_tile( const SDL_Renderer_Ptr &renderer, const
 }
 
 std::optional<RGBColor> cata_tiles::get_vpart_tint( const vehicle &veh, const point &mount,
-        const bool roof ) const
+        const bool roof, const int z ) const
 {
     if( !get_option<bool>( "VEHICLE_PART_COLOR" ) ) {
         return std::nullopt;
     }
-    const int part_idx = veh.part_displayed_at( mount, true, !roof, roof );
+    const int part_idx = veh.part_displayed_at( mount, true, !roof, roof, z );
     if( part_idx < 0 ) {
         return std::nullopt;
     }

@@ -1733,11 +1733,18 @@ static std::vector<tripoint_abs_omt> get_overmap_path_to( const tripoint_abs_omt
         }
     }
     // literal "edge" case: the vehicle may be in a different OMT than the player
-    const tripoint_abs_omt start_omt_pos = driving ? player_veh->global_omt_location() : player_omt_pos;
-    if( dest == player_omt_pos || dest == start_omt_pos ) {
+    tripoint_abs_omt start_omt_pos = driving ? player_veh->global_omt_location() : player_omt_pos;
+    tripoint_abs_omt dest_omt = dest;
+    // 起点在地表以上（飞行器、或站在高层甲板/屋顶）时，按地表 omt z=0 规划：
+    // 天空层没有地形，在那一层搜索会大规模展开（表现为一直"请稍等……"、最后还没有路线）
+    if( start_omt_pos.z() > 0 ) {
+        start_omt_pos.z() = 0;
+        dest_omt.z() = 0;
+    }
+    if( dest_omt == player_omt_pos || dest_omt == start_omt_pos ) {
         return {};
     } else {
-        return overmap_buffer.get_travel_path( start_omt_pos, dest, params );
+        return overmap_buffer.get_travel_path( start_omt_pos, dest_omt, params );
     }
 }
 
@@ -1916,6 +1923,9 @@ static tripoint_abs_omt display( const tripoint_abs_omt &orig,
                     }
                     action = "QUIT";
                 }
+            } else if( player_character.omt_path.empty() ) {
+                // 光标就在原地／目标还没探索到时会得到空路线，给个提示，避免"按了没反应"
+                popup( "没有可走的路线：目的地要选已经探索到的地块，而且不能是你脚下这一格。" );
             }
         } else if( action == "TOGGLE_BLINKING" ) {
             uistate.overmap_blinking = !uistate.overmap_blinking;
@@ -1980,7 +1990,13 @@ static tripoint_abs_omt display( const tripoint_abs_omt &orig,
 
 void ui::omap::display()
 {
-    overmap_ui::display( get_player_character().global_omt_location(), overmap_ui::draw_data_t() );
+    tripoint_abs_omt pos = get_player_character().global_omt_location();
+    // 玩家在高空（坐飞行器）时按地表显示：天空层没有可看的地形，
+    // 在那一层选旅行目的地会变成对着空白图层搜索
+    if( pos.z() > 0 ) {
+        pos.z() = 0;
+    }
+    overmap_ui::display( pos, overmap_ui::draw_data_t() );
 }
 
 void ui::omap::display_hordes()

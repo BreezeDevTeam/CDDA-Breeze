@@ -1349,7 +1349,7 @@ bool paint_vehicle_activity_tile( map &here, vehicle &target, const tripoint &pt
     const int displayed_index = displayed ? static_cast<int>( displayed->part_index() ) : -1;
     bool changed = false;
 
-    for( const int index : target.parts_at_relative( mount, true ) ) {
+    for( const int index : target.parts_at_relative( mount, true, false, ovp->mount_z() ) ) {
         vehicle_part &vp = target.part( index );
         if( vp.removed || vp.info().has_flag( "NO_PAINT" ) ) {
             continue;

@@ -394,7 +394,7 @@ bool veh_menu::query()
     menu.hilight_disabled = true;
 
     const std::vector<tripoint> locations = get_locations();
-    pointmenu_cb callback( locations );
+    pointmenu_cb callback( locations, true );
     if( locations.size() == items.size() ) { // all items have valid location attached
         menu.callback = &callback;
         menu.w_x_setup = 4; // move menu to the left so more space around vehicle is visible

@@ -68,6 +68,7 @@
       "repair": { "skills": [ [ "mechanics", 20 ], [ "spellcraft", 1 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] }
     },
     "flags": [
+      "SUPPORTS_ABOVE",
       "OBSOLETE",
       "ENGINE",
       "STABLE",

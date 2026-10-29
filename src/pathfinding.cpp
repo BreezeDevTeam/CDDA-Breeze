@@ -515,10 +515,30 @@ std::vector<tripoint> map::route( const tripoint &f, const tripoint &t,
                 if( rope_top.z() - cur_bub.z() + 1 > ladder_len ) {
                     continue;  // 绳梯长度不足，不覆盖 cur
                 }
+                // 绳梯的垂落线被中间层的载具部件挡住时，够不到 cur
+                bool line_blocked = false;
+                for( int z = cur.z + 1; z < rope_top.z(); ++z ) {
+                    if( veh_at( tripoint( cur.xy(), z ) ) ) {
+                        line_blocked = true;
+                        break;
+                    }
+                }
+                if( line_blocked ) {
+                    continue;
+                }
                 // 从 cur 正下方开始逐层找可着陆点
                 for( int i = 1; i <= ladder_len - 1; i++ ) {
                     tripoint dest( cur.xy(), cur.z - i );
                     if( dest.z < min.z ) {
+                        break;
+                    }
+                    // 该层同格有载具部件：绳梯垂到这里为止，站得上去就连过去，否则没有边
+                    if( veh_at( dest ) ) {
+                        if( passable( dest ) ) {
+                            pf.add_point( layer.gscore[parent_index] + 2 * i,
+                                          layer.score[parent_index] + 2 * i + 2 * rl_dist( dest, t ),
+                                          cur, dest );
+                        }
                         break;
                     }
                     if( !has_flag( ter_furn_flag::TFLAG_NO_FLOOR, dest ) ) {
@@ -528,14 +548,6 @@ std::vector<tripoint> map::route( const tripoint &f, const tripoint &t,
                                           layer.score[parent_index] + 2 * i + 2 * rl_dist( dest, t ),
                                           cur, dest );
                         }
-                        break;
-                    }
-                    // 空气地形：检查是否有可登车且可通过的载具部件作为着陆点
-                    const optional_vpart_position vp = veh_at( dest );
-                    if( vp && vp->part_with_feature( VPFLAG_BOARDABLE, true ) && passable( dest ) ) {
-                        pf.add_point( layer.gscore[parent_index] + 2 * i,
-                                      layer.score[parent_index] + 2 * i + 2 * rl_dist( dest, t ),
-                                      cur, dest );
                         break;
                     }
                 }

@@ -1058,7 +1058,7 @@ bool game::start_game()
                     u.setpos( pos );
 
                     // Delete the items that would have spawned here from a "corpse"
-                    for( int sp : v.v->parts_at_relative( vp.mount(), true ) ) {
+                    for( int sp : v.v->parts_at_relative( vp.mount(), true, false, vp.mount_z() ) ) {
                         vehicle_stack here = v.v->get_items( sp );
 
                         for( auto iter = here.begin(); iter != here.end(); ) {
@@ -5601,13 +5601,13 @@ void game::exam_appliance( vehicle &veh, const point &c )
     }
 }
 
-void game::exam_vehicle( vehicle &veh, const point &c )
+void game::exam_vehicle( vehicle &veh, const point &c, int deck )
 {
     if( veh.magic ) {
         add_msg( m_info, _( "This is your %s" ), veh.name );
         return;
     }
-    player_activity act = veh_interact::run( veh, c );
+    player_activity act = veh_interact::run( veh, c, deck );
     if( act ) {
         u.moves = 0;
         u.assign_activity( act );

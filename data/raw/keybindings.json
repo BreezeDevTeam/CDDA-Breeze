@@ -1850,6 +1850,20 @@
   },
   {
     "type": "keybinding",
+    "id": "DECK_UP",
+    "category": "VEH_INTERACT",
+    "name": "切换到上一层级",
+    "bindings": [ { "input_method": "keyboard_any", "key": "+" } ]
+  },
+  {
+    "type": "keybinding",
+    "id": "DECK_DOWN",
+    "category": "VEH_INTERACT",
+    "name": "切换到下一层级",
+    "bindings": [ { "input_method": "keyboard_any", "key": "-" } ]
+  },
+  {
+    "type": "keybinding",
     "id": "TOGGLE_UNAVAILABLE_CONSTRUCTIONS",
     "category": "CONSTRUCTION",
     "name": "Toggle unavailable constructions",

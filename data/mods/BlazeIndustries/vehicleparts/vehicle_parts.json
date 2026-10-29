@@ -16,7 +16,7 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] }
     },
-    "flags": [ "MOUNTABLE" ]
+    "flags": [ "MOUNTABLE", "SUPPORTS_ABOVE" ]
   },
   {
     "id": "afs_lightweight_frame_cover",
@@ -99,7 +99,7 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] }
     },
-    "flags": [ "INITIAL_PART", "MOUNTABLE" ]
+    "flags": [ "INITIAL_PART", "MOUNTABLE", "SUPPORTS_ABOVE" ]
   },
   {
     "id": "afs_lightweight_foldable_frame_cover",
