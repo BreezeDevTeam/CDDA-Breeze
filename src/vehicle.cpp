@@ -1513,6 +1513,8 @@ int vehicle::install_part( const point &dp, const vpart_id &id, const std::strin
     }
     vehicle_part new_part( id, variant_id, dp, item( id.obj().base_item ) );
     new_part.mount_z = z;
+    new_part.precalc[0].z = z;
+    new_part.precalc[1].z = z;
     return install_part( dp, new_part );
 }
 
@@ -1524,6 +1526,8 @@ int vehicle::install_part( const point &dp, const vpart_id &id, item &&obj,
     }
     vehicle_part new_part( id, variant_id, dp, std::move( obj ) );
     new_part.mount_z = z;
+    new_part.precalc[0].z = z;
+    new_part.precalc[1].z = z;
     return install_part( dp, new_part );
 }
 
@@ -3299,7 +3303,8 @@ void vehicle::precalc_mounts( int idir, const units::angle &dir,
         auto q = mount_to_precalc.find( key );
         if( q == mount_to_precalc.end() ) {
             coord_translate( tdir, pivot, p.mount, p.precalc[idir] );
-            p.precalc[idir].z = p.mount_z;
+            // z 只由 advance_precalc_mounts() 维护（mount_z 基准 + 坡道 ±1 层），
+            // 这里重置会把跨坡道部件的层偏移抹掉，导致碰撞判定少一层。
             mount_to_precalc.insert( { key, p.precalc[idir] } );
         } else {
             p.precalc[idir] = q->second;
