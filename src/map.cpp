@@ -1452,13 +1452,49 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
     const tripoint_bub_ms src = veh.pos_bub();
     // handle vehicle ramps
     int ramp_offset = 0;
-    if( adjust_pos ) {
-        if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp ) ) {
-            ramp_offset += 1;
-            veh.is_on_ramp = true;
-        } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp ) ) {
-            ramp_offset -= 1;
-            veh.is_on_ramp = true;
+    bool stacked_decks = false;
+    for( int i = 0; i < veh.num_parts(); i++ ) {
+        if( !veh.part( i ).removed && veh.part( i ).mount_z > 0 ) {
+            stacked_decks = true;
+            break;
+        }
+    }
+    if( adjust_pos && !veh.is_flying_in_air() ) {
+        if( stacked_decks ) {
+            const tripoint base = veh.global_pos3();
+            int lowest = 1;
+            bool any_col = false;
+            for( int i = 0; i < veh.num_parts(); i++ ) {
+                const vehicle_part &vp = veh.part( i );
+                if( vp.removed || vp.mount_z != 0 ) {
+                    continue;
+                }
+                const tripoint cur = base + vp.precalc[0];
+                const tripoint rc( cur.x + dp.x, cur.y + dp.y, cur.z );
+                int col = cur.z - base.z;
+                if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
+                    col += 1;
+                } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {
+                    col -= 1;
+                }
+                col = std::min( 1, std::max( -1, col ) );
+                lowest = std::min( lowest, col );
+                any_col = true;
+            }
+            ramp_offset = any_col ? lowest : 0;
+            if( ramp_offset != 0 ) {
+                veh.is_on_ramp = true;
+            }
+        } else {
+            bool ramp_up = has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp );
+            bool ramp_down = has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp );
+            if( ramp_up ) {
+                ramp_offset += 1;
+                veh.is_on_ramp = true;
+            } else if( ramp_down ) {
+                ramp_offset -= 1;
+                veh.is_on_ramp = true;
+            }
         }
     }
 
@@ -1560,7 +1596,20 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
             // ramps make everything super tricky
             int psg_offset_z = -ramp_offset;
             tripoint next_pos = veh_part.precalc[1];
-            if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + next_pos ) ) {
+            if( stacked_decks ) {
+                int col_ramp = next_pos.z - veh_part.mount_z;
+                if( !veh.is_flying_in_air() ) {
+                    const tripoint rc( dst.x() + next_pos.x, dst.y() + next_pos.y,
+                                       src.z() + next_pos.z - veh_part.mount_z );
+                    if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
+                        col_ramp += 1;
+                    } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {
+                        col_ramp -= 1;
+                    }
+                }
+                col_ramp = std::min( 1, std::max( -1, col_ramp ) );
+                psg_offset_z = veh_part.mount_z + col_ramp - ramp_offset - next_pos.z;
+            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + next_pos ) ) {
                 psg_offset_z += 1;
             } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + next_pos ) ) {
                 psg_offset_z -= 1;
