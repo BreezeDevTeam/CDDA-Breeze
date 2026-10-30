@@ -1513,6 +1513,8 @@ int vehicle::install_part( const point &dp, const vpart_id &id, const std::strin
     }
     vehicle_part new_part( id, variant_id, dp, item( id.obj().base_item ) );
     new_part.mount_z = z;
+    new_part.precalc[0].z = z;
+    new_part.precalc[1].z = z;
     return install_part( dp, new_part );
 }
 
@@ -1524,6 +1526,8 @@ int vehicle::install_part( const point &dp, const vpart_id &id, item &&obj,
     }
     vehicle_part new_part( id, variant_id, dp, std::move( obj ) );
     new_part.mount_z = z;
+    new_part.precalc[0].z = z;
+    new_part.precalc[1].z = z;
     return install_part( dp, new_part );
 }
 
@@ -2405,6 +2409,9 @@ bool vehicle::split_vehicles( map &here,
             new_vehicle->camera_on = camera_on;
         }
 
+        // 源载具与新载具的层差：新载具原点被抬到分裂出来的那一层，
+        // 复制过来的部件要把 precalc 的 z 跟着平移，否则会差 min_z 层。
+        const int split_z_offset = new_vehicle->global_pos3().z - global_pos3().z;
         std::vector<Character *> passengers;
         for( size_t new_part = 0; new_part < split_parts.size(); new_part++ ) {
             int mov_part = split_parts[ new_part ];
@@ -2439,6 +2446,8 @@ bool vehicle::split_vehicles( map &here,
             new_vehicle->parts.emplace_back( parts[ mov_part ] );
             new_vehicle->parts.back().mount = new_mount;
             new_vehicle->parts.back().mount_z = mov_z - min_z;
+            new_vehicle->parts.back().precalc[0].z -= split_z_offset;
+            new_vehicle->parts.back().precalc[1].z -= split_z_offset;
 
             // remove labels associated with the mov_part
             const auto iter = labels.find( label( cur_mount ) );
@@ -3299,7 +3308,8 @@ void vehicle::precalc_mounts( int idir, const units::angle &dir,
         auto q = mount_to_precalc.find( key );
         if( q == mount_to_precalc.end() ) {
             coord_translate( tdir, pivot, p.mount, p.precalc[idir] );
-            p.precalc[idir].z = p.mount_z;
+            // z 只由 advance_precalc_mounts() 维护（mount_z 基准 + 坡道 ±1 层），
+            // 这里重置会把跨坡道部件的层偏移抹掉，导致碰撞判定少一层。
             mount_to_precalc.insert( { key, p.precalc[idir] } );
         } else {
             p.precalc[idir] = q->second;
@@ -7614,6 +7624,13 @@ bool vehicle::restore_folded_parts( const item &it )
     } catch( const JsonError &e ) {
         debugmsg( "Error restoring folded vehicle parts: %s", e.c_str() );
         return false;
+    }
+
+    // 收起的部件重新展开时，按自身层号重置预计算的 z：
+    // 折叠期间保存的坡道偏移在这里没有意义，保留会让部件错层。
+    for( vehicle_part &pt : parts ) {
+        pt.precalc[0].z = pt.mount_z;
+        pt.precalc[1].z = pt.mount_z;
     }
 
     // item should have snapshot of average part damage in item var. take difference of current
