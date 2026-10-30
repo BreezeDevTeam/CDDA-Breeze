@@ -1923,10 +1923,25 @@ vehicle *vehicle::act_on_map()
                                       << " water=" << in_water
                                       << " float=" << is_floating
                                       << " decks=" << decks.size();
-            for( const auto &d : decks ) {
-                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG]   deck " << d.first
-                                          << " parts=" << d.second
-                                          << " abs_z=" << ( pt.z + d.first );
+            std::map<int, int> real_z;
+            for( const vehicle_part &vp : parts ) {
+                if( !vp.removed ) {
+                    real_z[global_part_pos3( vp ).z]++;
+                }
+            }
+            for( const auto &d : real_z ) {
+                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG]   actual_z=" << d.first
+                                          << " parts=" << d.second;
+            }
+            for( int mz = 0; mz < 3; mz++ ) {
+                for( const vehicle_part &vp : parts ) {
+                    if( !vp.removed && vp.mount_z == mz ) {
+                        DebugLog( D_INFO, D_MAIN ) << "[VEHDBG]   sample mount=" << mz
+                                                  << " precalc=" << vp.precalc[1].z
+                                                  << " abs=" << global_part_pos3( vp ).z;
+                        break;
+                    }
+                }
             }
         }
     }

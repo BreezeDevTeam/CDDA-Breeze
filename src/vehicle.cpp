@@ -8220,6 +8220,24 @@ std::set<int> vehicle::advance_precalc_mounts( const point &new_pos, const tripo
     // can get split across the z-levels and continue moving, enough though large parts of the
     // vehicle are unsupported.  In that case, move the unsupported parts down until they are
     // supported.
+    std::map<point, int> col_ramps;
+    if( stacked_decks ) {
+        for( const vehicle_part &vp : parts ) {
+            if( vp.removed || vp.mount_z != 0 ) {
+                continue;
+            }
+            const tripoint cur = src + vp.precalc[0];
+            int col = cur.z - src.z + ramp_offset;
+            const tripoint rc( cur.x + dp.x, cur.y + dp.y, cur.z );
+            if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
+                col += 1;
+            } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {
+                col -= 1;
+            }
+            col_ramps[point( vp.precalc[0].x, vp.precalc[0].y )] =
+                std::min( 1, std::max( -1, col ) );
+        }
+    }
     int index = -1;
     for( vehicle_part &prt : parts ) {
         index += 1;
@@ -8236,17 +8254,8 @@ std::set<int> vehicle::advance_precalc_mounts( const point &new_pos, const tripo
             prt.precalc[0].z += dp.z;
         }
         if( stacked_decks ) {
-            int col_ramp = prt.precalc[1].z - prt.mount_z;
-            if( !is_flying_in_air() ) {
-                const tripoint cur = src + prt.precalc[0];
-                const tripoint rc( cur.x + dp.x, cur.y + dp.y, cur.z );
-                if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
-                    col_ramp += 1;
-                } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {
-                    col_ramp -= 1;
-                }
-            }
-            col_ramp = std::min( 1, std::max( -1, col_ramp ) );
+            auto it = col_ramps.find( point( prt.precalc[0].x, prt.precalc[0].y ) );
+            const int col_ramp = it != col_ramps.end() ? it->second : 0;
             prt.precalc[0].z = prt.mount_z + col_ramp - ramp_offset;
         } else {
             if( !is_flying_in_air() ) {

@@ -1462,7 +1462,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
     if( adjust_pos && !veh.is_flying_in_air() ) {
         if( stacked_decks ) {
             const tripoint base = veh.global_pos3();
-            int lowest = 0;
+            int lowest = 1;
+            bool any_col = false;
             for( int i = 0; i < veh.num_parts(); i++ ) {
                 const vehicle_part &vp = veh.part( i );
                 if( vp.removed || vp.mount_z != 0 ) {
@@ -1478,8 +1479,9 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
                 }
                 col = std::min( 1, std::max( -1, col ) );
                 lowest = std::min( lowest, col );
+                any_col = true;
             }
-            ramp_offset = lowest;
+            ramp_offset = any_col ? lowest : 0;
             if( ramp_offset != 0 ) {
                 veh.is_on_ramp = true;
             }
@@ -1561,6 +1563,25 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
     // Need old coordinates to check for remote control
     const bool remote = veh.remote_controlled( player_character );
 
+    std::map<point, int> psg_col_ramps;
+    if( stacked_decks ) {
+        for( int i = 0; i < veh.num_parts(); i++ ) {
+            const vehicle_part &vp = veh.part( i );
+            if( vp.removed || vp.mount_z != 0 ) {
+                continue;
+            }
+            const tripoint cur = src.raw() + vp.precalc[1];
+            int col = cur.z - src.z() + ramp_offset;
+            const tripoint rc( cur.x + dp.x, cur.y + dp.y, cur.z );
+            if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
+                col += 1;
+            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {
+                col -= 1;
+            }
+            psg_col_ramps[point( vp.precalc[1].x, vp.precalc[1].y )] =
+                std::min( 1, std::max( -1, col ) );
+        }
+    }
     // record every passenger and pet inside
     std::vector<rider_data> riders = veh.get_riders();
 
@@ -1603,14 +1624,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
             int psg_offset_z = -ramp_offset;
             tripoint next_pos = veh_part.precalc[1];
             if( stacked_decks ) {
-                tripoint rc( dst.x() + next_pos.x, dst.y() + next_pos.y, src.z() + next_pos.z );
-                int col_ramp = next_pos.z - veh_part.mount_z;
-                if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
-                    col_ramp += 1;
-                } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {
-                    col_ramp -= 1;
-                }
-                col_ramp = std::min( 1, std::max( -1, col_ramp ) );
+                auto cit = psg_col_ramps.find( point( next_pos.x, next_pos.y ) );
+                const int col_ramp = cit != psg_col_ramps.end() ? cit->second : 0;
                 psg_offset_z = veh_part.mount_z + col_ramp - ramp_offset - next_pos.z;
             } else if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + next_pos ) ) {
                 psg_offset_z += 1;
