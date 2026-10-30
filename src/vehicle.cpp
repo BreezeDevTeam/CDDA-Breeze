@@ -8239,7 +8239,7 @@ std::set<int> vehicle::advance_precalc_mounts( const point &new_pos, const tripo
             int col_ramp = prt.precalc[1].z - prt.mount_z;
             if( !is_flying_in_air() ) {
                 const tripoint cur = src + prt.precalc[0];
-                const tripoint rc( cur.x + dp.x, cur.y + dp.y, src.z );
+                const tripoint rc( cur.x + dp.x, cur.y + dp.y, cur.z - prt.mount_z );
                 if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
                     col_ramp += 1;
                 } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {

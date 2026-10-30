@@ -1605,7 +1605,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
             int psg_offset_z = -ramp_offset;
             tripoint next_pos = veh_part.precalc[1];
             if( stacked_decks ) {
-                const tripoint rc( dst.x() + next_pos.x, dst.y() + next_pos.y, src.z() );
+                const tripoint rc( dst.x() + next_pos.x, dst.y() + next_pos.y,
+                                   src.z() + next_pos.z - veh_part.mount_z );
                 int col_ramp = next_pos.z - veh_part.mount_z;
                 if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
                     col_ramp += 1;
