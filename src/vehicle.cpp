@@ -8192,6 +8192,10 @@ std::set<int> vehicle::advance_precalc_mounts( const point &new_pos, const tripo
 {
     map &here = get_map();
     std::set<int> smzs;
+    const bool stacked_decks = std::any_of( parts.begin(), parts.end(),
+    []( const vehicle_part &prt ) {
+        return !prt.removed && prt.mount_z > 0;
+    } );
     // when a vehicle part enters the low end of a down ramp, or the high end of an up ramp,
     // it immediately translates down or up a z-level, respectively, ending up on the low
     // end of an up ramp or high end of a down ramp, respectively.  The two ends are set
@@ -8231,12 +8235,29 @@ std::set<int> vehicle::advance_precalc_mounts( const point &new_pos, const tripo
         } else if( !adjust_pos &&  parts_to_move.find( index ) != parts_to_move.end() ) {
             prt.precalc[0].z += dp.z;
         }
-        if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + prt.precalc[0] ) ) {
-            prt.precalc[0].z += 1;
-        } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + prt.precalc[0] ) ) {
-            prt.precalc[0].z -= 1;
+        if( stacked_decks ) {
+            int col_ramp = prt.precalc[1].z - prt.mount_z;
+            if( !is_flying_in_air() ) {
+                const tripoint cur = src + prt.precalc[0];
+                const tripoint rc( cur.x + dp.x, cur.y + dp.y, cur.z );
+                if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
+                    col_ramp += 1;
+                } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, rc ) ) {
+                    col_ramp -= 1;
+                }
+            }
+            col_ramp = std::min( 1, std::max( -1, col_ramp ) );
+            prt.precalc[0].z = prt.mount_z + col_ramp - ramp_offset;
+        } else {
+            if( !is_flying_in_air() ) {
+                if( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + prt.precalc[0] ) ) {
+                    prt.precalc[0].z += 1;
+                } else if( here.has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + prt.precalc[0] ) ) {
+                    prt.precalc[0].z -= 1;
+                }
+            }
+            prt.precalc[0].z -= ramp_offset;
         }
-        prt.precalc[0].z -= ramp_offset;
         prt.precalc[1].z = prt.precalc[0].z;
         smzs.insert( prt.precalc[0].z );
     }

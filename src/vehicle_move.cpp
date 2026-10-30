@@ -728,6 +728,49 @@ bool vehicle::collision( std::vector<veh_collision> &colls,
         //  and turning (precalc[1])
         const tripoint dsp = global_pos3() + dp + parts[p].precalc[1];
         veh_collision coll = part_collision( p, dsp, just_detect, bash_floor );
+        if( coll.type != veh_coll_nothing ) {
+            static int dbg_coll = 0;
+            static bool dbg_scanned = false;
+            const tripoint vp = global_pos3();
+            if( velocity != 0 || ++dbg_coll % 20 == 1 ) {
+                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] collide " << name
+                                          << " pos=" << vp.x << "," << vp.y << "," << vp.z
+                                          << " part=" << p
+                                          << " mount=" << parts[p].mount.x << "," << parts[p].mount.y << "," << parts[p].mount_z
+                                          << " precalc=" << parts[p].precalc[1].x << "," << parts[p].precalc[1].y << "," << parts[p].precalc[1].z
+                                          << " dp=" << dp.x << "," << dp.y << "," << dp.z
+                                          << " dsp=" << dsp.x << "," << dsp.y << "," << dsp.z
+                                          << " ter=" << here.ter( dsp ).id().str()
+                                          << " ctype=" << static_cast<int>( coll.type )
+                                          << " tname=" << coll.target_name
+                                          << " origter=" << here.ter( vp ).id().str()
+                                          << " mc=" << here.move_cost_ter_furn( dsp )
+                                          << " furn=" << here.furn( dsp ).id().str()
+                                          << " bash=" << here.is_bashable_ter_furn( dsp, false )
+                                          << " bashfloor=" << bash_floor
+                                          << " detect=" << just_detect
+                                          << " vel=" << velocity;
+            }
+            if( !dbg_scanned ) {
+                dbg_scanned = true;
+                for( int dz = 0; dz <= 1; dz++ ) {
+                    for( int dy = -3; dy <= 3; dy++ ) {
+                        std::string row;
+                        for( int dx = -3; dx <= 3; dx++ ) {
+                            const tripoint q( vp.x + dx, vp.y + dy, vp.z + dz );
+                            if( here.inbounds( q ) ) {
+                                row += here.ter( q ).id().str();
+                            } else {
+                                row += "oob";
+                            }
+                            row += " ";
+                        }
+                        DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] scan z=" << ( vp.z + dz )
+                                                  << " y=" << ( vp.y + dy ) << " | " << row;
+                    }
+                }
+            }
+        }
         if( coll.type == veh_coll_nothing && info.rotor_diameter() > 0 ) {
             size_t radius = static_cast<size_t>( std::round( info.rotor_diameter() / 2.0f ) );
             for( const tripoint &rotor_point : here.points_in_radius( dsp, radius ) ) {
@@ -1361,12 +1404,23 @@ void vehicle::selfdrive( const point &p )
 
 bool vehicle::check_is_heli_landed()
 {
-    // @TODO - when there are chasms that extend below z-level 0 - perhaps the heli
-    // will be able to descend into them but for now, assume z-level-0 == the ground.
-    if( global_pos3().z == 0 ||
-        !get_map().has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, global_pos3() ) ) {
-        is_flying = false;
-        return true;
+    map &here = get_map();
+    std::map<point, int> column_bottom;
+    for( const tripoint &pt : get_points( true ) ) {
+        auto it = column_bottom.find( pt.xy() );
+        if( it == column_bottom.end() ) {
+            column_bottom.emplace( pt.xy(), pt.z );
+        } else if( pt.z < it->second ) {
+            it->second = pt.z;
+        }
+    }
+    for( const auto &col : column_bottom ) {
+        const tripoint bottom( col.first, col.second );
+        if( bottom.z <= -OVERMAP_DEPTH ||
+            !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, bottom ) ) {
+            is_flying = false;
+            return true;
+        }
     }
     return false;
 }
@@ -1840,6 +1894,42 @@ vehicle *vehicle::act_on_map()
 {
     const tripoint pt = global_pos3();
     map &here = get_map();
+    {
+        static int dbg_state = 0;
+        if( ++dbg_state % 10 == 0 ) {
+            std::map<int, int> decks;
+            for( const vehicle_part &vp : parts ) {
+                if( !vp.removed ) {
+                    decks[vp.mount_z]++;
+                }
+            }
+            const std::set<tripoint> &dbg_pts = get_points( true );
+            int minx = 0, maxx = 0, miny = 0, maxy = 0;
+            if( !dbg_pts.empty() ) {
+                minx = maxx = dbg_pts.begin()->x;
+                miny = maxy = dbg_pts.begin()->y;
+                for( const tripoint &gp : dbg_pts ) {
+                    minx = std::min( minx, gp.x );
+                    maxx = std::max( maxx, gp.x );
+                    miny = std::min( miny, gp.y );
+                    maxy = std::max( maxy, gp.y );
+                }
+            }
+            DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] state " << name
+                                      << " pos=" << pt.x << "," << pt.y << "," << pt.z
+                                      << " bbox=" << minx << "," << miny << "~" << maxx << "," << maxy
+                                      << " falling=" << is_falling
+                                      << " flying=" << is_flying
+                                      << " water=" << in_water
+                                      << " float=" << is_floating
+                                      << " decks=" << decks.size();
+            for( const auto &d : decks ) {
+                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG]   deck " << d.first
+                                          << " parts=" << d.second
+                                          << " abs_z=" << ( pt.z + d.first );
+            }
+        }
+    }
     if( !here.inbounds( pt ) ) {
         dbg( D_INFO ) << "stopping out-of-map vehicle.  (x,y,z)=(" << pt.x << "," << pt.y << "," << pt.z <<
                       ")";
@@ -2071,6 +2161,10 @@ bool vehicle::level_vehicle()
     if( is_flying && is_rotorcraft() ) {
         return true;
     }
+    const bool stacked_decks = std::any_of( parts.begin(), parts.end(),
+    []( const vehicle_part &prt ) {
+        return !prt.removed && prt.mount_z > 0;
+    } );
     is_on_ramp = false;
     // make sure that all parts are either supported across levels or on the same level
     std::map<int, bool> no_support;
@@ -2079,12 +2173,14 @@ bool vehicle::level_vehicle()
             continue;
         }
         const tripoint part_pos = global_part_pos3( prt );
-        if( no_support.find( part_pos.z ) == no_support.end() ) {
-            no_support[part_pos.z] = part_pos.z > -OVERMAP_DEPTH;
-        }
-        if( no_support[part_pos.z] ) {
-            no_support[part_pos.z] = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, part_pos ) &&
-                                     !here.supports_above( part_pos + tripoint_below );
+        if( !stacked_decks ) {
+            if( no_support.find( part_pos.z ) == no_support.end() ) {
+                no_support[part_pos.z] = part_pos.z > -OVERMAP_DEPTH;
+            }
+            if( no_support[part_pos.z] ) {
+                no_support[part_pos.z] = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, part_pos ) &&
+                                         !here.supports_above( part_pos + tripoint_below );
+            }
         }
         if( !is_on_ramp &&
             ( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, tripoint( part_pos.xy(), part_pos.z - 1 ) ) ||
@@ -2187,8 +2283,31 @@ void vehicle::check_falling_or_floating()
             deep_water_tiles += here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, position ) ? 1 : 0;
             water_tiles += here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, position ) ? 1 : 0;
         }
+    }
+    const bool stacked_decks = std::any_of( parts.begin(), parts.end(),
+    []( const vehicle_part &prt ) {
+        return !prt.removed && prt.mount_z > 0;
+    } );
+    std::set<tripoint> support_check;
+    if( stacked_decks ) {
+        std::map<point, int> column_bottom;
+        for( const tripoint &pt : pts ) {
+            auto it = column_bottom.find( pt.xy() );
+            if( it == column_bottom.end() ) {
+                column_bottom.emplace( pt.xy(), pt.z );
+            } else if( pt.z < it->second ) {
+                it->second = pt.z;
+            }
+        }
+        for( const auto &col : column_bottom ) {
+            support_check.insert( tripoint( col.first, col.second ) );
+        }
+    } else {
+        support_check = pts;
+    }
+    for( const tripoint &position : support_check ) {
         if( !is_falling ) {
-            continue;
+            break;
         }
         is_falling = !has_support( position, true );
     }
