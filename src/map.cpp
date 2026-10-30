@@ -1501,14 +1501,6 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
     const tripoint_bub_ms dst =
         src + ( adjust_pos ? ( dp + tripoint( 0, 0, ramp_offset ) ) : tripoint_zero );
 
-    if( src.z() != dst.z() ) {
-        DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] zchange " << veh.name
-                                   << " src=" << src.x() << "," << src.y() << "," << src.z()
-                                   << " dst=" << dst.x() << "," << dst.y() << "," << dst.z()
-                                   << " dp=" << dp.x << "," << dp.y << "," << dp.z
-                                   << " ramp=" << ramp_offset;
-    }
-
     if( !inbounds( src ) ) {
         add_msg_debug( debugmode::DF_MAP,
                        "map::displace_vehicle: coordinates out of bounds %d,%d,%d->%d,%d,%d",
@@ -1627,8 +1619,6 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
             tripoint_bub_ms psgp( dst + next_pos + tripoint( 0, 0, psg_offset_z ) );
             // someone is in the way so try again
             if( creatures.creature_at( psgp ) ) {
-                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] rider blocked part=" << prt
-                                           << " psgp=" << psgp.x() << "," << psgp.y() << "," << psgp.z();
                 complete = false;
                 continue;
             }
@@ -1636,12 +1626,6 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
                 // If passenger is you, we need to update the map
                 need_update = true;
                 z_change = psgp.z() - part_pos.z;
-                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] avatar part=" << prt
-                                           << " from=" << part_pos.x << "," << part_pos.y << "," << part_pos.z
-                                           << " to=" << psgp.x() << "," << psgp.y() << "," << psgp.z()
-                                           << " zchg=" << z_change
-                                           << " ramp=" << ramp_offset
-                                           << " dst_z=" << dst.z();
             }
 
             psg->setpos( psgp.raw() );

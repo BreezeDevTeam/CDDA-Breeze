@@ -728,49 +728,6 @@ bool vehicle::collision( std::vector<veh_collision> &colls,
         //  and turning (precalc[1])
         const tripoint dsp = global_pos3() + dp + parts[p].precalc[1];
         veh_collision coll = part_collision( p, dsp, just_detect, bash_floor );
-        if( coll.type != veh_coll_nothing ) {
-            static int dbg_coll = 0;
-            static bool dbg_scanned = false;
-            const tripoint vp = global_pos3();
-            if( velocity != 0 || ++dbg_coll % 20 == 1 ) {
-                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] collide " << name
-                                          << " pos=" << vp.x << "," << vp.y << "," << vp.z
-                                          << " part=" << p
-                                          << " mount=" << parts[p].mount.x << "," << parts[p].mount.y << "," << parts[p].mount_z
-                                          << " precalc=" << parts[p].precalc[1].x << "," << parts[p].precalc[1].y << "," << parts[p].precalc[1].z
-                                          << " dp=" << dp.x << "," << dp.y << "," << dp.z
-                                          << " dsp=" << dsp.x << "," << dsp.y << "," << dsp.z
-                                          << " ter=" << here.ter( dsp ).id().str()
-                                          << " ctype=" << static_cast<int>( coll.type )
-                                          << " tname=" << coll.target_name
-                                          << " origter=" << here.ter( vp ).id().str()
-                                          << " mc=" << here.move_cost_ter_furn( dsp )
-                                          << " furn=" << here.furn( dsp ).id().str()
-                                          << " bash=" << here.is_bashable_ter_furn( dsp, false )
-                                          << " bashfloor=" << bash_floor
-                                          << " detect=" << just_detect
-                                          << " vel=" << velocity;
-            }
-            if( !dbg_scanned ) {
-                dbg_scanned = true;
-                for( int dz = 0; dz <= 1; dz++ ) {
-                    for( int dy = -3; dy <= 3; dy++ ) {
-                        std::string row;
-                        for( int dx = -3; dx <= 3; dx++ ) {
-                            const tripoint q( vp.x + dx, vp.y + dy, vp.z + dz );
-                            if( here.inbounds( q ) ) {
-                                row += here.ter( q ).id().str();
-                            } else {
-                                row += "oob";
-                            }
-                            row += " ";
-                        }
-                        DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] scan z=" << ( vp.z + dz )
-                                                  << " y=" << ( vp.y + dy ) << " | " << row;
-                    }
-                }
-            }
-        }
         if( coll.type == veh_coll_nothing && info.rotor_diameter() > 0 ) {
             size_t radius = static_cast<size_t>( std::round( info.rotor_diameter() / 2.0f ) );
             for( const tripoint &rotor_point : here.points_in_radius( dsp, radius ) ) {
@@ -1894,57 +1851,6 @@ vehicle *vehicle::act_on_map()
 {
     const tripoint pt = global_pos3();
     map &here = get_map();
-    {
-        static int dbg_state = 0;
-        if( ++dbg_state % 10 == 0 ) {
-            std::map<int, int> decks;
-            for( const vehicle_part &vp : parts ) {
-                if( !vp.removed ) {
-                    decks[vp.mount_z]++;
-                }
-            }
-            const std::set<tripoint> &dbg_pts = get_points( true );
-            int minx = 0, maxx = 0, miny = 0, maxy = 0;
-            if( !dbg_pts.empty() ) {
-                minx = maxx = dbg_pts.begin()->x;
-                miny = maxy = dbg_pts.begin()->y;
-                for( const tripoint &gp : dbg_pts ) {
-                    minx = std::min( minx, gp.x );
-                    maxx = std::max( maxx, gp.x );
-                    miny = std::min( miny, gp.y );
-                    maxy = std::max( maxy, gp.y );
-                }
-            }
-            DebugLog( D_INFO, D_MAIN ) << "[VEHDBG] state " << name
-                                      << " pos=" << pt.x << "," << pt.y << "," << pt.z
-                                      << " bbox=" << minx << "," << miny << "~" << maxx << "," << maxy
-                                      << " falling=" << is_falling
-                                      << " flying=" << is_flying
-                                      << " water=" << in_water
-                                      << " float=" << is_floating
-                                      << " decks=" << decks.size();
-            std::map<int, int> real_z;
-            for( const vehicle_part &vp : parts ) {
-                if( !vp.removed ) {
-                    real_z[global_part_pos3( vp ).z]++;
-                }
-            }
-            for( const auto &d : real_z ) {
-                DebugLog( D_INFO, D_MAIN ) << "[VEHDBG]   actual_z=" << d.first
-                                          << " parts=" << d.second;
-            }
-            for( int mz = 0; mz < 3; mz++ ) {
-                for( const vehicle_part &vp : parts ) {
-                    if( !vp.removed && vp.mount_z == mz ) {
-                        DebugLog( D_INFO, D_MAIN ) << "[VEHDBG]   sample mount=" << mz
-                                                  << " precalc=" << vp.precalc[1].z
-                                                  << " abs=" << global_part_pos3( vp ).z;
-                        break;
-                    }
-                }
-            }
-        }
-    }
     if( !here.inbounds( pt ) ) {
         dbg( D_INFO ) << "stopping out-of-map vehicle.  (x,y,z)=(" << pt.x << "," << pt.y << "," << pt.z <<
                       ")";
