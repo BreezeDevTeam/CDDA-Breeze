@@ -1361,12 +1361,23 @@ void vehicle::selfdrive( const point &p )
 
 bool vehicle::check_is_heli_landed()
 {
-    // @TODO - when there are chasms that extend below z-level 0 - perhaps the heli
-    // will be able to descend into them but for now, assume z-level-0 == the ground.
-    if( global_pos3().z == 0 ||
-        !get_map().has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, global_pos3() ) ) {
-        is_flying = false;
-        return true;
+    map &here = get_map();
+    std::map<point, int> column_bottom;
+    for( const tripoint &pt : get_points( true ) ) {
+        auto it = column_bottom.find( pt.xy() );
+        if( it == column_bottom.end() ) {
+            column_bottom.emplace( pt.xy(), pt.z );
+        } else if( pt.z < it->second ) {
+            it->second = pt.z;
+        }
+    }
+    for( const auto &col : column_bottom ) {
+        const tripoint bottom( col.first, col.second );
+        if( bottom.z <= -OVERMAP_DEPTH ||
+            !here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, bottom ) ) {
+            is_flying = false;
+            return true;
+        }
     }
     return false;
 }
@@ -2071,6 +2082,10 @@ bool vehicle::level_vehicle()
     if( is_flying && is_rotorcraft() ) {
         return true;
     }
+    const bool stacked_decks = std::any_of( parts.begin(), parts.end(),
+    []( const vehicle_part &prt ) {
+        return !prt.removed && prt.mount_z > 0;
+    } );
     is_on_ramp = false;
     // make sure that all parts are either supported across levels or on the same level
     std::map<int, bool> no_support;
@@ -2079,12 +2094,14 @@ bool vehicle::level_vehicle()
             continue;
         }
         const tripoint part_pos = global_part_pos3( prt );
-        if( no_support.find( part_pos.z ) == no_support.end() ) {
-            no_support[part_pos.z] = part_pos.z > -OVERMAP_DEPTH;
-        }
-        if( no_support[part_pos.z] ) {
-            no_support[part_pos.z] = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, part_pos ) &&
-                                     !here.supports_above( part_pos + tripoint_below );
+        if( !stacked_decks ) {
+            if( no_support.find( part_pos.z ) == no_support.end() ) {
+                no_support[part_pos.z] = part_pos.z > -OVERMAP_DEPTH;
+            }
+            if( no_support[part_pos.z] ) {
+                no_support[part_pos.z] = here.has_flag_ter_or_furn( ter_furn_flag::TFLAG_NO_FLOOR, part_pos ) &&
+                                         !here.supports_above( part_pos + tripoint_below );
+            }
         }
         if( !is_on_ramp &&
             ( here.has_flag( ter_furn_flag::TFLAG_RAMP_UP, tripoint( part_pos.xy(), part_pos.z - 1 ) ) ||
@@ -2187,8 +2204,31 @@ void vehicle::check_falling_or_floating()
             deep_water_tiles += here.has_flag( ter_furn_flag::TFLAG_DEEP_WATER, position ) ? 1 : 0;
             water_tiles += here.has_flag( ter_furn_flag::TFLAG_SWIMMABLE, position ) ? 1 : 0;
         }
+    }
+    const bool stacked_decks = std::any_of( parts.begin(), parts.end(),
+    []( const vehicle_part &prt ) {
+        return !prt.removed && prt.mount_z > 0;
+    } );
+    std::set<tripoint> support_check;
+    if( stacked_decks ) {
+        std::map<point, int> column_bottom;
+        for( const tripoint &pt : pts ) {
+            auto it = column_bottom.find( pt.xy() );
+            if( it == column_bottom.end() ) {
+                column_bottom.emplace( pt.xy(), pt.z );
+            } else if( pt.z < it->second ) {
+                it->second = pt.z;
+            }
+        }
+        for( const auto &col : column_bottom ) {
+            support_check.insert( tripoint( col.first, col.second ) );
+        }
+    } else {
+        support_check = pts;
+    }
+    for( const tripoint &position : support_check ) {
         if( !is_falling ) {
-            continue;
+            break;
         }
         is_falling = !has_support( position, true );
     }
