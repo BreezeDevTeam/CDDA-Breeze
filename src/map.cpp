@@ -1610,9 +1610,11 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
                 }
                 col_ramp = std::min( 1, std::max( -1, col_ramp ) );
                 psg_offset_z = veh_part.mount_z + col_ramp - ramp_offset - next_pos.z;
-            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + next_pos ) ) {
+            } else if( !veh.is_flying_in_air() &&
+                       has_flag( ter_furn_flag::TFLAG_RAMP_UP, src + dp + next_pos ) ) {
                 psg_offset_z += 1;
-            } else if( has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + next_pos ) ) {
+            } else if( !veh.is_flying_in_air() &&
+                       has_flag( ter_furn_flag::TFLAG_RAMP_DOWN, src + dp + next_pos ) ) {
                 psg_offset_z -= 1;
             }
 
