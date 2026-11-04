@@ -1470,7 +1470,8 @@ bool map::displace_vehicle( vehicle &veh, const tripoint &dp, const bool adjust_
                     continue;
                 }
                 const tripoint cur = base + vp.precalc[0];
-                const tripoint rc( cur.x + dp.x, cur.y + dp.y, cur.z );
+                const tripoint next = base + vp.precalc[1];
+                const tripoint rc( next.x + dp.x, next.y + dp.y, cur.z );
                 int col = cur.z - base.z;
                 if( has_flag( ter_furn_flag::TFLAG_RAMP_UP, rc ) ) {
                     col += 1;
