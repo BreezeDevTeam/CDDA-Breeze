@@ -2103,7 +2103,7 @@ static void grab()
     }
 
     tripoint grabp;
-    if( grab_candidates.size() == 1 ) {
+    if( grab_candidates.size() == 1 && get_option<bool>("AUTOSELECT_SINGLE_VALID_TARGET") ) {
         grabp = grab_candidates.front();
     } else {
         shared_ptr_fast<game::draw_callback_t> grab_targets_cb =
