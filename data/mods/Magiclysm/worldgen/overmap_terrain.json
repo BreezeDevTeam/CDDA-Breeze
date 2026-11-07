@@ -37,8 +37,8 @@
     "type": "overmap_terrain",
     "id": "magic_cabin",
     "name": "cabin",
-    "sym": "F",
-    "color": "green",
+    "sym": "C",
+    "color": "i_green",
     "see_cost": 5,
     "extras": "build",
     "mondensity": 2
@@ -47,8 +47,8 @@
     "type": "overmap_terrain",
     "id": "magic_cabin_roof",
     "name": "cabin",
-    "sym": "F",
-    "color": "green",
+    "sym": "C",
+    "color": "i_green",
     "see_cost": 5,
     "extras": "build",
     "mondensity": 2
