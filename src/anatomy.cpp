@@ -303,7 +303,9 @@ bodypart_id anatomy::select_blocking_part( const Creature *blocker, bool arm, bo
 
     const bodypart_id *ret = block_scores.pick();
     if( ret == nullptr ) {
-        debugmsg( "Attempted to select body part from empty anatomy %s", id.c_str() );
+        if( cached_bps.empty() ) {
+            debugmsg( "Attempted to select body part from empty anatomy %s", id.c_str() );
+        }
         return bodypart_str_id::NULL_ID().id();
     }
 

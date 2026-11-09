@@ -2315,7 +2315,11 @@ bool Character::block_hit( Creature *source, bodypart_id &bp_hit, damage_instanc
         handle_melee_wear( shield, wear_modifier );
     }  else {
         // Select part to block with, preferring worn blocking armor if applicable
-        bp_hit = select_blocking_part( arm_block, leg_block, nonstandard_block );
+        const bodypart_id block_bp = select_blocking_part( arm_block, leg_block, nonstandard_block );
+        if( block_bp == bodypart_str_id::NULL_ID() ) {
+            return false;
+        }
+        bp_hit = block_bp;
         block_score *= get_part( bp_hit )->get_limb_score( limb_score_block );
         add_msg_debug( debugmode::DF_MELEE, "Block score after multiplier %d", block_score );
         if( worn_shield && shield->covers( bp_hit ) ) {
