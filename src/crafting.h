@@ -27,7 +27,7 @@ void remove_ammo( item &dis_item, Character &p );
 // same as above but for each item in the list
 void remove_ammo( std::list<item> &dis_items, Character &p );
 
-void drop_or_handle( const item &newit, Character &p );
+void drop_or_handle( const item &newit, Character &p, const item *avoid = nullptr );
 
 // Resolve an explicitly selected workplace, or the best nearby workbench for automatic mode.
 // Marked crafting spots are preferred over ordinary workbenches.
