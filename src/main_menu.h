@@ -68,7 +68,7 @@ class main_menu
         // These variables are shared between @opening_screen and the tab functions.
         // TODO: But this is an ugly short-term solution.
         input_context ctxt;
-        int sel1 = 1;
+        int sel1 = 0;
         int sel2 = 1;
         int sub_opt_off = 0;
         point LAST_TERM;
