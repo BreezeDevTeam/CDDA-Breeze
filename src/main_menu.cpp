@@ -50,18 +50,17 @@
 #include "worldfactory.h"
 
 enum class main_menu_opts : int {
-    CHAT_GROUP = 0,
-    NEWCHAR = 1,
-    LOADCHAR = 2,
-    WORLD = 3,
-    SPECIAL = 4,
-    SETTINGS = 5,
-    HELP = 6,
-    CREDITS = 7,
-    QUIT = 8
+    NEWCHAR = 0,
+    LOADCHAR = 1,
+    WORLD = 2,
+    SPECIAL = 3,
+    SETTINGS = 4,
+    HELP = 5,
+    CREDITS = 6,
+    QUIT = 7
 };
 
-static constexpr int max_menu_opts = 8;
+static constexpr int max_menu_opts = 7;
 
 std::string main_menu::queued_world_to_load;
 std::string main_menu::queued_save_id_to_load;
@@ -165,8 +164,6 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
     int xlen = 0;
     main_menu_opts sel_o = static_cast<main_menu_opts>( sel );
     switch( sel_o ) {
-        case main_menu_opts::CHAT_GROUP:
-            return;
         case main_menu_opts::CREDITS:
             display_text( mmenu_credits, _( "Credits" ), sel_line );
             return;
@@ -440,7 +437,6 @@ void main_menu::init_strings()
 
     // fill menu with translated menu items
     vMenuItems.clear();
-    vMenuItems.emplace_back(pgettext("Main Menu", "交流群"));
     vMenuItems.emplace_back( pgettext( "Main Menu", "<N|n>ew Game" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "Lo<a|A>d" ) );
     vMenuItems.emplace_back( pgettext( "Main Menu", "<W|w>orld" ) );
@@ -792,9 +788,6 @@ bool main_menu::opening_screen()
             switch( static_cast<main_menu_opts>( sel1 ) ) {
                 case main_menu_opts::HELP:
                     get_help().display_help();
-                    break;
-                case main_menu_opts::CHAT_GROUP:
-                    popup("QQ：1082913120");
                     break;
                 case main_menu_opts::QUIT:
                     return false;

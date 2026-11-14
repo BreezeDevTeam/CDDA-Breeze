@@ -4,9 +4,6 @@ CDDA-Breeze是[Cataclysm-DDA](https://github.com/CleverRaven/Cataclysm-DDA)的�
 
 **此项目是一个独立的分支，没有一定要全方位跟进DDA的任务，不会再基于DDA的新稳定版进行开发。**
 
-## 交流群
-QQ：1082913120
-
 ## 表达对此项目的支持
 
 如果喜欢我们的工作，可以帮项目点一个star。
