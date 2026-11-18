@@ -69,8 +69,7 @@ static const activity_id ACT_EAT_MENU( "ACT_EAT_MENU" );
 static const bionic_id bio_painkiller( "bio_painkiller" );
 
 static const flag_id json_flag_CALORIES_INTAKE( "CALORIES_INTAKE" );
-
-static const itype_id itype_fitness_band( "fitness_band" );
+static const flag_id json_flag_CALORIES_SPENT( "CALORIES_SPENT" );
 
 static const quality_id qual_ANESTHESIA( "ANESTHESIA" );
 
@@ -896,8 +895,9 @@ static std::string get_consume_needs_hint( Character &you )
     int kcal_ingested_yesterday = you.as_avatar()->get_daily_ingested_kcal( true );
     int kcal_spent_today = you.as_avatar()->get_daily_spent_kcal( false );
     int kcal_spent_yesterday = you.as_avatar()->get_daily_spent_kcal( true );
-    bool has_fitness_band =  you.is_wearing( itype_fitness_band );
-    bool has_tracker = has_fitness_band || you.has_item_with_flag( json_flag_CALORIES_INTAKE );
+    bool has_calories_spent_tracker = you.worn_with_flag( json_flag_CALORIES_SPENT );
+    bool has_tracker = has_calories_spent_tracker ||
+                       you.has_item_with_flag( json_flag_CALORIES_INTAKE );
 
     std::string kcal_estimated_intake;
     if( kcal_ingested_today == 0 ) {
@@ -934,7 +934,7 @@ static std::string get_consume_needs_hint( Character &you )
         hint.append( _( "Consumed today (kcal): " ) );
         hint.append( colorize( kcal_estimated_intake, c_white ) );
     }
-    if( has_fitness_band ) {
+    if( has_calories_spent_tracker ) {
         hint.append( string_format( " %s ", LINE_XOXO_S ) );
         hint.append( _( "Spent: " ) );
         desc = std::make_pair( string_format( _( "%d kcal " ), kcal_spent_today ), c_white );

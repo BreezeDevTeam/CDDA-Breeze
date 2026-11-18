@@ -52,7 +52,7 @@ class veh_interact
         using part_selector = std::function<bool( const vehicle_part &pt )>;
 
     public:
-        static player_activity run( vehicle &veh, const point &p );
+        static player_activity run( vehicle &veh, const point &p, int deck = 0 );
 
         /** Prompt for a part matching the selector function */
         static vehicle_part &select_part( const vehicle &veh, const part_selector &sel,
@@ -61,12 +61,14 @@ class veh_interact
         static void complete_vehicle( Character &you );
 
     private:
-        explicit veh_interact( vehicle &veh, const point &p = point_zero );
+        explicit veh_interact( vehicle &veh, const point &p = point_zero, int deck = 0 );
         ~veh_interact();
 
         item_location target;
 
         point dd = point_zero;
+        /* 当前正在编辑的层级，0 为最低层 */
+        int edit_deck = 0;
         /* starting offset for vehicle parts description display and max offset for scrolling */
         int start_at = 0;
         int start_limit = 0;

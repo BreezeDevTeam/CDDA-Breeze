@@ -125,7 +125,8 @@ char vehicle::part_sym( const int p, const bool exact, const bool include_fake )
         return ' ';
     }
 
-    int displayed_part = exact ? p : part_displayed_at( parts[p].mount, include_fake );
+    int displayed_part = exact ? p : part_displayed_at( parts[p].mount, include_fake, true, true,
+                         parts[p].mount_z );
     if( displayed_part == -1 ) {
         displayed_part = p;
     }
@@ -162,7 +163,8 @@ std::string vehicle::part_id_string( const int p, char &part_mod, bool below_roo
         return "";
     }
 
-    int displayed_part = part_displayed_at( parts[p].mount, true, below_roof, roof );
+    int displayed_part = part_displayed_at( parts[p].mount, true, below_roof, roof,
+                                            parts[p].mount_z );
     if( displayed_part < 0 || displayed_part >= static_cast<int>( parts.size() ) ||
         parts[ displayed_part ].removed ) {
         return "";
@@ -199,7 +201,8 @@ nc_color vehicle::part_color( const int p, const bool exact, const bool include_
     if( parm >= 0 ) {
         col = part_info( parm ).color;
     } else {
-        const int displayed_part = exact ? p : part_displayed_at( parts[p].mount, include_fake );
+        const int displayed_part = exact ? p : part_displayed_at( parts[p].mount, include_fake,
+                                   true, true, parts[p].mount_z );
 
         if( displayed_part < 0 || displayed_part >= static_cast<int>( parts.size() ) ) {
             return c_black;
@@ -254,7 +257,8 @@ int vehicle::print_part_list( const catacurses::window &win, int y1, const int m
     if( p < 0 || p >= static_cast<int>( parts.size() ) ) {
         return y1;
     }
-    std::vector<int> pl = this->parts_at_relative( parts[p].mount, true, include_fakes );
+    std::vector<int> pl = this->parts_at_relative( parts[p].mount, true, include_fakes,
+                         parts[p].mount_z );
     int y = y1;
     for( size_t i = 0; i < pl.size(); i++ ) {
         const vehicle_part &vp = parts[ pl [ i ] ];
@@ -380,7 +384,8 @@ void vehicle::print_vparts_descs( const catacurses::window &win, int max_y, int 
         return;
     }
 
-    std::vector<int> pl = this->parts_at_relative( parts[p].mount, true );
+    std::vector<int> pl = this->parts_at_relative( parts[p].mount, true, false,
+                         parts[p].mount_z );
     std::string msg;
 
     int lines = 0;

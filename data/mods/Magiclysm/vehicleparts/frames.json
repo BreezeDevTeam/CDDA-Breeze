@@ -15,7 +15,7 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "8 m", "using": "vehicle_weld_removal" },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "4 m", "using": [ [ "welding_standard", 4 ] ] }
     },
-    "flags": [ "INITIAL_PART", "MOUNTABLE" ],
+    "flags": [ "INITIAL_PART", "MOUNTABLE", "SUPPORTS_ABOVE" ],
     "damage_reduction": { "all": 30 }
   },
   {
@@ -34,7 +34,7 @@
       "removal": { "skills": [ [ "mechanics", 2 ], [ "spellcraft", 1 ] ], "time": "30 m", "using": [ [ "vehicle_weld_removal", 1 ] ] },
       "repair": { "skills": [ [ "mechanics", 3 ], [ "spellcraft", 1 ] ], "time": "60 m", "using": [ [ "welding_standard", 5 ] ] }
     },
-    "flags": [ "INITIAL_PART", "MOUNTABLE" ],
+    "flags": [ "INITIAL_PART", "MOUNTABLE", "SUPPORTS_ABOVE" ],
     "categories": [ "hull" ],
     "damage_reduction": { "all": 12 }
   },
@@ -53,7 +53,7 @@
       "removal": { "skills": [ [ "mechanics", 2 ] ], "time": "10 m", "using": "vehicle_weld_removal" },
       "repair": { "skills": [ [ "mechanics", 2 ] ], "time": "5 m", "using": [ [ "welding_standard", 5 ] ] }
     },
-    "flags": [ "MOUNTABLE" ],
+    "flags": [ "MOUNTABLE", "SUPPORTS_ABOVE" ],
     "categories": [ "hull" ],
     "damage_reduction": { "all": 50 }
   },

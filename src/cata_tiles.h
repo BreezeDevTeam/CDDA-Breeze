@@ -577,7 +577,8 @@ class cata_tiles
                                  const std::array<bool, 5> &invisible );
         bool draw_vpart( const tripoint &p, lit_level ll, int &height_3d,
                          const std::array<bool, 5> &invisible, bool roof );
-        std::optional<RGBColor> get_vpart_tint( const vehicle &veh, const point &mount, bool roof ) const;
+        std::optional<RGBColor> get_vpart_tint( const vehicle &veh, const point &mount, bool roof,
+                                                int z = -1 ) const;
         bool draw_vpart_no_roof( const tripoint &p, lit_level ll, int &height_3d,
                                  const std::array<bool, 5> &invisible );
         bool draw_vpart_roof( const tripoint &p, lit_level ll, int &height_3d,
@@ -694,9 +695,10 @@ class cata_tiles
                                          const std::string &subcategory, const tripoint &pos,
                                          int subtile, int rota, lit_level ll,
                                          bool apply_night_vision_goggles, int &height_3d,
-                                         const vehicle &veh, const point &mount, bool roof )
+                                         const vehicle &veh, const point &mount, bool roof,
+                                         int z = -1 )
         {
-            pending_part_tint_ = get_vpart_tint( veh, mount, roof );
+            pending_part_tint_ = get_vpart_tint( veh, mount, roof, z );
             const bool ret = draw_from_id_string( id, category, subcategory, pos, subtile, rota,
                                ll, apply_night_vision_goggles, height_3d );
             pending_part_tint_.reset();

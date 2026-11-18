@@ -1283,7 +1283,7 @@ bool vehicle::can_close( int part_index, Character &who )
 
 void vehicle::open_all_at( int p )
 {
-    std::vector<int> parts_here = parts_at_relative( parts[p].mount, true, true );
+    std::vector<int> parts_here = parts_at_relative( parts[p].mount, true, true, parts[p].mount_z );
     for( int &elem : parts_here ) {
         if( part_flag( elem, VPFLAG_OPENABLE ) ) {
             // Note that this will open multi-square and non-multipart parts in the tile. This

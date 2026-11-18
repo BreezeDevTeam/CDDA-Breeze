@@ -3328,25 +3328,24 @@ void remove_ammo( std::list<item> &dis_items, Character &p )
     }
 }
 
-void drop_or_handle( const item &newit, Character &p )
+void drop_or_handle( const item &newit, Character &p, const item *avoid )
 {
     if( newit.made_of( phase_id::LIQUID ) && p.is_avatar() ) { // TODO: what about NPCs?
         liquid_handler::handle_all_liquid( newit, PICKUP_RANGE );
     } else {
         item tmp( newit );
-        p.i_add_or_drop( tmp );
+        p.i_add_or_drop( tmp, 1, avoid );
     }
 }
 
 void remove_ammo( item &dis_item, Character &p )
 {
-    dis_item.remove_items_with( [&p]( const item & it ) {
-        if( it.is_irremovable() || !( it.is_gunmod() || it.is_toolmod() || it.is_magazine() ) ) {
-            return false;
-        }
-        drop_or_handle( it, p );
-        return true;
+    std::list<item> removed = dis_item.remove_items_with( []( const item & it ) {
+        return !it.is_irremovable() && ( it.is_gunmod() || it.is_toolmod() || it.is_magazine() );
     } );
+    for( const item &it : removed ) {
+        drop_or_handle( it, p, &dis_item );
+    }
 
     if( dis_item.has_flag( flag_NO_UNLOAD ) ) {
         return;

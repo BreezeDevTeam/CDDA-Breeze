@@ -109,6 +109,10 @@ class vpart_position
          */
         // TODO: change to return tripoint.
         point mount() const;
+        /**
+         * Returns the deck layer of the part (0 = lowest deck).
+         */
+        int mount_z() const;
 };
 
 /**

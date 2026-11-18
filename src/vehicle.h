@@ -177,6 +177,7 @@ struct vpart_edge_info {
 struct vehicle_work_progress {
     char operation = 0;
     point mount = point_zero;
+    int mount_z = 0;
     std::string part_id;
     std::string variant;
     int part_index = -1;
@@ -246,6 +247,8 @@ double vmiph_to_mps( int vmiph );
 int cmps_to_vmiph( int cmps );
 int vmiph_to_cmps( int vmiph );
 static constexpr float accel_g = 9.81f;
+
+static constexpr int MAX_VEHICLE_DECK = 3;
 
 /**
  * Structure, describing vehicle part (i.e., wheel, seat)
@@ -459,6 +462,8 @@ struct vehicle_part {
         /** mount translated to face.dir [0] and turn_dir [1] */
         // NOLINTNEXTLINE(cata-use-named-point-constants)
         std::array<tripoint, 2> precalc = { { tripoint( -1, -1, 0 ), tripoint( -1, -1, 0 ) } };
+
+        int mount_z = 0;
 
         /** current part health with range [0,durability] */
         int hp() const;
@@ -791,7 +796,7 @@ class vehicle
 {
     private:
         void apply_color_palette( const vehicle_prototype &proto );
-        bool has_structural_part( const point &dp ) const;
+        bool has_structural_part( const point &dp, int z = 0 ) const;
         bool is_structural_part_removed() const;
         void open_or_close( int part_index, bool opening );
         bool is_connected( const vehicle_part &to, const vehicle_part &from,
@@ -1009,7 +1014,7 @@ class vehicle
         const vpart_info &part_info( int index, bool include_removed = false ) const;
 
         // check if certain part can be mounted at certain position (not accounting frame direction)
-        bool can_mount( const point &dp, const vpart_id &id ) const;
+        bool can_mount( const point &dp, const vpart_id &id, int z = 0 ) const;
 
         // check if certain part can be unmounted
         bool can_unmount( int p ) const;
@@ -1017,14 +1022,14 @@ class vehicle
 
         // install a new part to vehicle
         int install_part( const point &dp, const vpart_id &id, const std::string &variant = "",
-                          bool force = false );
+                          bool force = false, int z = 0 );
 
         // Install a copy of the given part, skips possibility check
         int install_part( const point &dp, const vehicle_part &part );
 
         /** install item specified item to vehicle as a vehicle part */
         int install_part( const point &dp, const vpart_id &id, item &&obj,
-                          const std::string &variant = "", bool force = false );
+                          const std::string &variant = "", bool force = false, int z = 0 );
 
         struct rackable_vehicle {
             std::string name;
@@ -1146,11 +1151,12 @@ class vehicle
 
         // returns the list of indices of parts at certain position (not accounting frame direction)
         std::vector<int> parts_at_relative( const point &dp, bool use_cache,
-                                            bool include_fake = false ) const;
+                                            bool include_fake = false, int z = -1 ) const;
 
         // returns index of part, inner to given, with certain flag, or -1
         int part_with_feature( int p, const std::string &f, bool unbroken ) const;
-        int part_with_feature( const point &pt, const std::string &f, bool unbroken ) const;
+        int part_with_feature( const point &pt, const std::string &f, bool unbroken,
+                               int z = -1 ) const;
         int part_with_feature( int p, vpart_bitflags f, bool unbroken ) const;
 
         // returns index of part, inner to given, with certain flag, or -1
@@ -1238,9 +1244,9 @@ class vehicle
         tripoint mount_to_tripoint( const point &mount, const point &offset ) const;
 
         // Seek a vehicle part which obstructs tile with given coordinates relative to vehicle position
-        int part_at( const point &dp ) const;
+        int part_at( const point &dp, int z = -1 ) const;
         int part_displayed_at( const point &dp, bool include_fake = false,
-                               bool below_roof = true, bool roof = true ) const;
+                               bool below_roof = true, bool roof = true, int z = -1 ) const;
         int roof_at_part( int p ) const;
 
         // Given a part, finds its index in the vehicle

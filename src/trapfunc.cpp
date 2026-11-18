@@ -1204,7 +1204,7 @@ bool trapfunc::ledge( const tripoint &p, Creature *c, item * )
     if (auto ovp = get_map().veh_at(c->pos())) {
         vehicle& veh = ovp->vehicle();
         point mount = ovp->mount();
-        for (int part_idx : veh.parts_at_relative(mount, true)) {
+        for (int part_idx : veh.parts_at_relative(mount, true, false, ovp->mount_z())) {
             const vehicle_part& part = veh.part(part_idx);
             if (part.removed) {
                 continue;
