@@ -1008,11 +1008,8 @@ class game
     private:
         // Routine loop functions, approximately in order of execution
         void open_consume_item_menu(); // Custom menu for consuming specific group of items
-        bool do_regular_action( action_id &act, avatar &player_character,
-                                const std::optional<tripoint> &mouse_target );
+        bool do_regular_action( action_id &act, avatar &player_character );
         bool handle_action();
-        bool try_get_right_click_action( action_id &act, const tripoint_bub_ms &mouse_target );
-        bool try_get_left_click_action( action_id &act, const tripoint_bub_ms &mouse_target );
         // If loc is empty then use all the items in character inventory including bionics.
         void item_action_menu( item_location loc = item_location() ); // Displays item action menu
 
@@ -1042,8 +1039,7 @@ class game
         void list_missions();       // Listed current, completed and failed missions (mission_ui.cpp)
     private:
         // Input related
-        // Handles box showing items under mouse
-        bool handle_mouseview( input_context &ctxt, std::string &action );
+        bool handle_view_input( input_context &ctxt, std::string &action );
 
         // On-request draw functions
         void display_faction_epilogues();
@@ -1232,13 +1228,6 @@ class game
         // Preview for auto move route
         std::vector<tripoint_bub_ms> destination_preview; // NOLINT(cata-serialize)
 
-        // NOLINTNEXTLINE(cata-serialize)
-        std::chrono::time_point<std::chrono::steady_clock> last_mouse_edge_scroll;
-        tripoint last_mouse_edge_scroll_vector_terrain; // NOLINT(cata-serialize)
-        tripoint last_mouse_edge_scroll_vector_overmap; // NOLINT(cata-serialize)
-        std::pair<tripoint, tripoint> mouse_edge_scrolling( input_context &ctxt, int speed,
-                const tripoint &last, bool iso );
-
         weak_ptr_fast<ui_adaptor> main_ui_adaptor; // NOLINT(cata-serialize)
 
         std::unique_ptr<static_popup> wait_popup; // NOLINT(cata-serialize)
@@ -1246,18 +1235,6 @@ class game
         shared_ptr_fast<monster> monster_now_controlled = nullptr;
 
     public:
-        /** Used to implement mouse "edge scrolling". Returns a
-         *  tripoint which is a vector of the resulting "move", i.e.
-         *  (0, 0, 0) if the mouse is not at the edge of the screen,
-         *  otherwise some (x, y, 0) depending on which edges are
-         *  hit.
-         *  This variant adjust scrolling speed according to zoom
-         *  level, making it suitable when viewing the "terrain".
-         */
-        tripoint mouse_edge_scrolling_terrain( input_context &ctxt );
-        /** This variant is suitable for the overmap. */
-        tripoint mouse_edge_scrolling_overmap( input_context &ctxt );
-
         // called on map shifting
         void shift_destination_preview( const point &delta );
 

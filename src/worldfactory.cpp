@@ -625,9 +625,6 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
     ctxt.register_action( "NEXT_TAB" );
     ctxt.register_action( "PREV_TAB" );
     ctxt.register_action( "CONFIRM" );
-    // for mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
 
@@ -637,26 +634,6 @@ WORLD *worldfactory::pick_world( bool show_prompt, bool empty_only )
         std::string action = ctxt.handle_input();
         const size_t recmax = world_pages[selpage].size();
         const size_t scroll_rate = recmax > 20 ? 10 : 3;
-
-        // handle mouse click
-        if( action == "SELECT" || action == "MOUSE_MOVE" ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-            if( !!coord ) {
-                int cnt = run_for_point_in<int, point>( button_map, *coord,
-                [&sel, &on_move]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                    if( sel != p.first ) {
-                        on_move( false );
-                        sel = p.first;
-                    }
-                } );
-                if( cnt > 0 ) {
-                    if( action == "SELECT" ) {
-                        action = "CONFIRM";
-                    }
-                    ui_manager::redraw();
-                }
-            }
-        }
 
         if( action == "QUIT" ) {
             break;
@@ -955,10 +932,6 @@ void worldfactory::show_active_world_mods( const std::vector<mod_id> &world_mods
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
 
-    // for mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
-    ctxt.register_action( "SEC_SELECT" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
 
@@ -977,16 +950,6 @@ void worldfactory::show_active_world_mods( const std::vector<mod_id> &world_mods
         const std::string action = ctxt.handle_input();
         const int recmax = static_cast<int>( num_mods );
         const int scroll_rate = recmax > 20 ? 10 : 3;
-
-        if( !world_mods.empty() && action == "MOUSE_MOVE" ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( w_mods );
-            if( !!coord ) {
-                run_for_point_in<int, point>( ent_map, *coord,
-                [&cursor]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                    cursor = p.first;
-                } );
-            }
-        }
 
         if( action == "UP" || action == "SCROLL_UP" ) {
             cursor--;
@@ -1065,9 +1028,6 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
     ctxt.register_action( "SAVE_DEFAULT_MODS" );
     ctxt.register_action( "VIEW_MOD_DESCRIPTION" );
     ctxt.register_action( "FILTER" );
-    // for mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
 
@@ -1378,74 +1338,6 @@ int worldfactory::show_worldgen_tab_modselection( const catacurses::window &win,
                         static_cast<int>( active_mod_order.size() );
         size_t scroll_rate = recmax > 20 ? 10 : 3;
 
-        // Mouse selection
-        if( action == "MOUSE_MOVE" || action == "SELECT" ) {
-            bool found_opt = false;
-            sel_top_tab = 0;
-            std::optional<point> coord = ctxt.get_coordinates_text( win );
-            if( !!coord ) {
-                // Mod tabs
-                bool new_val = false;
-                found_opt = run_for_point_in<int, point>( mod_tab_map, *coord,
-                [&iCurrentTab, &new_val]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                    if( static_cast<int>( iCurrentTab ) != p.first ) {
-                        new_val = true;
-                        iCurrentTab = clamp<int>( p.first, 0, get_mod_list_tabs().size() - 1 );
-                    }
-                } ) > 0;
-                if( new_val ) {
-                    active_header = 0;
-                    startsel[0] = 0;
-                    cursel[0] = 0;
-                    recalc_start = true;
-                }
-            }
-            if( !found_opt && !!coord && with_tabs ) {
-                // Top tabs
-                found_opt = run_for_point_in<size_t, point>( top_tab_map, *coord,
-                [&sel_top_tab]( const std::pair<size_t, inclusive_rectangle<point>> &p ) {
-                    sel_top_tab = p.first;
-                } ) > 0;
-                if( found_opt ) {
-                    if( action == "SELECT" ) {
-                        tab_output = sel_top_tab;
-                    }
-                }
-            }
-            if( !found_opt ) {
-                // Inactive mod list
-                coord = ctxt.get_coordinates_text( w_list );
-                if( !!coord ) {
-                    found_opt = run_for_point_in<int, point>( inact_mod_map, *coord,
-                    [&cursel]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                        cursel[0] = p.first;
-                    } );
-                }
-                if( found_opt ) {
-                    active_header = 0;
-                    if( action == "SELECT" ) {
-                        action = "CONFIRM";
-                    }
-                }
-            }
-            if( !found_opt ) {
-                // Active mod list
-                coord = ctxt.get_coordinates_text( w_active );
-                if( !!coord ) {
-                    found_opt = run_for_point_in<int, point>( act_mod_map, *coord,
-                    [&cursel]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                        cursel[1] = p.first;
-                    } );
-                }
-                if( found_opt ) {
-                    active_header = 1;
-                    if( action == "SELECT" ) {
-                        action = "CONFIRM";
-                    }
-                }
-            }
-        }
-
         if( action == "DOWN" || action == "SCROLL_DOWN" ) {
             selection = next_selection;
             recalc_start = true;
@@ -1632,9 +1524,6 @@ int worldfactory::show_worldgen_basic( WORLD *world )
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
     ctxt.register_cardinal();
-    // mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
 
     int win_height = 0;
     int content_height = 0; // buttons & sliders
@@ -1833,34 +1722,6 @@ int worldfactory::show_worldgen_basic( WORLD *world )
 
         recalc_startpos = false;
         std::string action = ctxt.handle_input();
-        // Handle mouse input
-        if( action == "MOUSE_MOVE" || action == "SELECT" ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( w_confirmation );
-            if( !!coord ) {
-                int orig_opt = sel_opt;
-                bool found = run_for_point_in<int, point>( btn_map, *coord,
-                [&sel_opt]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                    sel_opt = p.first;
-                } ) > 0;
-                if( found && action == "SELECT" ) {
-                    if( sel_opt == static_cast<int>( wg_sliders.size() + 4 ) ) {
-                        action = "ADVANCED_SETTINGS";
-                    } else if( sel_opt == static_cast<int>( wg_sliders.size() + 5 ) ) {
-                        action = "PICK_MODS";
-                    } else {
-                        action = "CONFIRM";
-                        run_for_point_in<int, point>( slider_inc_map, *coord,
-                        [&action]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                            action = p.first % 2 == 0 ? "LEFT" : "RIGHT";
-                        } );
-                    }
-                }
-                if( sel_opt > static_cast<int>( wg_sliders.size() + 3 ) ) {
-                    sel_opt = orig_opt;
-                }
-            }
-        }
-
         // Button shortcuts
         if( action == "FINALIZE" ) {
             action = "CONFIRM";

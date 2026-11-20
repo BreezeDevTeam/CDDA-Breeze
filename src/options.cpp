@@ -2139,26 +2139,6 @@ void options_manager::add_options_interface()
          true, COPT_CURSES_HIDE
        );
 
-    add( "HIDE_CURSOR", "interface", to_translation( "Hide mouse cursor" ),
-         to_translation( "Show: cursor is always shown.  Hide: cursor is hidden.  HideKB: cursor is hidden on keyboard input and unhidden on mouse movement." ),
-         //~ show mouse cursor
-    {   { "show", to_translation( "Show" ) },
-        //~ hide mouse cursor
-        { "hide", to_translation( "Hide" ) },
-        //~ hide mouse cursor when keyboard is used
-        { "hidekb", to_translation( "HideKB" ) }
-    },
-    "show", COPT_CURSES_HIDE );
-
-    add( "EDGE_SCROLL", "interface", to_translation( "Edge scrolling" ),
-    to_translation( "Edge scrolling with the mouse." ), {
-        { -1, to_translation( "options", "Disabled" ) },
-        { 100, to_translation( "Slow" ) },
-        { 30, to_translation( "Normal" ) },
-        { 10, to_translation( "Fast" ) },
-    },
-    30, 30, COPT_CURSES_HIDE );
-
 }
 
 void options_manager::add_options_graphics()
@@ -3344,9 +3324,6 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
     }
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
-    // for mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
 
@@ -3595,53 +3572,6 @@ std::string options_manager::show( bool ingame, const bool world_options_only, b
 
         if( world_options_only && ( action == "NEXT_TAB" || action == "PREV_TAB" || action == "QUIT" ) ) {
             return action;
-        }
-
-        if( action == "MOUSE_MOVE" || action == "SELECT" ) {
-            bool found_opt = false;
-            sel_worldgen_tab = 1;
-            std::optional<point> coord = ctxt.get_coordinates_text( w_options_border );
-            if( world_options_only && with_tabs && coord.has_value() ) {
-                // worldgen tabs
-                found_opt = run_for_point_in<size_t, point>( worldgen_tab_map, *coord,
-                [&sel_worldgen_tab]( const std::pair<size_t, inclusive_rectangle<point>> &p ) {
-                    sel_worldgen_tab = p.first;
-                } ) > 0;
-                if( found_opt && action == "SELECT" && sel_worldgen_tab != 1 ) {
-                    return sel_worldgen_tab == 0 ? "PREV_TAB" : "NEXT_TAB";
-                }
-            }
-            coord = ctxt.get_coordinates_text( w_options_header );
-            if( !found_opt && coord.has_value() ) {
-                // option category tabs
-                bool new_val = false;
-                const int psize = pages_.size();
-                found_opt = run_for_point_in<int, point>( opt_tab_map, *coord,
-                [&iCurrentPage, &new_val, &psize]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                    if( p.first != iCurrentPage ) {
-                        new_val = true;
-                        iCurrentPage = clamp<int>( p.first, 0, psize - 1 );
-                    }
-                } ) > 0;
-                if( new_val ) {
-                    iCurrentLine = 0;
-                    iStartPos = 0;
-                    recalc_startpos = true;
-                    sfx::play_variant_sound( "menu_move", "default", 100 );
-                }
-            }
-            coord = ctxt.get_coordinates_text( w_options );
-            if( !found_opt && coord.has_value() ) {
-                // option lines
-                const int psize = page_items.size();
-                found_opt = run_for_point_in<int, point>( opt_line_map, *coord,
-                [&iCurrentLine, &psize]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                    iCurrentLine = clamp<int>( p.first, 0, psize - 1 );
-                } ) > 0;
-                if( found_opt && action == "SELECT" ) {
-                    action = "CONFIRM";
-                }
-            }
         }
 
         const std::string &opt_name = *page_items[iCurrentLine];

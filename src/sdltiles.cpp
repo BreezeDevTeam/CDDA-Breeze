@@ -142,7 +142,7 @@ static SDL_Texture_Ptr touch_joystick;
 int WindowWidth;        //Width of the actual window, not the curses window
 int WindowHeight;       //Height of the actual window, not the curses window
 // input from various input sources. Each input source sets the type and
-// the actual input value (key pressed, mouse button clicked, ...)
+// the actual input value (key pressed, ...)
 // This value is finally returned by input_manager::get_input_event.
 input_event last_input;
 
@@ -438,13 +438,8 @@ static void WinCreate()
     SDL_SetHint( SDL_HINT_ANDROID_TRAP_BACK_BUTTON, trap_back_button ? "1" : "0" );
 #endif
 
-    // Prevent mouse|touch input confusion
-#if defined(SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH)
-    SDL_SetHint( SDL_HINT_ANDROID_SEPARATE_MOUSE_AND_TOUCH, "1" );
-#else
     SDL_SetHint( SDL_HINT_MOUSE_TOUCH_EVENTS, "0" );
     SDL_SetHint( SDL_HINT_TOUCH_MOUSE_EVENTS, "0" );
-#endif
 #endif
 
     ::window.reset( SDL_CreateWindow( "",
@@ -575,13 +570,7 @@ static void WinCreate()
 
     ClearScreen();
 
-    // Errors here are ignored, worst case: the option does not work as expected,
-    // but that won't crash
-    if( get_option<std::string>( "HIDE_CURSOR" ) != "show" && SDL_ShowCursor( -1 ) ) {
-        SDL_ShowCursor( SDL_DISABLE );
-    } else {
-        SDL_ShowCursor( SDL_ENABLE );
-    }
+    SDL_ShowCursor( SDL_DISABLE );
 
     if( get_option<bool>( "ENABLE_JOYSTICK" ) ) {
         gamepad::init();
@@ -3152,7 +3141,7 @@ void StopTextInput()
 #endif
 }
 
-//Check for any window messages (keypress, paint, mousemove, etc)
+//Check for any window messages (keypress, paint, etc)
 static void CheckMessages()
 {
     SDL_Event ev;
@@ -3538,10 +3527,6 @@ static void CheckMessages()
                 }
 #endif
                 is_repeat = ev.key.repeat;
-                //hide mouse cursor on keyboard input
-                if( get_option<std::string>( "HIDE_CURSOR" ) != "show" && SDL_ShowCursor( -1 ) ) {
-                    SDL_ShowCursor( SDL_DISABLE );
-                }
                 keyboard_mode mode = keyboard_mode::keychar;
 #if !defined(__ANDROID__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1)
                 if( !SDL_IsTextInputActive() ) {
@@ -3706,48 +3691,6 @@ static void CheckMessages()
             case SDL_GAMEPAD_SCHEDULER:
                 gamepad::handle_scheduler_event( ev );
                 break;
-            case SDL_MOUSEMOTION:
-                if( get_option<std::string>( "HIDE_CURSOR" ) == "show" ||
-                    get_option<std::string>( "HIDE_CURSOR" ) == "hidekb" ) {
-                    if( !SDL_ShowCursor( -1 ) ) {
-                        SDL_ShowCursor( SDL_ENABLE );
-                    }
-
-                    // Only monitor motion when cursor is visible
-                    last_input = input_event( MouseInput::Move, input_event_t::mouse );
-                }
-                break;
-
-            case SDL_MOUSEBUTTONDOWN:
-                switch( ev.button.button ) {
-                    case SDL_BUTTON_LEFT:
-                        last_input = input_event( MouseInput::LeftButtonPressed, input_event_t::mouse );
-                        break;
-                    case SDL_BUTTON_RIGHT:
-                        last_input = input_event( MouseInput::RightButtonPressed, input_event_t::mouse );
-                        break;
-                }
-                break;
-
-            case SDL_MOUSEBUTTONUP:
-                switch( ev.button.button ) {
-                    case SDL_BUTTON_LEFT:
-                        last_input = input_event( MouseInput::LeftButtonReleased, input_event_t::mouse );
-                        break;
-                    case SDL_BUTTON_RIGHT:
-                        last_input = input_event( MouseInput::RightButtonReleased, input_event_t::mouse );
-                        break;
-                }
-                break;
-
-            case SDL_MOUSEWHEEL:
-                if( ev.wheel.y > 0 ) {
-                    last_input = input_event( MouseInput::ScrollWheelUp, input_event_t::mouse );
-                } else if( ev.wheel.y < 0 ) {
-                    last_input = input_event( MouseInput::ScrollWheelDown, input_event_t::mouse );
-                }
-                break;
-
 #if defined(__ANDROID__)
             case SDL_FINGERMOTION:
                 if( ev.tfinger.fingerId == 0 ) {
@@ -4283,8 +4226,6 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
     // see, e.g., http://linux.die.net/man/3/getch
     // so although it's non-obvious, that refresh() call (and maybe InvalidateRect?) IS supposed to be there
     // however, the refresh call has not effect when nothing has been drawn, so
-    // we can skip screen update if `needupdate` is false to improve performance during mouse
-    // move events.
     wnoutrefresh( catacurses::stdscr );
     if( needupdate ) {
         refresh_display();
@@ -4318,7 +4259,6 @@ input_event input_manager::get_input_event( const keyboard_mode preferred_keyboa
         CheckMessages();
     }
 
-    SDL_GetMouseState( &last_input.mouse_pos.x, &last_input.mouse_pos.y );
     if( last_input.type == input_event_t::keyboard_char ) {
         previously_pressed_key = last_input.get_first_input();
 #if defined(__ANDROID__)
@@ -4409,49 +4349,6 @@ window_dimensions get_window_dimensions( const catacurses::window &win )
 window_dimensions get_window_dimensions( const point &pos, const point &size )
 {
     return get_window_dimensions( {}, pos, size );
-}
-
-std::optional<tripoint> input_context::get_coordinates( const catacurses::window &capture_win_,
-        const point &offset, const bool center_cursor ) const
-{
-    // This information is required by curses, but is not (currently) used in SDL
-    ( void ) center_cursor;
-
-    if( !coordinate_input_received ) {
-        return std::nullopt;
-    }
-
-    const catacurses::window &capture_win = capture_win_ ? capture_win_ : g->w_terrain;
-    const window_dimensions dim = get_window_dimensions( capture_win );
-
-    const int &fw = dim.scaled_font_size.x;
-    const int &fh = dim.scaled_font_size.y;
-    const point &win_min = dim.window_pos_pixel;
-    const point &win_size = dim.window_size_pixel;
-    const point win_max = win_min + win_size;
-
-    // Translate mouse coordinates to map coordinates based on tile size
-    // Check if click is within bounds of the window we care about
-    const inclusive_rectangle<point> win_bounds( win_min, win_max );
-    if( !win_bounds.contains( coordinate ) ) {
-        return std::nullopt;
-    }
-
-    const point screen_pos = coordinate - win_min;
-    point p;
-    if( g->is_tileset_isometric() ) {
-        const float win_mid_x = win_min.x + win_size.x / 2.0f;
-        const float win_mid_y = -win_min.y + win_size.y / 2.0f;
-        const int screen_col = std::round( ( screen_pos.x - win_mid_x ) / ( fw / 2.0 ) );
-        const int screen_row = std::round( ( screen_pos.y - win_mid_y ) / ( fw / 4.0 ) );
-        const point selected( ( screen_col - screen_row ) / 2, ( screen_row + screen_col ) / 2 );
-        p = offset + selected;
-    } else {
-        const point selected( screen_pos.x / fw, screen_pos.y / fh );
-        p = offset + selected - dim.window_size_cell / 2;
-    }
-
-    return tripoint( p, get_map().get_abs_sub().z() );
 }
 
 int get_terminal_width()
@@ -4585,13 +4482,4 @@ void set_title( const std::string &title )
 const SDL_Renderer_Ptr &get_sdl_renderer()
 {
     return renderer;
-}
-
-
-
-bool window_contains_point_relative( const catacurses::window &win, const point &p )
-{
-    const point bound = point( catacurses::getmaxx( win ), catacurses::getmaxy( win ) );
-    const half_open_rectangle<point> win_bounds( point_zero, bound );
-    return win_bounds.contains( p );
 }

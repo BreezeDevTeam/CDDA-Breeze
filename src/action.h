@@ -21,13 +21,9 @@ enum action_id : int {
     /** Invalid action used for various lookup errors */
     ACTION_NULL = 0,
 
-    // Mouse actions
     /**@{*/
-    /** Click on a point with primary mouse button (usually left button) */
     ACTION_SELECT,
-    /** Click on a point with secondary mouse button (usually right button) */
     ACTION_SEC_SELECT,
-    /** action on left mouse button-down, for clicking and dragging */
     ACTION_CLICK_AND_DRAG,
     /**@}*/
 

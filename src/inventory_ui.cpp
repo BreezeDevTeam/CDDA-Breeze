@@ -2225,16 +2225,6 @@ inventory_entry *inventory_selector::find_entry_by_invlet( int invlet ) const
     return nullptr;
 }
 
-inventory_entry *inventory_selector::find_entry_by_coordinate( const point &coordinate ) const
-{
-    for( auto pair : rect_entry_map ) {
-        if( pair.first.contains( coordinate ) ) {
-            return pair.second;
-        }
-    }
-    return nullptr;
-}
-
 inventory_entry *inventory_selector::find_entry_by_location( item_location &loc ) const
 {
     for( const inventory_column *elem : columns ) {
@@ -2900,7 +2890,6 @@ inventory_selector::inventory_selector( Character &u, const inventory_selector_p
     ctxt.register_action( "TOGGLE_FAVORITE", to_translation( "Toggle favorite" ) );
     ctxt.register_action( "HOME", to_translation( "Home" ) );
     ctxt.register_action( "END", to_translation( "End" ) );
-    ctxt.register_action( "SELECT" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
     ctxt.register_action( "VIEW_CATEGORY_MODE" );
     ctxt.register_action( "ANY_INPUT" ); // For invlets
@@ -2957,19 +2946,6 @@ inventory_input inventory_selector::get_input()
 inventory_input inventory_selector::process_input( const std::string &action, int ch )
 {
     inventory_input res{ action, ch, nullptr };
-
-    if( res.action == "SELECT" ) {
-        std::optional<point> o_p = ctxt.get_coordinates_text( w_inv );
-        if( o_p ) {
-            point p = o_p.value();
-            if( window_contains_point_relative( w_inv, p ) ) {
-                res.entry = find_entry_by_coordinate( p );
-                if( res.entry != nullptr && res.entry->is_selectable() ) {
-                    return res;
-                }
-            }
-        }
-    }
 
     res.entry = find_entry_by_invlet( res.ch );
     if( res.entry != nullptr && !res.entry->is_selectable() ) {
@@ -3842,7 +3818,7 @@ void inventory_multiselector::on_input( const inventory_input &input )
 {
     bool const noMarkCountBound = ctxt.keys_bound_to( "MARK_WITH_COUNT" ).empty();
 
-    if( input.entry != nullptr ) { // Single Item from mouse
+    if( input.entry != nullptr ) {
         highlight( input.entry->any_item() );
         toggle_entries( count );
     } else if( input.action == "TOGGLE_NON_FAVORITE" ) {

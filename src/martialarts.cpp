@@ -2150,7 +2150,6 @@ bool ma_style_callback::key( const input_context &ctxt, const input_event &event
         scrollbar sb;
 
         input_context ict;
-        sb.set_draggable( ict );
         ict.register_action( "UP" );
         ict.register_action( "DOWN" );
         ict.register_action( "PAGE_UP" );
@@ -2186,9 +2185,6 @@ bool ma_style_callback::key( const input_context &ctxt, const input_event &event
 
             if( action == "QUIT" ) {
                 break;
-            } else if( sb.handle_dragging( action, ict.get_coordinates_text( catacurses::stdscr ),
-                                           selected ) ) {
-                // Scrollbar has handled action
             } else if( action == "DOWN" ) {
                 selected++;
             } else if( action == "UP" ) {

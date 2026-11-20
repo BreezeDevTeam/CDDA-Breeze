@@ -67,13 +67,6 @@ int OVERMAP_LEGEND_WIDTH;
 
 scrollingcombattext SCT;
 
-// Mouseover selection delays to keep different types of scrolling from fighting
-// Currently used by multiline_list
-static const std::chrono::duration<int, std::milli> base_mouse_delay =
-    std::chrono::milliseconds( 100 );
-static const std::chrono::duration<int, std::milli> scrollwheel_delay =
-    std::chrono::milliseconds( 500 );
-
 std::string string_from_int( const catacurses::chtype ch )
 {
     catacurses::chtype charcode = ch;
@@ -444,7 +437,6 @@ void scrollable_text( const std::function<catacurses::window()> &init_window,
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
-    // mouse
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
 
@@ -1212,8 +1204,7 @@ input_event draw_item_info( const std::function<catacurses::window()> &init_wind
     if( data.handle_scrolling ) {
         ctxt.register_action( "PAGE_UP" );
         ctxt.register_action( "PAGE_DOWN" );
-        item_info_bar.set_draggable( ctxt );
-    }
+        }
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
@@ -1225,11 +1216,7 @@ input_event draw_item_info( const std::function<catacurses::window()> &init_wind
     while( true ) {
         ui_manager::redraw();
         action = ctxt.handle_input();
-        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-
-        if( data.handle_scrolling && item_info_bar.handle_dragging( action, coord, *data.ptr_selected ) ) {
-            // No action required, the scrollbar has handled it
-        } else if( data.handle_scrolling && action == "PAGE_UP" ) {
+        if( data.handle_scrolling && action == "PAGE_UP" ) {
             if( *data.ptr_selected > 0 ) {
                 --*data.ptr_selected;
             }
@@ -1750,9 +1737,6 @@ scrollbar &scrollbar::scroll_to_last( bool scr2last )
 
 void scrollbar::apply( const catacurses::window &window )
 {
-    scrollbar_area = inclusive_rectangle<point>( point( getbegx( window ) + offset_x_v,
-                     getbegy( window ) + offset_y_v ), point( getbegx( window ) + offset_x_v,
-                             getbegy( window ) + offset_y_v + viewport_size_v ) );
     if( viewport_size_v >= content_size_v || content_size_v <= 0 ) {
         // scrollbar not needed, fill output area with borders
         for( int i = offset_y_v; i < offset_y_v + viewport_size_v; ++i ) {
@@ -1775,52 +1759,14 @@ void scrollbar::apply( const catacurses::window &window )
             bar_start = slot_size - bar_size;
         }
         int bar_end = bar_start + bar_size;
-        nc_color temp_bar_color = dragging ? c_magenta_magenta : bar_color_v;
 
         for( int i = 0; i < slot_size; ++i ) {
             if( i >= bar_start && i < bar_end ) {
-                mvwputch( window, point( offset_x_v, offset_y_v + 1 + i ), temp_bar_color, LINE_XOXO );
+                mvwputch( window, point( offset_x_v, offset_y_v + 1 + i ), bar_color_v, LINE_XOXO );
             } else {
                 mvwputch( window, point( offset_x_v, offset_y_v + 1 + i ), slot_color_v, LINE_XOXO );
             }
         }
-    }
-}
-
-scrollbar &scrollbar::set_draggable( input_context &ctxt )
-{
-    ctxt.register_action( "MOUSE_MOVE" );
-    ctxt.register_action( "CLICK_AND_DRAG" );
-    ctxt.register_action( "SELECT" ); // Not directly used yet, but required for mouse-up reaction
-    return *this;
-}
-
-bool scrollbar::handle_dragging( const std::string &action, const std::optional<point> &coord,
-                                 int &position )
-{
-    if( ( action != "MOUSE_MOVE" && action != "CLICK_AND_DRAG" ) && dragging ) {
-        // Stopped dragging the scrollbar
-        dragging = false;
-
-        // We don't want to accidentally select something on mouse-up after dragging the scrollbar, so if
-        // there's a mouse-up event, tell the UI that we've handled it
-        return action == "SELECT";
-    } else  if( action == "CLICK_AND_DRAG" && coord.has_value() &&
-                scrollbar_area.contains( coord.value() ) ) {
-        // Started dragging the scrollbar
-        dragging = true;
-        return true;
-    } else if( action == "MOUSE_MOVE" && coord.has_value() && dragging ) {
-        // Currently dragging the scrollbar.  Clamp cursor position to scrollbar area, then interpolate
-        int clamped_cursor_pos = clamp( coord->y - scrollbar_area.p_min.y, 0,
-                                        scrollbar_area.p_max.y - scrollbar_area.p_min.y - 1 );
-        viewport_pos_v = clamped_cursor_pos * ( content_size_v - viewport_size_v ) /
-                         ( scrollbar_area.p_max.y - scrollbar_area.p_min.y - 1 );
-        position = viewport_pos_v;
-        return true;
-    } else {
-        // Not doing anything related to the scrollbar
-        return false;
     }
 }
 
@@ -1932,28 +1878,9 @@ int multiline_list::get_offset_from_entry( const int entry )
     return offset;
 }
 
-bool multiline_list::handle_navigation( std::string &action, input_context &ctxt )
+bool multiline_list::handle_navigation( std::string &action, input_context & )
 {
-    std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-    inclusive_rectangle<point> mouseover_area( point( catacurses::getbegx( w ),
-            catacurses::getbegy( w ) ), point( getmaxx( w ) + catacurses::getbegx( w ),
-                    getmaxy( w ) + catacurses::getbegy( w ) ) );
-    bool mouse_in_window = coord.has_value() && mouseover_area.contains( coord.value() );
-
-    mouseover_position = -1;
-    std::optional<point> local_coord = ctxt.get_coordinates_text( w );
-    if( local_coord.has_value() ) {
-        for( const auto &entry : entry_map ) {
-            if( entry.second.contains( local_coord.value() ) ) {
-                mouseover_position = entry.first;
-                break;
-            }
-        }
-    }
-
-    if( list_sb->handle_dragging( action, coord, offset_position ) ) {
-        // No action required
-    } else if( action == "HOME" ) {
+    if( action == "HOME" ) {
         set_entry_pos( 0, false );
     } else if( action == "END" ) {
         set_entry_pos( entries.size() - 1, false );
@@ -1965,38 +1892,6 @@ bool multiline_list::handle_navigation( std::string &action, input_context &ctxt
         set_entry_pos( entry_position - 1, true );
     } else if( action == "DOWN" ) {
         set_entry_pos( entry_position + 1, true );
-    } else if( action == "SCROLL_UP" && mouse_in_window ) {
-        // Scroll selection, but only adjust view as if we're scrolling offset
-        set_entry_pos( entry_position - 1, false );
-        set_offset_pos( get_offset_from_entry( entry_position ), false );
-        mouseover_delay_end = std::chrono::steady_clock::now() + scrollwheel_delay;
-    } else if( action == "SCROLL_DOWN" && mouse_in_window ) {
-        set_entry_pos( entry_position + 1, false );
-        set_offset_pos( get_offset_from_entry( entry_position ), false );
-        mouseover_delay_end = std::chrono::steady_clock::now() + scrollwheel_delay;
-    } else if( action == "SELECT" && mouse_in_window ) {
-        if( mouseover_position >= 0 ) {
-            set_entry_pos( mouseover_position, false );
-            action = "CONFIRM";
-            mouseover_delay_end = std::chrono::steady_clock::now() + base_mouse_delay;
-        }
-    } else if( action == "MOUSE_MOVE" && mouse_in_window && local_coord.has_value() ) {
-        if( std::chrono::steady_clock::now() > mouseover_delay_end ) {
-            if( mouseover_position >= 0 ) {
-                entry_position = mouseover_position;
-            }
-            const int mouse_scroll_up_pos = 0;
-            const int mouse_scroll_down_pos = getmaxy( w ) - 1;
-            if( local_coord.value().y <= mouse_scroll_up_pos ) {
-                set_offset_pos( offset_position - 1, false );
-                ++mouseover_accel_counter;
-            } else if( local_coord.value().y >= mouse_scroll_down_pos ) {
-                set_offset_pos( offset_position + 1, false );
-                ++mouseover_accel_counter;
-            } else {
-                mouseover_accel_counter = 1;
-            }
-        }
     } else {
         return false;
     }
@@ -2006,7 +1901,6 @@ bool multiline_list::handle_navigation( std::string &action, input_context &ctxt
 void multiline_list::print_entries()
 {
     werase( w );
-    entry_map.clear();
 
     int ycurrent = 0;
     int current_offset = 0;
@@ -2043,8 +1937,6 @@ void multiline_list::print_line( int entry, const point &start, const std::strin
         output_text = hilite_string( output_text );
     }
     print_colored_text( w, start, cur_color, c_light_gray, output_text );
-    entry_map.emplace( entry, inclusive_rectangle<point>( start, point( start.x +
-                       utf8_width( text, true ), start.y + entry_sizes[entry] - 1 ) ) );
 }
 
 void multiline_list::set_entry_pos( const int entry_pos, const bool looping = false )
@@ -2062,7 +1954,6 @@ void multiline_list::set_entry_pos( const int entry_pos, const bool looping = fa
     }
     int available_space = getmaxy( w ) - entry_sizes[entry_position];
     set_offset_pos( get_offset_from_entry() - available_space / 2, false );
-    mouseover_delay_end = std::chrono::steady_clock::now() + base_mouse_delay / mouseover_accel_counter;
 }
 
 void multiline_list::set_offset_pos( const int offset_pos, const bool update_selection )
@@ -2088,21 +1979,17 @@ void multiline_list::set_offset_pos( const int offset_pos, const bool update_sel
             offset_position = clamp( offset_pos, 0, max_offset );
         }
     }
-    mouseover_delay_end = std::chrono::steady_clock::now() + base_mouse_delay / mouseover_accel_counter;
 }
 
 void multiline_list::set_up_navigation( input_context &ctxt )
 {
-    list_sb->set_draggable( ctxt );
     ctxt.register_updown();
     ctxt.register_action( "END" );
     ctxt.register_action( "HOME" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "PAGE_DOWN" );
     ctxt.register_action( "PAGE_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
     ctxt.register_action( "SCROLL_UP" );
-    ctxt.register_action( "SELECT" );
 }
 
 void scrolling_text_view::set_text( const std::string &text, const bool scroll_to_top )
@@ -2169,18 +2056,11 @@ void scrolling_text_view::draw( const nc_color &base_color )
     wnoutrefresh( w_ );
 }
 
-bool scrolling_text_view::handle_navigation( const std::string &action, input_context &ctxt )
+bool scrolling_text_view::handle_navigation( const std::string &action, input_context & )
 {
-    std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-    inclusive_rectangle<point> mouseover_area( point( getbegx( w_ ), getbegy( w_ ) ),
-            point( getmaxx( w_ ) + getbegx( w_ ), getmaxy( w_ ) + getbegy( w_ ) ) );
-    bool mouse_in_window = coord.has_value() && mouseover_area.contains( coord.value() );
-
-    if( text_view_scrollbar.handle_dragging( action, coord, offset_ ) ) {
-        // No action required, the scrollbar has handled it
-    } else if( action == scroll_up_action || ( action == "SCROLL_UP" && mouse_in_window ) ) {
+    if( action == scroll_up_action ) {
         scroll_up();
-    } else if( action == scroll_down_action || ( action == "SCROLL_DOWN" && mouse_in_window ) ) {
+    } else if( action == scroll_down_action ) {
         scroll_down();
     } else if( paging_enabled && action == "PAGE_UP" ) {
         page_up();
@@ -2196,11 +2076,8 @@ void scrolling_text_view::set_up_navigation( input_context &ctxt,
         const scrolling_key_scheme scheme,
         const bool enable_paging )
 {
-    ctxt.register_action( "CLICK_AND_DRAG" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
-    ctxt.register_action( "SELECT" );
     if( scheme != scrolling_key_scheme::no_scheme ) {
         if( scheme == scrolling_key_scheme::angle_bracket_scroll ) {
             scroll_up_action = "SCROLL_INFOBOX_UP";
@@ -2217,7 +2094,6 @@ void scrolling_text_view::set_up_navigation( input_context &ctxt,
         ctxt.register_action( "PAGE_UP" );
         ctxt.register_action( "PAGE_DOWN" );
     }
-    text_view_scrollbar.set_draggable( ctxt );
 }
 
 int scrolling_text_view::text_width()
