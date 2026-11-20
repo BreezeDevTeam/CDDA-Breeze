@@ -6,8 +6,6 @@
 
 #include <string>
 
-enum class holiday : int;
-
 static const std::string SAVE_MASTER( "master.gsav" );
 static const std::string SAVE_ARTIFACTS( "artifacts.gsav" );
 static const std::string SAVE_EXTENSION( ".sav" );
@@ -51,7 +49,6 @@ std::string lang_file();
 std::string soundpack_conf();
 
 std::string credits();
-std::string title( holiday current_holiday );
 
 cata_path autopickup();
 cata_path autonote();

@@ -146,7 +146,7 @@ void bc_text_band( const catacurses::window &w, const point &p, const std::strin
             continue;
         }
         const int cw = mk_wcwidth( ch );
-        if( cw <= 0 ) {
+        if( cw < 0 ) {
             continue;
         }
         const int bucket = x + cw <= band_lo ? 0 : ( x >= band_hi ? 2 : 1 );
@@ -424,7 +424,11 @@ void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_lin
                 const WORLD *wrld = world_generator->get_world( world_name );
                 const int saves = wrld ? static_cast<int>( wrld->world_saves.size() ) : 0;
                 const bool tutorial = world_name == "TUTORIAL" || world_name == "DEFENSE";
-                bc_subs.push_back( { string_format( "%s (%d)", world_name, saves ), "",
+                std::string shown_name = world_name;
+                if( utf8_width( shown_name ) > 22 ) {
+                    shown_name = utf8_truncate( shown_name, 21 ) + "…";
+                }
+                bc_subs.push_back( { string_format( "%s (%d)", shown_name, saves ), "",
                                      tutorial ? c_light_cyan : c_light_gray } );
             }
             break;
@@ -492,14 +496,29 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
     const int tail_w = utf8_width( tail );
     const bool show_tail = width - tail_w - 2 > 40;
 
-    std::string world_path = "~/save";
+    std::string world_path = PATH_INFO::savedir();
+    while( !world_path.empty() && world_path.back() == '/' ) {
+        world_path.pop_back();
+    }
+    if( world_path.empty() ) {
+        world_path = "save";
+    }
     if( !world_generator->last_world_name.empty() ) {
         world_path += "/" + world_generator->last_world_name;
     }
     const int path_budget = std::max( 6, width - 14 - utf8_width( stats_txt )
                                       - ( show_tail ? tail_w + 2 : 0 ) );
-    if( utf8_width( world_path ) > path_budget ) {
-        world_path = utf8_truncate( world_path, path_budget );
+    bool path_trimmed = false;
+    while( utf8_width( world_path ) > path_budget ) {
+        const size_t slash = world_path.find( '/' );
+        if( slash == std::string::npos ) {
+            break;
+        }
+        world_path.erase( 0, slash + 1 );
+        path_trimmed = true;
+    }
+    if( path_trimmed ) {
+        world_path = "…/" + world_path;
     }
 
     for( int x = 0; x < width; x++ ) {
@@ -574,7 +593,7 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
             bc_put( w_open, line_at + point( 1, 0 ), "▍", c_white_cyan );
             const bc_move_band band = bc_band_for( since_move, bc_box_w );
             bc_text_band( w_open, line_at + point( 3, 0 ), label, c_black_cyan, c_white_cyan,
-                          band.lo, band.hi );
+                          box_at.x + band.lo, box_at.x + band.hi );
             if( has_sub ) {
                 bc_put( w_open, line_at + point( 3 + utf8_width( label ) + 1, 0 ), "▾",
                         c_black_cyan );
@@ -634,7 +653,7 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
                 bc_put( w_open, sub_at + point( 4, 0 ), "▍", c_white_cyan );
                 const bc_move_band sub_band = bc_band_for( since_move, bc_box_w );
                 bc_text_band( w_open, sub_at + point( 5, 0 ), sub_label, c_black_cyan,
-                              c_white_cyan, sub_band.lo, sub_band.hi );
+                              c_white_cyan, box_at.x + sub_band.lo, box_at.x + sub_band.hi );
                 if( sub_key_w > 0 ) {
                     bc_text( w_open, sub_at + point( sub_key_x, 0 ), sub.key, c_black_cyan );
                 }
@@ -702,30 +721,6 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
     wnoutrefresh( w_open );
 }
 
-std::vector<std::string> main_menu::load_file( const std::string &path,
-        const std::string &alt_text ) const
-{
-    std::vector<std::string> result;
-    read_from_file_optional( path, [&result]( std::istream & fin ) {
-        std::string line;
-        while( std::getline( fin, line ) ) {
-            if( !line.empty() && line[0] == '#' ) {
-                continue;
-            }
-            result.push_back( line );
-        }
-    } );
-    if( result.empty() ) {
-        result.push_back( alt_text );
-    }
-    return result;
-}
-
-holiday main_menu::get_holiday_from_time()
-{
-    return ::get_holiday_from_time( 0, true );
-}
-
 void main_menu::init_windows()
 {
     if( LAST_TERM == point( TERMX, TERMY ) ) {
@@ -741,9 +736,6 @@ void main_menu::init_windows()
 
 void main_menu::init_strings()
 {
-    // ASCII Art
-    mmenu_title = load_file( PATH_INFO::title( current_holiday ), _( "Cataclysm: Dark Days Ahead" ) );
-
     // Credits
     mmenu_credits.clear();
     read_from_file_optional( PATH_INFO::credits(), [&]( std::istream & stream ) {
@@ -856,6 +848,7 @@ void main_menu::display_text( const std::string &text, const std::string &title,
     int height = b_height - 2;
     const auto vFolded = foldstring( text, width );
     int iLines = vFolded.size();
+    selected = clamp( selected, 0, std::max( 0, iLines - height ) );
 
     fold_and_print_from( w_text, point_zero, width, selected, c_light_gray, text );
 
@@ -879,9 +872,6 @@ void main_menu::load_char_templates()
 
 bool main_menu::opening_screen()
 {
-    // set holiday based on local system time
-    current_holiday = get_holiday_from_time();
-
     if( music::get_music_id() != music::music_id::title ) {
         music::deactivate_music_id_all();
     } else {
@@ -955,14 +945,15 @@ bool main_menu::opening_screen()
         }
     }
 
-    const bool animate_menu = get_option<bool>( "ANIMATIONS" );
     while( !start ) {
         ui_manager::redraw();
+        const bool animate_menu = get_option<bool>( "ANIMATIONS" );
         std::string action = ctxt.handle_input( animate_menu ? bc_frame_ms : -1 );
         if( action == "TIMEOUT" ) {
             continue;
         }
         input_event sInput = ctxt.get_raw_input();
+        const int sel1_at_input = sel1;
 
         // check automatic menu shortcuts
         for( int i = 0; static_cast<size_t>( i ) < vMenuHotkeys.size(); ++i ) {
@@ -1003,6 +994,14 @@ bool main_menu::opening_screen()
                     }
                 }
             }
+        }
+
+        if( sel1 != sel1_at_input && ( action == "LEFT" || action == "RIGHT" ||
+                                       action == "UP" || action == "DOWN" ||
+                                       action == "PREV_TAB" || action == "NEXT_TAB" ||
+                                       action == "PAGE_UP" || action == "PAGE_DOWN" ||
+                                       action == "SCROLL_UP" || action == "SCROLL_DOWN" ) ) {
+            action.clear();
         }
 
         // also check special keys
@@ -1490,49 +1489,4 @@ void main_menu::world_tab( const std::string &worldname )
         default:
             break;
     }
-}
-
-std::string main_menu::halloween_spider()
-{
-    static const std::string spider =
-        "\\ \\ \\/ / / / / / / /\n"
-        " \\ \\/\\/ / / / / / /\n"
-        "\\ \\/__\\/ / / / / /\n"
-        " \\/____\\/ / / / /\n"
-        "\\/______\\/ / / /\n"
-        "/________\\/ / /\n"
-        "__________\\/ /\n"
-        "___________\\/\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "  , .   |  . ,\n" // NOLINT(cata-text-style)
-        "  { | ,--, | }\n" // NOLINT(cata-text-style)
-        "   \\\\{~~~~}//\n"
-        "  /_/ {<color_c_red>..</color>} \\_\\\n"
-        "  { {      } }\n"
-        "  , ,      , ."; // NOLINT(cata-text-style)
-
-    return spider;
-}
-
-std::string main_menu::halloween_graves()
-{
-    static const std::string graves =
-        "                    _\n"
-        "        -q       __(\")_\n"
-        "         (\\      \\_  _/\n"
-        " .-.   .-''\"'.     |/\n" // NOLINT(cata-text-style)
-        "|RIP|  | RIP |   .-.\n"
-        "|   |  |     |  |RIP|\n"
-        ";   ;  |     | ,'---',"; // NOLINT(cata-text-style)
-
-    return graves;
 }

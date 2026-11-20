@@ -8,7 +8,6 @@ set(CATACLYSM_DATA_DIRS
         ${CMAKE_SOURCE_DIR}/data/raw
         ${CMAKE_SOURCE_DIR}/data/motd
         ${CMAKE_SOURCE_DIR}/data/credits
-        ${CMAKE_SOURCE_DIR}/data/title
         ${CMAKE_SOURCE_DIR}/data/core
         ${CMAKE_SOURCE_DIR}/data/screenshots
         ${CMAKE_SOURCE_DIR}/data/xdg
