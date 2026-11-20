@@ -465,12 +465,10 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
     const bool show_logo = height >= 22;
     const bool show_big_logo = height >= 30;
     const bool show_ribbon = height >= 26;
-    const bool show_tagline = height >= 26;
     const std::vector<std::string> &logo = bc_logo_art( show_big_logo );
     const int logo_h = show_logo ? static_cast<int>( logo.size() ) : 0;
     const int ribbon_h = show_ribbon ? 1 : 0;
-    const int tagline_h = show_tagline ? 1 : 0;
-    const int hero_h = logo_h > 0 ? logo_h + ribbon_h + tagline_h + 1 : 0;
+    const int hero_h = logo_h > 0 ? logo_h + ribbon_h + 1 : 0;
 
     bc_box_w = std::min( 40, std::max( 24, width - 6 ) );
     bc_box_w = std::min( bc_box_w, width - 2 );
@@ -490,7 +488,7 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
         bars += utf32_to_utf8( 0x2581 + clamp( static_cast<int>( v * 8.0 ), 0, 7 ) );
     }
     const std::string clock_txt = bc_clock_text();
-    const std::string tail = ( clock_txt.empty() ? "" : clock_txt + "  ▏  " ) + bars + "  微风 ";
+    const std::string tail = ( clock_txt.empty() ? "" : clock_txt + "  ▏  " ) + bars + " ";
     const int tail_w = utf8_width( tail );
     const bool show_tail = width - tail_w - 2 > 40;
 
@@ -531,11 +529,6 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
         bc_draw_logo( w_open, logo_at, logo, t );
         if( show_ribbon ) {
             bc_draw_ribbon( w_open, logo_at + point( 0, logo_h ), logo_w, t );
-        }
-        if( show_tagline ) {
-            const std::string tag = "微风  ·  风起于青萍之末";
-            bc_text( w_open, point( std::max( 0, ( width - utf8_width( tag ) ) / 2 ),
-                                    top + logo_h + ribbon_h ), tag, c_dark_gray );
         }
     }
 
