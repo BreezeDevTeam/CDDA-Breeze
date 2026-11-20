@@ -163,6 +163,27 @@ void bc_text_band( const catacurses::window &w, const point &p, const std::strin
     }
 }
 
+std::string bc_tail( const std::string &s, int max_width )
+{
+    if( utf8_width( s ) <= max_width ) {
+        return s;
+    }
+    const char *ptr = s.c_str();
+    int left = static_cast<int>( s.size() );
+    int width = utf8_width( s );
+    while( left > 0 && width > max_width ) {
+        const uint32_t ch = UTF8_getch( &ptr, &left );
+        if( ch == UNKNOWN_UNICODE ) {
+            continue;
+        }
+        const int cw = mk_wcwidth( ch );
+        if( cw > 0 ) {
+            width -= cw;
+        }
+    }
+    return std::string( ptr );
+}
+
 std::string bc_upper( const std::string &s )
 {
     std::string res = s;
@@ -508,13 +529,18 @@ void main_menu::print_menu( const catacurses::window &w_open, int iSel, const po
     }
     const int path_budget = std::max( 6, width - 14 - utf8_width( stats_txt )
                                       - ( show_tail ? tail_w + 2 : 0 ) );
+    const int path_content = std::max( 4, path_budget - 2 );
     bool path_trimmed = false;
-    while( utf8_width( world_path ) > path_budget ) {
+    while( utf8_width( world_path ) > path_content ) {
         const size_t slash = world_path.find( '/' );
         if( slash == std::string::npos ) {
             break;
         }
         world_path.erase( 0, slash + 1 );
+        path_trimmed = true;
+    }
+    if( utf8_width( world_path ) > path_content ) {
+        world_path = bc_tail( world_path, path_content );
         path_trimmed = true;
     }
     if( path_trimmed ) {
