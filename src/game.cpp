@@ -495,8 +495,7 @@ game::game() :
     u_shared_ptr(&u, null_deleter{}),
     next_npc_id(1),
     next_mission_id(1),
-    remoteveh_cache_time(calendar::before_time_starts),
-    last_mouse_edge_scroll(std::chrono::steady_clock::now())
+    remoteveh_cache_time(calendar::before_time_starts)
 {
     first_redraw_since_waiting_started = true;
     reset_light_level();
@@ -2470,106 +2469,14 @@ int game::inventory_item_menu( item_location locThisItem,
     return cMenu;
 }
 
-// Checks input to see if mouse was moved and handles the mouse view box accordingly.
-// Returns true if input requires breaking out into a game action.
-bool game::handle_mouseview( input_context &ctxt, std::string &action )
+bool game::handle_view_input( input_context &ctxt, std::string &action )
 {
-    std::optional<tripoint> liveview_pos;
-
-    do {
-        action = ctxt.handle_input();
-        if( action == "MOUSE_MOVE" ) {
-            const std::optional<tripoint> mouse_pos = ctxt.get_coordinates( w_terrain, ter_view_p.xy(), true );
-            if( mouse_pos && ( !liveview_pos || *mouse_pos != *liveview_pos ) ) {
-                liveview_pos = mouse_pos;
-                liveview.show( *liveview_pos );
-            } else if( !mouse_pos ) {
-                liveview_pos.reset();
-                liveview.hide();
-            }
-            ui_manager::redraw();
-        }
-    } while( action == "MOUSE_MOVE" ); // Freeze animation when moving the mouse
-
+    action = ctxt.handle_input();
     if( action != "TIMEOUT" ) {
-        // Keyboard event, break out of animation loop
         liveview.hide();
         return false;
     }
-
-    // Mouse movement or un-handled key
     return true;
-}
-
-std::pair<tripoint, tripoint> game::mouse_edge_scrolling( input_context &ctxt, const int speed,
-        const tripoint &last, bool iso )
-{
-    const int rate = get_option<int>( "EDGE_SCROLL" );
-    auto ret = std::make_pair( tripoint_zero, last );
-    if( rate == -1 ) {
-        // Fast return when the option is disabled.
-        return ret;
-    }
-    // Ensure the parameters are used even if the #if below is false
-    ( void ) ctxt;
-    ( void ) speed;
-    ( void ) iso;
-#if (defined TILES || defined _WIN32 || defined WINDOWS)
-    std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-    if( now < last_mouse_edge_scroll + std::chrono::milliseconds( rate ) ) {
-        return ret;
-    } else {
-        last_mouse_edge_scroll = now;
-    }
-    const input_event event = ctxt.get_raw_input();
-    if( event.type == input_event_t::mouse ) {
-        const point threshold( projected_window_width() / 100, projected_window_height() / 100 );
-        if( event.mouse_pos.x <= threshold.x ) {
-            ret.first.x -= speed;
-            if( iso ) {
-                ret.first.y -= speed;
-            }
-        } else if( event.mouse_pos.x >= projected_window_width() - threshold.x ) {
-            ret.first.x += speed;
-            if( iso ) {
-                ret.first.y += speed;
-            }
-        }
-        if( event.mouse_pos.y <= threshold.y ) {
-            ret.first.y -= speed;
-            if( iso ) {
-                ret.first.x += speed;
-            }
-        } else if( event.mouse_pos.y >= projected_window_height() - threshold.y ) {
-            ret.first.y += speed;
-            if( iso ) {
-                ret.first.x -= speed;
-            }
-        }
-        ret.second = ret.first;
-    } else if( event.type == input_event_t::timeout ) {
-        ret.first = ret.second;
-    }
-#endif
-    return ret;
-}
-
-tripoint game::mouse_edge_scrolling_terrain( input_context &ctxt )
-{
-    auto ret = mouse_edge_scrolling( ctxt, std::max( DEFAULT_TILESET_ZOOM / uistate.tileset_zoom, 1 ),
-                                     last_mouse_edge_scroll_vector_terrain, g->is_tileset_isometric() );
-    last_mouse_edge_scroll_vector_terrain = ret.second;
-    last_mouse_edge_scroll_vector_overmap = tripoint_zero;
-    return ret.first;
-}
-
-tripoint game::mouse_edge_scrolling_overmap( input_context &ctxt )
-{
-    // overmap has no iso mode
-    auto ret = mouse_edge_scrolling( ctxt, 2, last_mouse_edge_scroll_vector_overmap, false );
-    last_mouse_edge_scroll_vector_overmap = ret.second;
-    last_mouse_edge_scroll_vector_terrain = tripoint_zero;
-    return ret.first;
 }
 
 input_context default_mode_input_context = create_default_mode_input_context();
@@ -2722,11 +2629,6 @@ input_context create_default_mode_input_context()
     ctxt.register_action( "main_menu" );
     ctxt.register_action( "item_action_menu" );
     ctxt.register_action( "ANY_INPUT" );
-    ctxt.register_action( "COORDINATE" );
-    ctxt.register_action( "MOUSE_MOVE" );
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "CLICK_AND_DRAG" );
-    ctxt.register_action( "SEC_SELECT" );
     return ctxt;
 }
 
@@ -2801,85 +2703,6 @@ void game::reset_now_controlled_monster() {
     u.remove_value("monster_controlled_pos_string");
     u.view_offset.x = 0;
     u.view_offset.y = 0;
-}
-
-bool game::try_get_left_click_action( action_id &act, const tripoint_bub_ms &mouse_target )
-{
-    bool new_destination = true;
-    if( !destination_preview.empty() ) {
-        auto &final_destination = destination_preview.back();
-        if( final_destination.xy() == mouse_target.xy() ) {
-            // Second click
-            new_destination = false;
-            u.set_destination( destination_preview );
-            destination_preview.clear();
-            act = u.get_next_auto_move_direction();
-            if( act == ACTION_NULL ) {
-                // Something went wrong
-                u.clear_destination();
-                return false;
-            }
-        }
-    }
-
-    if( new_destination ) {
-        const std::optional<std::vector<tripoint_bub_ms>> try_route =
-        safe_route_to( u, mouse_target, 0, []( const std::string & msg ) {
-            add_msg( msg );
-        } );
-        if( try_route.has_value() ) {
-            destination_preview = *try_route;
-            return true;
-        }
-        return false;
-    }
-
-    return true;
-}
-
-bool game::try_get_right_click_action( action_id &act, const tripoint_bub_ms &mouse_target )
-{
-    const bool cleared_destination = !destination_preview.empty();
-    u.clear_destination();
-    destination_preview.clear();
-
-    if( cleared_destination ) {
-        // Produce no-op if auto move had just been cleared on this action
-        // e.g. from a previous single left mouse click. This has the effect
-        // of right-click canceling an auto move before it is initiated.
-        return false;
-    }
-
-    const bool is_adjacent = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 1;
-    const bool is_self = square_dist( mouse_target.xy(), u.pos_bub().xy() ) <= 0;
-    if( const monster *const mon = get_creature_tracker().creature_at<monster>( mouse_target ) ) {
-        if( !u.sees( *mon ) ) {
-            add_msg( _( "Nothing relevant here." ) );
-            return false;
-        }
-
-        if( !u.get_wielded_item() || !u.get_wielded_item()->is_gun() ) {
-            add_msg( m_info, _( "You are not wielding a ranged weapon." ) );
-            return false;
-        }
-
-        // TODO: Add weapon range check. This requires weapon to be reloaded.
-
-        act = ACTION_FIRE;
-    } else if( is_adjacent &&
-               m.close_door( tripoint_bub_ms( mouse_target.xy(), u.posz() ),
-                             !m.is_outside( u.pos() ), true ) ) {
-        act = ACTION_CLOSE;
-    } else if( is_self ) {
-        act = ACTION_PICKUP;
-    } else if( is_adjacent ) {
-        act = ACTION_EXAMINE;
-    } else {
-        add_msg( _( "Nothing relevant here." ) );
-        return false;
-    }
-
-    return true;
 }
 
 bool game::is_game_over()
@@ -7739,13 +7562,11 @@ look_around_result game::look_around(
     input_context ctxt( "LOOK" );
     ctxt.set_iso( true );
     ctxt.register_directions();
-    ctxt.register_action( "COORDINATE" );
     ctxt.register_action( "LEVEL_UP" );
     ctxt.register_action( "LEVEL_DOWN" );
     ctxt.register_action( "TOGGLE_FAST_SCROLL" );
     ctxt.register_action( "CHANGE_MONSTER_NAME" );
     ctxt.register_action( "EXTENDED_DESCRIPTION" );
-    ctxt.register_action( "SELECT" );
     if( peeking ) {
         ctxt.register_action( "throw_blind" );
         ctxt.register_action( "fire_in_peeking" );
@@ -7754,7 +7575,6 @@ look_around_result game::look_around(
         ctxt.register_action( "TRAVEL_TO" );
         ctxt.register_action( "LIST_ITEMS" );
     }
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "CENTER" );
 
     ctxt.register_action( "debug_scent" );
@@ -7881,17 +7701,8 @@ look_around_result game::look_around(
         }
 
         //Wait for input
-        // only specify a timeout here if "EDGE_SCROLL" is enabled
-        // otherwise use the previously set timeout
-        const tripoint edge_scroll = mouse_edge_scrolling_terrain( ctxt );
-        const int scroll_timeout = get_option<int>( "EDGE_SCROLL" );
-        const bool edge_scrolling = edge_scroll != tripoint_zero && scroll_timeout >= 0;
-        if( edge_scrolling ) {
-            action = ctxt.handle_input( scroll_timeout );
-        } else {
-            action = ctxt.handle_input();
-        }
-        if( ( action == "LEVEL_UP" || action == "LEVEL_DOWN" || action == "MOUSE_MOVE" ||
+        action = ctxt.handle_input();
+        if( ( action == "LEVEL_UP" || action == "LEVEL_DOWN" ||
               ctxt.get_direction( action ) ) && ( ( select_zone && has_first_point ) || is_moving_zone ) ) {
             blink = true; // Always draw blink symbols when moving cursor
         } else if( action == "TIMEOUT" ) {
@@ -7968,21 +7779,6 @@ look_around_result game::look_around(
             center = u.pos();
             lp = u.pos_bub();
             u.view_offset.z = 0;
-        } else if( action == "MOUSE_MOVE" || action == "TIMEOUT" ) {
-            // This block is structured this way so that edge scroll can work
-            // whether the mouse is moving at the edge or simply stationary
-            // at the edge. But even if edge scroll isn't in play, there's
-            // other things for us to do here.
-
-            if( edge_scrolling ) {
-                center += action == "MOUSE_MOVE" ? edge_scroll * 2 : edge_scroll;
-            } else if( action == "MOUSE_MOVE" ) {
-                const std::optional<tripoint> mouse_pos = ctxt.get_coordinates( w_terrain, ter_view_p.xy(), true );
-                if( mouse_pos ) {
-                    lx = mouse_pos->x;
-                    ly = mouse_pos->y;
-                }
-            }
         } else if( std::optional<tripoint> vec = ctxt.get_direction( action ) ) {
             if( fast_scroll ) {
                 vec->x *= soffset;

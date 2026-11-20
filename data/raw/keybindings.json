@@ -160,18 +160,6 @@
   },
   {
     "type": "keybinding",
-    "id": "SCROLL_UP",
-    "name": "Scroll up",
-    "bindings": [ { "input_method": "mouse", "key": "SCROLL_UP" } ]
-  },
-  {
-    "type": "keybinding",
-    "id": "SCROLL_DOWN",
-    "name": "Scroll down",
-    "bindings": [ { "input_method": "mouse", "key": "SCROLL_DOWN" } ]
-  },
-  {
-    "type": "keybinding",
     "id": "SELECT_ALL",
     "category": "PICKUP",
     "name": "Select all",
@@ -430,8 +418,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -557,8 +544,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -942,8 +928,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -956,8 +941,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -984,7 +968,7 @@
   },
   {
     "type": "keybinding",
-    "//": "Use a prefix here to avoid falling back to QUIT.  Otherwise MOUSE_RIGHT is dropped when keyboard_mode is keychar.",
+    "//": "Use a prefix here to avoid falling back to QUIT.",
     "id": "WORLDGEN_CONFIRM.QUIT",
     "category": "WORLDGEN_CONFIRM_DIALOG",
     "name": "Exit worldgen screen",
@@ -993,8 +977,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -1062,8 +1045,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -1076,8 +1058,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -1252,8 +1233,7 @@
     "bindings": [
       { "input_method": "keyboard_any", "key": "f" },
       { "input_method": "keyboard_any", "key": "RETURN" },
-      { "input_method": "keyboard_any", "key": "KEYPAD_ENTER" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "KEYPAD_ENTER" }
     ]
   },
   {
@@ -1264,7 +1244,6 @@
     "bindings": [
       { "input_method": "keyboard_char", "key": "BACKTAB" },
       { "input_method": "keyboard_code", "key": "TAB", "mod": [ "shift" ] },
-      { "input_method": "mouse", "key": "SCROLL_UP" },
       { "input_method": "keyboard_any", "key": "PPAGE" }
     ]
   },
@@ -1275,7 +1254,6 @@
     "name": "Next target",
     "bindings": [
       { "input_method": "keyboard_any", "key": "TAB" },
-      { "input_method": "mouse", "key": "SCROLL_DOWN" },
       { "input_method": "keyboard_any", "key": "NPAGE" }
     ]
   },
@@ -1364,30 +1342,6 @@
   },
   {
     "type": "keybinding",
-    "id": "SELECT",
-    "name": "Select with mouse",
-    "bindings": [ { "input_method": "mouse", "key": "MOUSE_LEFT" } ]
-  },
-  {
-    "type": "keybinding",
-    "id": "CLICK_AND_DRAG",
-    "name": "Click and drag with mouse",
-    "bindings": [ { "input_method": "mouse", "key": "MOUSE_LEFT_PRESSED" } ]
-  },
-  {
-    "type": "keybinding",
-    "id": "SEC_SELECT",
-    "name": "Secondary select",
-    "bindings": [ { "input_method": "mouse", "key": "MOUSE_RIGHT" } ]
-  },
-  {
-    "type": "keybinding",
-    "id": "MOUSE_MOVE",
-    "name": "Mouse move",
-    "bindings": [ { "input_method": "mouse", "key": "MOUSE_MOVE" } ]
-  },
-  {
-    "type": "keybinding",
     "id": "QUIT",
     "category": "PICK_WORLD_DIALOG",
     "name": "Quit",
@@ -1396,8 +1350,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -3874,8 +3827,7 @@
       { "input_method": "keyboard_any", "key": "q" },
       { "input_method": "keyboard_char", "key": "Q" },
       { "input_method": "keyboard_code", "key": "q", "mod": [ "shift" ] },
-      { "input_method": "keyboard_any", "key": "SPACE" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "SPACE" }
     ]
   },
   {
@@ -4134,8 +4086,7 @@
       { "input_method": "keyboard_any", "key": "ESC" },
       { "input_method": "keyboard_any", "key": "SPACE" },
       { "input_method": "keyboard_any", "key": "RETURN" },
-      { "input_method": "keyboard_any", "key": "KEYPAD_ENTER" },
-      { "input_method": "mouse", "key": "MOUSE_RIGHT" }
+      { "input_method": "keyboard_any", "key": "KEYPAD_ENTER" }
     ]
   },
   {
@@ -4243,8 +4194,7 @@
     "name": "Open context menu",
     "bindings": [
       { "input_method": "keyboard_any", "key": "RETURN" },
-      { "input_method": "keyboard_any", "key": "KEYPAD_ENTER" },
-      { "input_method": "mouse", "key": "MOUSE_LEFT" }
+      { "input_method": "keyboard_any", "key": "KEYPAD_ENTER" }
     ]
   },
   {

@@ -265,7 +265,7 @@ std::optional<std::list<item>::iterator> outfit::wear_item( Character &guy, cons
         bool interactive, bool do_calc_encumbrance, bool do_sort_items, bool quiet )
 {
     const bool was_deaf = guy.is_deaf();
-    const bool supertinymouse = guy.get_size() == creature_size::tiny;
+    const bool supertiny = guy.get_size() == creature_size::tiny;
     guy.last_item = to_wear.typeId();
 
     std::list<item>::iterator new_item_it = worn.end();
@@ -305,11 +305,11 @@ std::optional<std::list<item>::iterator> outfit::wear_item( Character &guy, cons
         if( !was_deaf && guy.is_deaf() && !quiet ) {
             guy.add_msg_if_player( m_info, _( "You're deafened!" ) );
         }
-        if( supertinymouse && !to_wear.has_flag( flag_UNDERSIZE ) && !quiet ) {
+        if( supertiny && !to_wear.has_flag( flag_UNDERSIZE ) && !quiet ) {
             guy.add_msg_if_player( m_warning,
                                    _( "This %s is too big to wear comfortably!  Maybe it could be refitted." ),
                                    to_wear.tname() );
-        } else if( !supertinymouse && to_wear.has_flag( flag_UNDERSIZE ) && !quiet ) {
+        } else if( !supertiny && to_wear.has_flag( flag_UNDERSIZE ) && !quiet ) {
             guy.add_msg_if_player( m_warning,
                                    _( "This %s is too small to wear comfortably!  Maybe it could be refitted." ),
                                    to_wear.tname() );

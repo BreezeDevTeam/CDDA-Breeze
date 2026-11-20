@@ -82,5 +82,4 @@ const SDL_Renderer_Ptr &get_sdl_renderer();
 
 
 // Text level, valid only for a point relative to the window, not a point in overall space.
-bool window_contains_point_relative( const catacurses::window &win, const point &p );
 #endif // CATA_SRC_SDLTILES_H

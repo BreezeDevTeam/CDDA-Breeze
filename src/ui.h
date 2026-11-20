@@ -406,12 +406,6 @@ class uilist // NOLINT(cata-xy)
         // This function assumes it's being called from `query` and should
         // not be made public.
         void inputfilter();
-        enum class handle_mouse_result_t {
-            unhandled, handled, confirmed
-        };
-        handle_mouse_result_t handle_mouse( const input_context &ctxt,
-                                            const std::string &ret_act,
-                                            bool loop );
 
     public:
         // Parameters
@@ -516,7 +510,6 @@ class uilist // NOLINT(cata-xy)
         std::function<bool(const uilist_entry&, const std::string&)> category_filter;
         int current_category = 0;
 
-        int find_entry_by_coordinate( const point &p ) const;
 
     public:
         // Results

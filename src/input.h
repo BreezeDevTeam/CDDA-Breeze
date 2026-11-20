@@ -146,25 +146,8 @@ enum : int {
 static constexpr int LEGEND_HEIGHT = 11;
 static constexpr int BORDER_SPACE = 2;
 
-bool is_mouse_enabled();
 bool is_keycode_mode_supported();
 std::string get_input_string_from_file( const std::string &fname = "input.txt" );
-
-// Mouse buttons and movement input
-enum class MouseInput : int {
-
-    LeftButtonPressed = 1,
-    LeftButtonReleased,
-
-    RightButtonPressed,
-    RightButtonReleased,
-
-    ScrollWheelUp,
-    ScrollWheelDown,
-
-    Move
-
-};
 
 enum class input_event_t : int  {
     error,
@@ -173,8 +156,7 @@ enum class input_event_t : int  {
     keyboard_char,
     // used on platforms with raw keycode input, such as non-android sdl
     keyboard_code,
-    gamepad,
-    mouse
+    gamepad
 };
 
 enum class keymod_t {
@@ -186,8 +168,8 @@ enum class keymod_t {
 /**
  * An instance of an input, like a keypress etc.
  *
- * Gamepad, mouse and keyboard keypresses will be represented as `int`.
- * Whether a gamepad, mouse or keyboard was used can be checked using the
+ * Gamepad and keyboard keypresses will be represented as `int`.
+ * Whether a gamepad or keyboard was used can be checked using the
  * `type` member.
  *
  */
@@ -197,11 +179,9 @@ struct input_event {
     std::set<keymod_t> modifiers; // Keys that need to be held down for
     // this event to be activated.
 
-    std::vector<int> sequence; // The sequence of key or mouse events that
+    std::vector<int> sequence; // The sequence of key events that
     // triggers this event. For single-key
     // events, simply make this of size 1.
-
-    point mouse_pos;       // Mouse click co-ordinates, if applicable
 
     // Actually entered text (if any), UTF-8 encoded, might be empty if
     // the input is not UTF-8 or not even text.
@@ -222,51 +202,12 @@ struct input_event {
         sequence.push_back( s );
     }
 
-    // overloaded function for a mouse input
-    // made for a cleaner code, to get rid of static_cast's from scoped enum to int
-    //
-    // Instead of:
-    //
-    //    input_event( static_cast<int>( MouseInput::Move ), ... )
-    //    input_event( static_cast<int>( MouseInput::LeftButtonPressed ), ... )
-    //    input_event( static_cast<int>( MouseInput::RightButtonPressed ), ... )
-    //
-    // we now can just use
-    //
-    //    input_event( MouseInput::Move, ... )
-    //    input_event( MouseInput::LeftButtonPressed, ... )
-    //    input_event( MouseInput::RightButtonPressed, ... )
-    //
-    input_event( const MouseInput s, input_event_t t )
-        : type( t ), edit_refresh( false ) {
-        sequence.push_back( static_cast<int>( s ) );
-    }
-
     input_event( const std::set<keymod_t> &mod, int s, input_event_t t );
 
     int get_first_input() const;
 
     void add_input( const int input ) {
         sequence.push_back( input );
-    }
-
-    // overloaded function for a mouse input
-    // made for a cleaner code, to get rid of static_cast's from scoped enum to int
-    //
-    // Instead of:
-    //
-    //    add_input( static_cast<int>( MouseInput::Move ) )
-    //    add_input( static_cast<int>( MouseInput::LeftButtonPressed ) )
-    //    add_input( static_cast<int>( MouseInput::RightButtonPressed ) )
-    //
-    // we now can just use
-    //
-    //    add_input( MouseInput::Move )
-    //    add_input( MouseInput::LeftButtonPressed )
-    //    add_input( MouseInput::RightButtonPressed )
-    //
-    void add_input( const MouseInput mouse_input ) {
-        sequence.push_back( static_cast<int>( mouse_input ) );
     }
 
     bool operator==( const input_event &other ) const {
@@ -427,7 +368,6 @@ class input_manager
         void pump_events();
 
         /**
-         * Wait until the user presses a key. Mouse and similar input is ignored,
          * only input events from the keyboard are considered.
          */
         void wait_for_any_key();
@@ -459,12 +399,10 @@ class input_manager
         t_key_to_name_map keyboard_char_keycode_to_keyname;
         t_key_to_name_map keyboard_code_keycode_to_keyname;
         t_key_to_name_map gamepad_keycode_to_keyname;
-        t_key_to_name_map mouse_keycode_to_keyname;
         using t_name_to_key_map = std::map<std::string, int>;
         t_name_to_key_map keyboard_char_keyname_to_keycode;
         t_name_to_key_map keyboard_code_keyname_to_keycode;
         t_name_to_key_map gamepad_keyname_to_keycode;
-        t_name_to_key_map mouse_keyname_to_keycode;
 
         // See @ref get_previously_pressed_key
         int previously_pressed_key;
@@ -475,7 +413,6 @@ class input_manager
         void add_keyboard_char_keycode_pair( int ch, const std::string &name );
         void add_keyboard_code_keycode_pair( int ch, const std::string &name );
         void add_gamepad_keycode_pair( int ch, const std::string &name );
-        void add_mouse_keycode_pair( MouseInput mouse_input, const std::string &name );
         /**
          * Load keybindings from a json file, override existing bindings.
          * Throws std::string on errors
@@ -544,19 +481,15 @@ class input_context
         inline static std::list<input_context *> input_context_stack;
 #endif
 
-        input_context() : registered_any_input( false ), category( "default" ),
-            coordinate_input_received( false ), handling_coordinate_input( false ) {
+        input_context() : registered_any_input( false ), category( "default" ) {
 #if defined(__ANDROID__)
             input_context_stack.push_back( this );
             allow_text_entry = false;
 #endif
         }
-        // TODO: consider making the curses WINDOW an argument to the constructor, so that mouse input
-        // outside that window can be ignored
         explicit input_context( const std::string &category,
                                 const keyboard_mode preferred_keyboard_mode = keyboard_mode::keycode )
             : registered_any_input( false ), category( category ),
-              coordinate_input_received( false ), handling_coordinate_input( false ),
               preferred_keyboard_mode( preferred_keyboard_mode ) {
 #if defined(__ANDROID__)
             input_context_stack.push_back( this );
@@ -617,9 +550,6 @@ class input_context
             allow_text_entry = other.allow_text_entry;
             registered_any_input = other.registered_any_input;
             category = other.category;
-            coordinate = other.coordinate;
-            coordinate_input_received = other.coordinate_input_received;
-            handling_coordinate_input = other.handling_coordinate_input;
             next_action = other.next_action;
             iso_mode = other.iso_mode;
             action_name_overrides = other.action_name_overrides;
@@ -633,9 +563,6 @@ class input_context
                    registered_manual_keys == other.registered_manual_keys &&
                    allow_text_entry == other.allow_text_entry &&
                    registered_any_input == other.registered_any_input &&
-                   coordinate == other.coordinate &&
-                   coordinate_input_received == other.coordinate_input_received &&
-                   handling_coordinate_input == other.handling_coordinate_input &&
                    next_action == other.next_action &&
                    iso_mode == other.iso_mode &&
                    action_name_overrides == other.action_name_overrides &&
@@ -657,10 +584,6 @@ class input_context
          * unregistered keys, those keys will all be linked to this "ANY_INPUT"
          * action.
          *
-         * If `action_descriptor` is the special "COORDINATE", coordinate input will be processed
-         * and the specified coordinates can be retrieved using `get_coordinates()`. Currently the
-         * only form of coordinate input is mouse input(you can directly click coordinates on
-         * the screen).
          *
          * @param action_descriptor String of action id.
          */
@@ -758,7 +681,6 @@ class input_context
          * This internally calls getch() or whatever other input method
          * is available(e.g. gamepad).
          *
-         * If the action is mouse input, returns "MOUSE".
          *
          * @return One of the input actions formerly registered with
          *         `register_action()`, or "ERROR" if an error happened.
@@ -775,12 +697,6 @@ class input_context
          * The returned vector will always have a z component of 0.
          */
         std::optional<tripoint> get_direction( const std::string &action ) const;
-
-        /**
-         * Get the coordinates associated with the last mouse click (if any).
-         */
-        std::optional<tripoint> get_coordinates( const catacurses::window &capture_win_,
-                const point &offset = point_zero, bool center_cursor = false ) const;
 
         // Below here are shortcuts for registering common key combinations.
         void register_directions();
@@ -804,19 +720,9 @@ class input_context
         input_event get_raw_input();
 
         /**
-         * Get coordinate of text level from mouse input, difference between this and get_coordinates is that one is getting pixel level coordinate.
-         */
-        std::optional<point> get_coordinates_text( const catacurses::window &capture_win ) const;
-
-        /**
          * Get the human-readable name for an action.
          */
         std::string get_action_name( const std::string &action_id ) const;
-
-        /* For the future, something like this might be nice:
-         * const std::string register_action(const std::string& action_descriptor, x, y, width, height);
-         * (x, y, width, height) would describe an area on the visible window that, if clicked, triggers the action.
-         */
 
         // (Press X (or Y)|Try) to Z
         std::string press_x( const std::string &action_id ) const;
@@ -836,8 +742,7 @@ class input_context
          *        here). If `false`, all keys (whether they are printable or not)
          *        are returned.
          * @param restrict_to_keyboard If `true`, the function returns the bound keys only
-         *        if they are keyboard inputs. If `false`, all inputs, such as mouse
-         *        inputs are included.
+         *        if they are keyboard inputs. If `false`, all inputs are included.
          * @returns All keys bound to the given action descriptor.
          */
         std::vector<input_event> keys_bound_to( const std::string &action_descriptor,
@@ -876,9 +781,6 @@ class input_context
     private:
         bool registered_any_input;
         std::string category; // The input category this context uses.
-        point coordinate;
-        bool coordinate_input_received;
-        bool handling_coordinate_input;
         input_event next_action;
         bool iso_mode = false; // should this context follow the game's isometric settings?
         int timeout = -1;

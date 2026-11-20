@@ -39,14 +39,11 @@ void game::list_missions()
     ctxt.register_cardinal();
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "QUIT" );
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
     ctxt.register_action( "HELP_KEYBINDINGS" );
 
     // rectangular coordinates of each tab
-    // used for mouse controls
     std::map<tab_mode, inclusive_rectangle<point>> tabs_coords;
     std::map<size_t, inclusive_rectangle<point>> mission_row_coords;
 
@@ -231,37 +228,6 @@ void game::list_missions()
                 u.set_active_mission( *umissions[selection] );
             }
             break;
-        } else if( action == "SELECT" ) {
-            // get clicked coord
-            std::optional<point> coord = ctxt.get_coordinates_text( w_missions );
-            if( coord.has_value() ) {
-
-                for( auto &it : tabs_coords ) {
-                    if( it.second.contains( coord.value() ) ) {
-                        tab = it.first;
-                    }
-                }
-
-                for( auto &it : mission_row_coords ) {
-                    if( it.second.contains( coord.value() ) ) {
-                        selection = it.first;
-                        if( tab == tab_mode::TAB_ACTIVE && selection < umissions.size() ) {
-                            u.set_active_mission( *umissions[selection] );
-                        }
-                    }
-                }
-            }
-        } else if( action == "MOUSE_MOVE" ) {
-            // get clicked coord
-            std::optional<point> coord = ctxt.get_coordinates_text( w_missions );
-            if( coord.has_value() ) {
-
-                for( auto &it : mission_row_coords ) {
-                    if( it.second.contains( coord.value() ) ) {
-                        selection = it.first;
-                    }
-                }
-            }
         } else if( action == "QUIT" ) {
             break;
         }

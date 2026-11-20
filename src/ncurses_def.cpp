@@ -250,10 +250,6 @@ void catacurses::init_interface()
     if( !newscr ) {
         throw std::runtime_error( "null newscr" );
     }
-#if !defined(__CYGWIN__)
-    // ncurses mouse registration
-    mousemask( ALL_MOUSE_EVENTS | REPORT_MOUSE_POSITION, nullptr );
-#endif
     // our curses wrapper does not support changing this behavior, ncurses must
     // behave exactly like the wrapper, therefore:
     noecho();  // Don't echo keypresses
@@ -320,37 +316,8 @@ input_event input_manager::get_input_event( const keyboard_mode /*preferred_keyb
             } else {
                 rval.type = input_event_t::error;
             }
-            // ncurses mouse handling
         } else if( key == KEY_RESIZE ) {
             catacurses::resizeterm();
-        } else if( key == KEY_MOUSE ) {
-            MEVENT event;
-            if( getmouse( &event ) == OK ) {
-                rval.type = input_event_t::mouse;
-                rval.mouse_pos = point( event.x, event.y );
-                if( event.bstate & BUTTON1_CLICKED ) {
-                    rval.add_input( MouseInput::LeftButtonReleased );
-                } else if( event.bstate & BUTTON1_PRESSED ) {
-                    rval.add_input( MouseInput::LeftButtonPressed );
-                } else if( event.bstate & BUTTON3_CLICKED ) {
-                    rval.add_input( MouseInput::RightButtonReleased );
-                    // If curses version is prepared for a 5-button mouse, enable mousewheel
-#if defined(BUTTON5_PRESSED)
-                } else if( event.bstate & BUTTON4_PRESSED ) {
-                    rval.add_input( MouseInput::ScrollWheelUp );
-                } else if( event.bstate & BUTTON5_PRESSED ) {
-                    rval.add_input( MouseInput::ScrollWheelDown );
-#endif
-                } else {
-                    rval.add_input( MouseInput::Move );
-                    if( input_timeout > 0 ) {
-                        // Mouse movement seems to clear ncurses timeout
-                        set_timeout( input_timeout );
-                    }
-                }
-            } else {
-                rval.type = input_event_t::error;
-            }
         } else {
             if( key == 127 ) { // == Unicode DELETE
                 previously_pressed_key = KEY_BACKSPACE;
@@ -489,7 +456,7 @@ void check_encoding()
             catacurses::refresh();
             // do not use input_manager or input_context here to avoid re-entry
             key = getch();
-        } while( key == KEY_RESIZE || key == KEY_MOUSE );
+        } while( key == KEY_RESIZE );
     }
 }
 

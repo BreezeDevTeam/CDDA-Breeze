@@ -2004,10 +2004,6 @@ class exosuit_interact
             ctxt.register_action( "SCROLL_INFOBOX_DOWN" );
             ctxt.register_action( "CONFIRM" );
             ctxt.register_action( "QUIT" );
-            // mouse selection
-            ctxt.register_action( "SELECT" );
-            ctxt.register_action( "SEC_SELECT" );
-            ctxt.register_action( "MOUSE_MOVE" );
             ctxt.register_action( "SCROLL_UP" );
             ctxt.register_action( "SCROLL_DOWN" );
             pocket_count = it->get_all_contained_pockets().size();
@@ -2128,33 +2124,7 @@ class exosuit_interact
             while( !done ) {
                 ui_manager::redraw();
                 std::string action = ctxt.handle_input();
-                if( action == "MOUSE_MOVE" || action == "SELECT" ) {
-                    std::optional<point> coord = ctxt.get_coordinates_text( w_border );
-                    if( !!coord ) {
-                        int tmp_frame = 0;
-                        run_for_point_in<int, point>( pkt_map, *coord,
-                        [&tmp_frame]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                            if( p.first == -1 ) {
-                                tmp_frame = 1;
-                            }
-                        } );
-                        sel_frame = tmp_frame;
-                    }
-                    coord = ctxt.get_coordinates_text( w_menu );
-                    if( !!coord ) {
-                        int tmp_pocket = cur_pocket;
-                        run_for_point_in<int, point>( pkt_map, *coord,
-                        [&tmp_pocket, &action]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                            if( p.first >= 0 ) {
-                                tmp_pocket = p.first;
-                                if( action == "SELECT" ) {
-                                    action = "CONFIRM";
-                                }
-                            }
-                        } );
-                        cur_pocket = tmp_pocket;
-                    }
-                } else if( action == "SCROLL_UP" || action == "SCROLL_DOWN" ) {
+                if( action == "SCROLL_UP" || action == "SCROLL_DOWN" ) {
                     if( sel_frame == 0 ) {
                         action = action == "SCROLL_UP" ? "UP" : "DOWN";
                     } else {

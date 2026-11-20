@@ -77,11 +77,6 @@ static std::string int_to_str( int number )
     return buffer.str();
 }
 
-bool is_mouse_enabled()
-{
-    return true;
-}
-
 bool is_keycode_mode_supported()
 {
 #if !defined(__ANDROID__) && !(defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1)
@@ -310,10 +305,8 @@ void input_manager::load( const cata_path &file_name, bool is_user_preferences )
                 new_events[0].type = input_event_t::keyboard_code;
             } else if( input_method == "gamepad" ) {
                 new_events[0].type = input_event_t::gamepad;
-            } else if( input_method == "mouse" ) {
-                new_events[0].type = input_event_t::mouse;
             } else {
-                keybinding.throw_error_at( "input_method", "unknown input_method" );
+                continue;
             }
 
             if( keybinding.has_member( "mod" ) ) {
@@ -432,9 +425,6 @@ void input_manager::save()
                         case input_event_t::gamepad:
                             jsout.member( "input_method", "gamepad" );
                             break;
-                        case input_event_t::mouse:
-                            jsout.member( "input_method", "mouse" );
-                            break;
                         default:
                             throw std::runtime_error( "unknown input_event_t" );
                     }
@@ -491,12 +481,6 @@ void input_manager::add_gamepad_keycode_pair( int ch, const std::string &name )
 {
     gamepad_keycode_to_keyname[ch] = name;
     gamepad_keyname_to_keycode[name] = ch;
-}
-
-void input_manager::add_mouse_keycode_pair( const MouseInput mouse_input, const std::string &name )
-{
-    mouse_keycode_to_keyname[static_cast<int>( mouse_input )] = name;
-    mouse_keyname_to_keycode[name] = static_cast<int>( mouse_input );
 }
 
 static constexpr int char_key_beg = ' ';
@@ -648,21 +632,6 @@ void input_manager::init_keycode_mapping()
     add_gamepad_keycode_pair( JOY_29,        translate_marker_context( "key name", "JOY_29" ) );
     add_gamepad_keycode_pair( JOY_30,        translate_marker_context( "key name", "JOY_30" ) );
 
-    add_mouse_keycode_pair( MouseInput::LeftButtonPressed,
-                            translate_marker_context( "key name", "MOUSE_LEFT_PRESSED" ) );
-    add_mouse_keycode_pair( MouseInput::LeftButtonReleased,
-                            translate_marker_context( "key name", "MOUSE_LEFT" ) );
-    add_mouse_keycode_pair( MouseInput::RightButtonPressed,
-                            translate_marker_context( "key name", "MOUSE_RIGHT_PRESSED" ) );
-    add_mouse_keycode_pair( MouseInput::RightButtonReleased,
-                            translate_marker_context( "key name", "MOUSE_RIGHT" ) );
-    add_mouse_keycode_pair( MouseInput::ScrollWheelUp,
-                            translate_marker_context( "key name", "SCROLL_UP" ) );
-    add_mouse_keycode_pair( MouseInput::ScrollWheelDown,
-                            translate_marker_context( "key name", "SCROLL_DOWN" ) );
-    add_mouse_keycode_pair( MouseInput::Move,
-                            translate_marker_context( "key name", "MOUSE_MOVE" ) );
-
 }
 
 int input_manager::get_keycode( const input_event_t inp_type, const std::string &name ) const
@@ -679,9 +648,6 @@ int input_manager::get_keycode( const input_event_t inp_type, const std::string 
             break;
         case input_event_t::gamepad:
             map = &gamepad_keyname_to_keycode;
-            break;
-        case input_event_t::mouse:
-            map = &mouse_keyname_to_keycode;
             break;
     }
     if( map ) {
@@ -711,9 +677,6 @@ std::string input_manager::get_keyname( int ch, input_event_t inp_type, bool por
             break;
         case input_event_t::gamepad:
             map = &gamepad_keycode_to_keyname;
-            break;
-        case input_event_t::mouse:
-            map = &mouse_keycode_to_keyname;
             break;
     }
     if( map ) {
@@ -926,7 +889,6 @@ void input_context::clear_conflicting_keybindings( const input_event &event )
 static const std::string CATA_ERROR = "ERROR";
 static const std::string ANY_INPUT = "ANY_INPUT";
 static const std::string HELP_KEYBINDINGS = "HELP_KEYBINDINGS";
-static const std::string COORDINATE = "COORDINATE";
 static const std::string TIMEOUT = "TIMEOUT";
 
 const std::string &input_context::input_to_action( const input_event &inp ) const
@@ -980,8 +942,6 @@ void input_context::register_action( const std::string &action_descriptor,
 {
     if( action_descriptor == "ANY_INPUT" ) {
         registered_any_input = true;
-    } else if( action_descriptor == "COORDINATE" ) {
-        handling_coordinate_input = true;
     }
 
     if( std::find( registered_actions.begin(), registered_actions.end(),
@@ -1203,13 +1163,6 @@ const std::string &input_context::handle_input( const int timeout )
             break;
         }
 
-        if( next_action.type == input_event_t::mouse
-            && !handling_coordinate_input && action == CATA_ERROR ) {
-            continue; // Ignore mouse movement.
-        }
-        coordinate_input_received = true;
-        coordinate = next_action.mouse_pos;
-
         if( action != CATA_ERROR ) {
             result = &action;
             break;
@@ -1402,12 +1355,12 @@ action_id input_context::display_menu( const bool permit_execute_action )
     input_manager::t_action_contexts old_action_contexts( inp_mngr.action_contexts );
     // current status: adding/removing/executing/showing keybindings
     enum { s_remove, s_add, s_add_global, s_execute, s_show } status = s_show;
-    // copy of registered_actions, but without the ANY_INPUT and COORDINATE, which should not be shown
+    // copy of registered_actions, but without the ANY_INPUT, which should not be shown
     std::vector<std::string> org_registered_actions( registered_actions );
     org_registered_actions.erase( std::remove_if( org_registered_actions.begin(),
                                   org_registered_actions.end(),
     []( const std::string & a ) {
-        return a == ANY_INPUT || a == COORDINATE;
+        return a == ANY_INPUT;
     } ), org_registered_actions.end() );
 
     // colors of the keybindings
@@ -1723,57 +1676,7 @@ bool gamepad_available()
     return false;
 }
 
-std::optional<tripoint> input_context::get_coordinates( const catacurses::window &capture_win,
-        const point &offset, const bool center_cursor ) const
-{
-    if( !coordinate_input_received ) {
-        return std::nullopt;
-    }
-    const point view_size( getmaxx( capture_win ), getmaxy( capture_win ) );
-    const point win_min( getbegx( capture_win ),
-                         getbegy( capture_win ) );
-    const half_open_rectangle<point> win_bounds( win_min, win_min + view_size );
-    if( !win_bounds.contains( coordinate ) ) {
-        return std::nullopt;
-    }
-
-    point p = coordinate + offset;
-    // If no offset is specified, account for the window location
-    if( offset == point_zero ) {
-        p -= win_min;
-    }
-    // Some windows (notably the overmap) want 0,0 to be the center of the screen
-    if( center_cursor ) {
-        p -= view_size / 2;
-    }
-    return tripoint( p, get_map().get_abs_sub().z() );
-}
 #endif
-
-std::optional<point> input_context::get_coordinates_text( const catacurses::window
-        &capture_win ) const
-{
-#if !defined( TILES )
-    std::optional<tripoint> coord3d = get_coordinates( capture_win );
-    if( coord3d.has_value() ) {
-        return get_coordinates( capture_win )->xy();
-    } else {
-        return std::nullopt;
-    }
-#else
-    if( !coordinate_input_received ) {
-        return std::nullopt;
-    }
-    const window_dimensions dim = get_window_dimensions( capture_win );
-    const int &fw = dim.scaled_font_size.x;
-    const int &fh = dim.scaled_font_size.y;
-    const point &win_min = dim.window_pos_pixel;
-    const point screen_pos = coordinate - win_min;
-    const point selected( divide_round_down( screen_pos.x, fw ),
-                          divide_round_down( screen_pos.y, fh ) );
-    return selected;
-#endif
-}
 
 std::string input_context::get_action_name( const std::string &action_id ) const
 {
@@ -1822,9 +1725,6 @@ std::string input_context::press_x( const std::string &action_id,
 {
     if( action_id == "ANY_INPUT" ) {
         return _( "any key" );
-    }
-    if( action_id == "COORDINATE" ) {
-        return _( "mouse movement" );
     }
     input_manager::t_input_event_list events = inp_mngr.get_input_for_action( action_id, category );
     events.erase( std::remove_if( events.begin(), events.end(), [this]( const input_event & evt ) {
@@ -1898,8 +1798,6 @@ bool input_context::is_event_type_enabled( const input_event_t type ) const
             return input_manager::actual_keyboard_mode( preferred_keyboard_mode ) == keyboard_mode::keycode;
         case input_event_t::gamepad:
             return gamepad_available();
-        case input_event_t::mouse:
-            return true;
     }
     return true;
 }

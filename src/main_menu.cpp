@@ -578,9 +578,6 @@ bool main_menu::opening_screen()
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "QUIT" );
 
-    // for mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
 
@@ -667,42 +664,6 @@ bool main_menu::opening_screen()
                         sel2 = i;
                         action = "CONFIRM";
                     }
-                }
-            }
-        }
-
-        // handle mouse click
-        if( action == "SELECT" || action == "MOUSE_MOVE" ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-            for( const auto &it : main_menu_button_map ) {
-                if( coord.has_value() && it.first.contains( coord.value() ) ) {
-                    if( sel1 != it.second ) {
-                        sel1 = it.second;
-                        sel2 = sel1 == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
-                        sel_line = 0;
-                        on_move();
-                    }
-                    if( action == "SELECT" &&
-                        ( sel1 == getopt( main_menu_opts::HELP ) || sel1 == getopt( main_menu_opts::QUIT ) ) ) {
-                        action = "CONFIRM";
-                    }
-                    ui_manager::redraw();
-                    break;
-                }
-            }
-            for( const auto &it : main_menu_sub_button_map ) {
-                if( coord.has_value() && it.first.contains( coord.value() ) ) {
-                    if( sel1 != it.second.first || sel2 != it.second.second ) {
-                        on_move();
-                    }
-                    sel1 = it.second.first;
-                    sel2 = it.second.second;
-                    sel_line = 0;
-                    if( action == "SELECT" ) {
-                        action = "CONFIRM";
-                    }
-                    ui_manager::redraw();
-                    break;
                 }
             }
         }
