@@ -305,8 +305,10 @@ void input_manager::load( const cata_path &file_name, bool is_user_preferences )
                 new_events[0].type = input_event_t::keyboard_code;
             } else if( input_method == "gamepad" ) {
                 new_events[0].type = input_event_t::gamepad;
-            } else {
+            } else if( input_method == "mouse" ) {
                 continue;
+            } else {
+                keybinding.throw_error_at( "input_method", "unknown input_method" );
             }
 
             if( keybinding.has_member( "mod" ) ) {

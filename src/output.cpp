@@ -1759,11 +1759,10 @@ void scrollbar::apply( const catacurses::window &window )
             bar_start = slot_size - bar_size;
         }
         int bar_end = bar_start + bar_size;
-        nc_color temp_bar_color = dragging ? c_magenta_magenta : bar_color_v;
 
         for( int i = 0; i < slot_size; ++i ) {
             if( i >= bar_start && i < bar_end ) {
-                mvwputch( window, point( offset_x_v, offset_y_v + 1 + i ), temp_bar_color, LINE_XOXO );
+                mvwputch( window, point( offset_x_v, offset_y_v + 1 + i ), bar_color_v, LINE_XOXO );
             } else {
                 mvwputch( window, point( offset_x_v, offset_y_v + 1 + i ), slot_color_v, LINE_XOXO );
             }
