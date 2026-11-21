@@ -23,8 +23,6 @@ class main_menu
         static std::string queued_world_to_load;
         static std::string queued_save_id_to_load;
     private:
-        // ASCII art that says "Cataclysm Dark Days Ahead"
-        std::vector<std::string> mmenu_title;
         std::string mmenu_credits;
         int mmenu_credits_len;
         std::vector<std::string> vMenuItems; // New Game, Load Game, etc.
@@ -43,9 +41,6 @@ class main_menu
          * the case where the player goes to the 'Settings' tab and changes the language.
         */
         void init_strings();
-        /** Helper function for @ref init_strings */
-        std::vector<std::string> load_file( const std::string &path,
-                                            const std::string &alt_text ) const;
 
         // Play a sound whenever the user moves left or right in the main menu or its tabs
         void on_move() const;
@@ -81,21 +76,6 @@ class main_menu
         std::vector<std::pair<inclusive_rectangle<point>, int>> main_menu_button_map;
 
         /**
-         * Prints a horizontal list of options
-         *
-         * @param w_in Window we are printing in
-         * @param vItems Main menu items
-         * @param iSel Which index of vItems is selected. This menu item will be highlighted to
-         * make it stand out from the other menu items.
-         * @param offset Offset of menu items
-         * @param spacing: How many spaces to print between each menu item
-         * @returns A list of horizontal offsets, one for each menu item
-         */
-        std::vector<int> print_menu_items( const catacurses::window &w_in,
-                                           const std::vector<std::string> &vItems, size_t iSel,
-                                           point offset, int spacing = 1, bool main = false );
-
-        /**
          * Called by @ref opening_screen, this prints all the text that you see on the main menu
          *
          * @param w_open Window to print menu in
@@ -109,13 +89,6 @@ class main_menu
         void display_sub_menu( int sel, const point &bottom_left, int sel_line );
 
         void init_windows();
-
-        holiday get_holiday_from_time();
-
-        holiday current_holiday = holiday::none;
-
-        static std::string halloween_spider();
-        std::string halloween_graves();
 };
 
 #endif // CATA_SRC_MAIN_MENU_H
