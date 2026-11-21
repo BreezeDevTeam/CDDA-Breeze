@@ -6483,7 +6483,8 @@ void map::process_items_in_vehicle( vehicle &cur_veh, submap &current_submap )
         }
         const auto it = std::find_if( begin( cargo_parts ),
         end( cargo_parts ), [&]( const vpart_reference & part ) {
-            return active_item_ref.location == part.mount();
+            return active_item_ref.location == part.mount() &&
+                   active_item_ref.z == part.mount_z();
         } );
 
         if( it == end( cargo_parts ) ) {

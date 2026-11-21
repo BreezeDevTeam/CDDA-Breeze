@@ -16,6 +16,7 @@ class item_pocket;
 // A struct used to uniquely identify an item within a submap or vehicle.
 struct item_reference {
     point location;
+    int z = 0;
     safe_reference<item> item_ref;
     // parent invalidating would also invalidate item_ref so it's safe to use a raw pointers here
     item* parent = nullptr;
@@ -58,7 +59,7 @@ class active_item_cache
          * Adds the reference to the cache. Does nothing if the reference is already in the cache.
          * Relies on the fact that item::processing_speed() is a constant.
          */
-        bool add(item& it, point location, item* parent = nullptr,
+        bool add(item& it, point location, int z = 0, item* parent = nullptr,
             std::vector<item_pocket const*> const& pocket_chain = {});
 
         /**
