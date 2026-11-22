@@ -1798,8 +1798,6 @@ static tripoint_abs_omt display( const tripoint_abs_omt &orig,
     ictxt.register_action( "zoom_in" );
     ictxt.register_action( "zoom_out" );
     ictxt.register_action( "HELP_KEYBINDINGS" );
-    ictxt.register_action( "MOUSE_MOVE" );
-    ictxt.register_action( "SELECT" );
     ictxt.register_action( "CHOOSE_DESTINATION" );
 
     // Actions whose keys we want to display.
@@ -1830,7 +1828,6 @@ static tripoint_abs_omt display( const tripoint_abs_omt &orig,
     bool show_explored = true;
     static bool fast_scroll = false;
     int fast_scroll_offset = get_option<int>( "FAST_SCROLL_OFFSET" );
-    std::optional<tripoint> mouse_pos;
     std::chrono::time_point<std::chrono::steady_clock> last_blink = std::chrono::steady_clock::now();
 
     ui.on_redraw( [&]( ui_adaptor & ui ) {
@@ -1840,31 +1837,10 @@ static tripoint_abs_omt display( const tripoint_abs_omt &orig,
 
     do {
         ui_manager::redraw();
-#if (defined TILES || defined _WIN32 || defined WINDOWS )
-        int scroll_timeout = get_option<int>( "EDGE_SCROLL" );
-        // If EDGE_SCROLL is disabled, it will have a value of -1.
-        // blinking won't work if handle_input() is passed a negative integer.
-        if( scroll_timeout < 0 ) {
-            scroll_timeout = BLINK_SPEED;
-        }
-        action = ictxt.handle_input( scroll_timeout );
-#else
         action = ictxt.handle_input( BLINK_SPEED );
-#endif
         if( const std::optional<tripoint> vec = ictxt.get_direction( action ) ) {
             int scroll_d = fast_scroll ? fast_scroll_offset : 1;
             curs += vec->xy() * scroll_d;
-        } else if( action == "MOUSE_MOVE" || action == "TIMEOUT" ) {
-            tripoint edge_scroll = g->mouse_edge_scrolling_overmap( ictxt );
-            if( edge_scroll != tripoint_zero ) {
-                if( action == "MOUSE_MOVE" ) {
-                    edge_scroll *= 2;
-                }
-                curs += edge_scroll;
-            }
-        } else if( action == "SELECT" &&
-                   ( mouse_pos = ictxt.get_coordinates( g->w_overmap, point_zero, true ) ) ) {
-            curs += mouse_pos->xy();
         } else if( action == "CENTER" ) {
             curs = orig;
         } else if( action == "LEVEL_DOWN" && curs.z() > -OVERMAP_DEPTH ) {

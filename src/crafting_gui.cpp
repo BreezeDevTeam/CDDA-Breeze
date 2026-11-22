@@ -1152,7 +1152,6 @@ static input_context make_crafting_context( bool highlight_unread_recipes )
     ctxt.register_action( "CHOOSE_CRAFTING_LOCATION" );
     ctxt.register_action( "RELATED_RECIPES" );
     ctxt.register_action( "HIDE_SHOW_RECIPE" );
-    ctxt.register_action( "SELECT" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
     if( highlight_unread_recipes ) {
@@ -1547,18 +1546,6 @@ static const translation filter_help_start = to_translation(
             "\n\n"
             "<color_white>Examples:</color>\n" );
 
-static bool mouse_in_window( std::optional<point> coord, const catacurses::window &w_ )
-{
-    if( coord.has_value() ) {
-        inclusive_rectangle<point> window_area( point( getbegx( w_ ), getbegy( w_ ) ),
-                                                point( getmaxx( w_ ) + getbegx( w_ ), getmaxy( w_ ) + getbegy( w_ ) ) );
-        if( window_area.contains( coord.value() ) ) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static void recursively_expance_recipes( std::vector<const recipe *> &current,
         std::vector<int> &indent, std::map<const recipe *, availability> &availability_cache, int i,
         Character &crafter, const recipe_subset *known_recipes,
@@ -1717,8 +1704,6 @@ crafting_selection select_crafter_and_crafting_recipe(
     catacurses::window w_subhead;
     catacurses::window w_data;
     catacurses::window w_iteminfo;
-    inclusive_rectangle<point> mouseover_area_list;
-    inclusive_rectangle<point> mouseover_area_recipe;
     std::vector<std::string> keybinding_tips;
     int keybinding_x = 0;
     ui_adaptor ui;
@@ -2059,12 +2044,6 @@ crafting_selection select_crafter_and_crafting_recipe(
             // border + padding + name + padding
             const int xpos = 1 + 1 + max_recipe_name_width + 3;
             const int fold_width = FULL_SCREEN_WIDTH - xpos - 2;
-            const int w_left = getbegx( w_data );
-            mouseover_area_list = inclusive_rectangle<point>( point( 1 + w_left, headHeight + subHeadHeight ),
-                                  point( w_left + xpos - 1, headHeight + subHeadHeight + dataLines ) );
-            mouseover_area_recipe = inclusive_rectangle<point>( point( xpos + w_left,
-                                    headHeight + subHeadHeight ), point( xpos + w_left + fold_width + 1,
-                                            headHeight + subHeadHeight + dataLines ) );
             const nc_color color = avail.color( true );
             const std::string qry = trim( filterstring );
             std::string qry_comps;
@@ -2298,62 +2277,11 @@ crafting_selection select_crafter_and_crafting_recipe(
         const int recmax = static_cast<int>( current.size() );
         const int scroll_rate = recmax > 20 ? 10 : 3;
 
-        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-        const bool mouse_in_list = coord.has_value() && mouseover_area_list.contains( coord.value() );
-        const bool mouse_in_recipe = coord.has_value() && mouseover_area_recipe.contains( coord.value() );
-
-        // Check mouse selection of recipes separately so that selecting an already-selected recipe
-        // can go straight to "CONFIRM"
-        if( action == "SELECT" ) {
-            if( coord.has_value() ) {
-                point local_coord = coord.value() - point( getbegx( w_data ), getbegy( w_data ) );
-                for( const auto &entry : list_map ) {
-                    if( entry.second.contains( local_coord ) ) {
-                        if( line == static_cast<int>( entry.first ) ) {
-                            action = "CONFIRM";
-                        } else {
-                            if( !previously_toggled_unread ) {
-                                last_line = line;
-                            }
-                            line = entry.first;
-                            user_moved_line = highlight_unread_recipes;
-                        }
-                    }
-                }
-            }
-        }
-
-        if( action == "SELECT" ) {
-            bool handled = false;
-            if( coord.has_value() ) {
-                point local_coord = coord.value() - point( getbegx( w_head_tabs ), getbegy( w_head_tabs ) );
-                for( const auto &entry : translated_tab_map ) {
-                    if( entry.second.contains( local_coord ) ) {
-                        tab.set_index( entry.first );
-                        recalc = true;
-                        subtab = tab_list( craft_subcat_list[tab.cur()] );
-                        handled = true;
-                    }
-                }
-                local_coord = coord.value() - point( getbegx( w_subhead ), getbegy( w_subhead ) );
-                if( !handled && !batch && filterstring.empty() ) {
-                    for( const auto &entry : translated_subtab_map ) {
-                        if( entry.second.contains( local_coord ) ) {
-                            subtab.set_index( entry.first );
-                            recalc = true;
-                        }
-                    }
-                }
-            }
-        } else if( action == "SCROLL_RECIPE_INFO_UP" ) {
+        if( action == "SCROLL_RECIPE_INFO_UP" ) {
             recipe_info_scroll -= dataLines;
-        } else if( action == "SCROLL_UP" && mouse_in_recipe ) {
-            --recipe_info_scroll;
         } else if( action == "SCROLL_RECIPE_INFO_DOWN" ) {
             recipe_info_scroll += dataLines;
-        } else if( action == "SCROLL_DOWN" && mouse_in_recipe ) {
-            ++recipe_info_scroll;
-        } else if( action == "LEFT" || ( action == "SCROLL_UP" && mouse_in_window( coord, w_subhead ) ) ) {
+        } else if( action == "LEFT" ) {
             if( batch || !filterstring.empty() ) {
                 continue;
             }
@@ -2365,20 +2293,14 @@ crafting_selection select_crafter_and_crafting_recipe(
             recalc = true;
         } else if( action == "SCROLL_ITEM_INFO_UP" ) {
             item_info_scroll -= scroll_item_info_lines;
-        } else if( action == "SCROLL_UP" && mouse_in_window( coord, w_iteminfo ) ) {
-            --item_info_scroll;
         } else if( action == "SCROLL_ITEM_INFO_DOWN" ) {
             item_info_scroll += scroll_item_info_lines;
-        } else if( action == "SCROLL_DOWN" && mouse_in_window( coord, w_iteminfo ) ) {
-            ++item_info_scroll;
-        } else if( action == "PREV_TAB" || ( action == "SCROLL_UP" &&
-                                             mouse_in_window( coord, w_head_tabs ) ) ) {
+        } else if( action == "PREV_TAB" ) {
             tab.prev();
             // Default ALL
             subtab = tab_list( craft_subcat_list[tab.cur()] );
             recalc = true;
-        } else if( action == "RIGHT" || ( action == "SCROLL_DOWN" &&
-                                          mouse_in_window( coord, w_subhead ) ) ) {
+        } else if( action == "RIGHT" ) {
             if( batch || !filterstring.empty() ) {
                 continue;
             }
@@ -2388,8 +2310,7 @@ crafting_selection select_crafter_and_crafting_recipe(
             } while( subtab.cur() != start && available_recipes.empty_category( tab.cur(),
                      subtab.cur() != "CSC_ALL" ? subtab.cur() : "" ) );
             recalc = true;
-        } else if( action == "NEXT_TAB" || ( action == "SCROLL_DOWN" &&
-                                             mouse_in_window( coord, w_head_tabs ) ) ) {
+        } else if( action == "NEXT_TAB" ) {
             tab.next();
             // Default ALL
             subtab = tab_list( craft_subcat_list[tab.cur()] );
@@ -2400,16 +2321,12 @@ crafting_selection select_crafter_and_crafting_recipe(
             }
             line++;
             user_moved_line = highlight_unread_recipes;
-        } else if( action == "SCROLL_DOWN" && mouse_in_list ) {
-            line = std::min( recmax - 1, line + 1 );
         } else if( action == "UP" ) {
             if( !previously_toggled_unread ) {
                 last_line = line;
             }
             line--;
             user_moved_line = highlight_unread_recipes;
-        } else if( action == "SCROLL_UP" && mouse_in_list ) {
-            line = std::max( 0, line - 1 );
         } else if( action == "PAGE_DOWN" ) {
             if( line == recmax - 1 ) {
                 line = 0;

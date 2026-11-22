@@ -205,18 +205,6 @@ bool tab_manager::handle_input( const std::string &action, const input_context &
         position.prev();
     } else if( action == "NEXT_TAB" ) {
         position.next();
-    } else if( action == "SELECT" ) {
-        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-        if( coord.has_value() ) {
-            point local_coord = coord.value() + window_pos;
-            for( const auto &entry : tab_map ) {
-                if( entry.second.contains( local_coord ) ) {
-                    position.set_index( entry.first );
-                    return true;
-                }
-            }
-        }
-        return false;
     } else {
         return false;
     }
@@ -227,7 +215,6 @@ void tab_manager::set_up_tab_navigation( input_context &ctxt )
 {
     ctxt.register_action( "PREV_TAB" );
     ctxt.register_action( "NEXT_TAB" );
-    ctxt.register_action( "SELECT" );
     ctxt.register_action( "QUIT" );
 }
 
@@ -1502,7 +1489,6 @@ void set_traits( tab_manager &tabs, avatar &u, pool_type pool )
     input_context ctxt( "NEW_CHAR_TRAITS" );
     tabs.set_up_tab_navigation( ctxt );
     for( scrollbar &sb : trait_sbs ) {
-        sb.set_draggable( ctxt );
     }
     ctxt.register_cardinal();
     ctxt.register_action( "PAGE_UP", to_translation( "Fast scroll up" ) );
@@ -1716,23 +1702,8 @@ void set_traits( tab_manager &tabs, avatar &u, pool_type pool )
             continue;
         }
 #endif
-        std::array< int, 3> cur_sb_pos = iStartPos;
-        bool scrollbar_handled = false;
-        for( int i = 0; i < static_cast<int>( trait_sbs.size() ); ++i ) {
-            if( trait_sbs[i].handle_dragging( action, ctxt.get_coordinates_text( catacurses::stdscr ),
-                                              cur_sb_pos[i] ) ) {
-                if( cur_sb_pos[i] != iStartPos[i] ) {
-                    iStartPos[i] = cur_sb_pos[i];
-                    iCurrentLine[i] = iStartPos[i] + ( iContentHeight - 1 ) / 2;
-                }
-                scrollbar_handled = true;
-            }
-        }
-
         if( tabs.handle_input( action, ctxt ) ) {
             break; // Tab has changed or user has quit the screen
-        } else if( scrollbar_handled ) {
-            // No action required, scrollbar has handled it
         } else if( action == "LEFT" ) {
             iCurWorkingPage = next_avail_page( true );
         } else if( action == "RIGHT" ) {
@@ -2102,7 +2073,6 @@ void set_profession( tab_manager &tabs, avatar &u, pool_type pool )
     input_context ctxt( "NEW_CHAR_PROFESSIONS" );
     tabs.set_up_tab_navigation( ctxt );
     details.set_up_navigation( ctxt, scrolling_key_scheme::angle_bracket_scroll );
-    list_sb.set_draggable( ctxt );
     ctxt.register_cardinal();
     ctxt.register_action( "PAGE_UP", to_translation( "Fast scroll up" ) );
     ctxt.register_action( "PAGE_DOWN", to_translation( "Fast scroll down" ) );
@@ -2265,18 +2235,11 @@ void set_profession( tab_manager &tabs, avatar &u, pool_type pool )
         const int recmax = profs_length;
         const int scroll_rate = recmax > 20 ? 10 : 2;
         const int id_for_curr_description = cur_id;
-        int scrollbar_pos = iStartPos;
 
         if( tabs.handle_input( action, ctxt ) ) {
             break; // Tab has changed or user has quit the screen
         } else if( details.handle_navigation( action, ctxt ) ) {
             //NO FURTHER ACTION REQUIRED
-        } else if( list_sb.handle_dragging( action, ctxt.get_coordinates_text( catacurses::stdscr ),
-                                            scrollbar_pos ) ) {
-            if( scrollbar_pos != iStartPos ) {
-                iStartPos = scrollbar_pos;
-                cur_id = iStartPos + ( iContentHeight - 1 ) / 2;
-            }
         } else if( action == "DOWN" ) {
             cur_id++;
             if( cur_id > recmax - 1 ) {
@@ -2509,7 +2472,6 @@ void set_hobbies( tab_manager &tabs, avatar &u, pool_type pool )
     input_context ctxt( "NEW_CHAR_PROFESSIONS" );
     tabs.set_up_tab_navigation( ctxt );
     details.set_up_navigation( ctxt, scrolling_key_scheme::angle_bracket_scroll );
-    list_sb.set_draggable( ctxt );
     ctxt.register_cardinal();
     ctxt.register_action( "PAGE_UP", to_translation( "Fast scroll up" ) );
     ctxt.register_action( "PAGE_DOWN", to_translation( "Fast scroll down" ) );
@@ -2647,18 +2609,11 @@ void set_hobbies( tab_manager &tabs, avatar &u, pool_type pool )
 #endif
         const int recmax = profs_length;
         const int scroll_rate = recmax > 20 ? 10 : 2;
-        int scrollbar_pos = iStartPos;
 
         if( tabs.handle_input( action, ctxt ) ) {
             break; // Tab has changed or user has quit the screen
         } else if( details.handle_navigation( action, ctxt ) ) {
             //NO FURTHER ACTION REQUIRED
-        } else if( list_sb.handle_dragging( action, ctxt.get_coordinates_text( catacurses::stdscr ),
-                                            scrollbar_pos ) ) {
-            if( scrollbar_pos != iStartPos ) {
-                iStartPos = scrollbar_pos;
-                cur_id = iStartPos + ( iContentHeight - 1 ) / 2;
-            }
         } else if( action == "DOWN" ) {
             cur_id++;
             if( cur_id > recmax - 1 ) {
@@ -2863,7 +2818,6 @@ void set_skills( tab_manager &tabs, avatar &u, pool_type pool )
 #endif
     input_context ctxt( "NEW_CHAR_SKILLS" );
     details.set_up_navigation( ctxt, scrolling_key_scheme::angle_bracket_scroll );
-    list_sb.set_draggable( ctxt );
     ctxt.register_cardinal();
     ctxt.register_action( "PAGE_UP", to_translation( "Fast scroll up" ) );
     ctxt.register_action( "PAGE_DOWN", to_translation( "Fast scroll down" ) );
@@ -3096,22 +3050,11 @@ void set_skills( tab_manager &tabs, avatar &u, pool_type pool )
         }
 #endif
         const int pos_for_curr_description = cur_pos;
-        int scrollbar_pos = cur_offset;
 
         if( tabs.handle_input( action, ctxt ) ) {
             break; // Tab has changed or user has quit the screen
         } else if( details.handle_navigation( action, ctxt ) ) {
             // NO FURTHER ACTION REQUIRED
-        } else if( list_sb.handle_dragging( action, ctxt.get_coordinates_text( catacurses::stdscr ),
-                                            scrollbar_pos ) ) {
-            if( scrollbar_pos != cur_offset ) {
-                cur_offset = scrollbar_pos;
-                cur_pos = cur_offset + ( iContentHeight - 1 ) / 2; // Get approximate location
-                get_next( false, false ); // Then make sure it's a skill rather than a heading
-                if( cur_pos < num_skills / 2 ) {
-                    get_next( true, false ); // Go back to where we were to ensure we can drag to the top
-                }
-            }
         } else if( action == "DOWN" ) {
             get_next( false, false );
         } else if( action == "UP" ) {
@@ -3340,7 +3283,6 @@ void set_scenario( tab_manager &tabs, avatar &u, pool_type pool )
     input_context ctxt( "NEW_CHAR_SCENARIOS" );
     tabs.set_up_tab_navigation( ctxt );
     details.set_up_navigation( ctxt, scrolling_key_scheme::angle_bracket_scroll );
-    list_sb.set_draggable( ctxt );
     ctxt.register_cardinal();
     ctxt.register_action( "PAGE_UP", to_translation( "Fast scroll up" ) );
     ctxt.register_action( "PAGE_DOWN", to_translation( "Fast scroll down" ) );
@@ -3510,18 +3452,11 @@ void set_scenario( tab_manager &tabs, avatar &u, pool_type pool )
 #endif
         const int scroll_rate = scens_length > 20 ? 5 : 2;
         const int id_for_curr_description = cur_id;
-        int scrollbar_pos = iStartPos;
 
         if( tabs.handle_input( action, ctxt ) ) {
             break; // Tab has changed or user has quit the screen
         } else if( details.handle_navigation( action, ctxt ) ) {
             // NO FURTHER ACTION REQUIRED
-        } else if( list_sb.handle_dragging( action, ctxt.get_coordinates_text( catacurses::stdscr ),
-                                            scrollbar_pos ) ) {
-            if( scrollbar_pos != iStartPos ) {
-                iStartPos = scrollbar_pos;
-                cur_id = iStartPos + ( iContentHeight - 1 ) / 2;
-            }
         } else if( action == "DOWN" ) {
             cur_id++;
             if( cur_id > scens_length - 1 ) {

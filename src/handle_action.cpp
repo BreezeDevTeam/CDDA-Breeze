@@ -653,13 +653,13 @@ input_context game::get_player_input(std::string& action)
             }
 
             ui_manager::redraw_invalidated();
-        } while (handle_mouseview(ctxt, action) && uquit != QUIT_WATCH
+        } while (handle_view_input(ctxt, action) && uquit != QUIT_WATCH
             && (action != "TIMEOUT" || !current_turn.has_timeout_elapsed()));
         ctxt.reset_timeout();
     }
     else {
         ctxt.set_timeout(125);
-        while (handle_mouseview(ctxt, action)) {
+        while (handle_view_input(ctxt, action)) {
             if (action == "TIMEOUT" && current_turn.has_timeout_elapsed()) {
                 break;
             }
@@ -3871,8 +3871,7 @@ static std::optional<ladder_descent_result> check_ladder_descent(
     return ladder_descent_result{ max_dist, true, false };
 }
 
-bool game::do_regular_action(action_id& act, avatar& player_character,
-    const std::optional<tripoint>& mouse_target)
+bool game::do_regular_action(action_id& act, avatar& player_character)
 {
     item_location weapon = player_character.get_wielded_item();
     bool in_shell = player_character.has_active_mutation(trait_SHELL2) ||
@@ -4256,14 +4255,6 @@ bool game::do_regular_action(action_id& act, avatar& player_character,
         else if (player_character.has_effect(effect_incorporeal)) {
             add_msg(m_info, _("You lack the substance to affect anything."));
         }
-        else if (mouse_target) {
-            if( player_character.is_mounted() &&
-                !is_mounted_passage_openable( m, *mouse_target ) ) {
-                add_msg( m_info, _( "骑乘时只能关门或关窗。" ) );
-            } else {
-                doors::close_door( m, player_character, *mouse_target );
-            }
-        }
         else {
             close();
         }
@@ -4288,10 +4279,6 @@ bool game::do_regular_action(action_id& act, avatar& player_character,
     case ACTION_EXAMINE_AND_PICKUP:
         if (in_shell) {
             add_msg(m_info, _("You can't examine your surroundings while you're in your shell."));
-        }
-        else if (mouse_target) {
-            // Examine including item pickup if ACTION_EXAMINE_AND_PICKUP is used
-            examine(*mouse_target, act == ACTION_EXAMINE_AND_PICKUP);
         }
         else {
             examine(act == ACTION_EXAMINE_AND_PICKUP);
@@ -4323,9 +4310,6 @@ bool game::do_regular_action(action_id& act, avatar& player_character,
         }
         else if (u.has_effect(effect_incorporeal)) {
             add_msg(m_info, _("You lack the substance to affect anything."));
-        }
-        else if (mouse_target) {
-            pickup(*mouse_target);
         }
         else {
             if (act == ACTION_PICKUP_ALL) {
@@ -5425,12 +5409,6 @@ bool game::handle_action()
         ctxt = get_player_input(action);
     }
 
-    bool veh_ctrl = has_vehicle_control(player_character);
-
-    // If performing an action with right mouse button, co-ordinates
-    // of location clicked.
-    std::optional<tripoint> mouse_target;
-
     if (uquit == QUIT_WATCH && action == "QUIT") {
         uquit = QUIT_DIED;
         return false;
@@ -5488,56 +5466,7 @@ bool game::handle_action()
             user_action_counter += 1;
         }
 
-        if (act == ACTION_CLICK_AND_DRAG) {
-            // Need to return false to avoid disrupting actions like character mouse movement that require two clicks
-            return false;
-        }
-
-        if (act == ACTION_SELECT || act == ACTION_SEC_SELECT) {
-            // Mouse button click
-            if (veh_ctrl) {
-                // No mouse use in vehicle
-                return false;
-            }
-
-            if (player_character.is_dead_state()) {
-                // do not allow mouse actions while dead
-                return false;
-            }
-
-            const std::optional<tripoint> mouse_pos = ctxt.get_coordinates(w_terrain, ter_view_p.xy(), true);
-            if (!mouse_pos) {
-                return false;
-            }
-            if (!player_character.sees(*mouse_pos)) {
-                // Not clicked in visible terrain
-                return false;
-            }
-            mouse_target = mouse_pos;
-
-            if (act == ACTION_SELECT) {
-                // Note: The following has the potential side effect of
-                // setting auto-move destination state in addition to setting
-                // act.
-                // TODO: fix point types
-                if (!try_get_left_click_action(act, tripoint_bub_ms(*mouse_target))) {
-                    return false;
-                }
-            }
-            else if (act == ACTION_SEC_SELECT) {
-                // TODO: fix point types
-                if (!try_get_right_click_action(act, tripoint_bub_ms(*mouse_target))) {
-                    return false;
-                }
-            }
-        }
-        else if (act != ACTION_TIMEOUT) {
-            // act has not been set for an auto-move, so clearing possible
-            // auto-move destinations. Since initializing an auto-move with
-            // the mouse may span across multiple actions, we do not clear the
-            // auto-move destination if the action is only a timeout, as this
-            // would require the user to double click quicker than the
-            // timeout delay.
+        if (act != ACTION_TIMEOUT) {
             player_character.clear_destination();
             destination_preview.clear();
         }
@@ -5574,7 +5503,7 @@ bool game::handle_action()
 
     // actions allowed only while alive
     if (!player_character.is_dead_state()) {
-        if (!do_regular_action(act, player_character, mouse_target)) {
+        if (!do_regular_action(act, player_character)) {
             return false;
         }
     }

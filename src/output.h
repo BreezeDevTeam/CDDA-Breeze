@@ -915,20 +915,13 @@ class scrollbar
         scrollbar &bar_color( nc_color bar_c );
         // can viewport_pos go beyond (content_size - viewport_size)?
         scrollbar &scroll_to_last( bool scr2last );
-        // Sets up ability for the scrollbar to be dragged with the mouse
-        scrollbar &set_draggable( input_context &ctxt );
         // draw the scrollbar to the window
         void apply( const catacurses::window &window );
-        // Checks if the user is dragging the scrollbar with the mouse (set_draggable first)
-        bool handle_dragging( const std::string &action, const std::optional<point> &coord,
-                              int &position );
     private:
         int offset_x_v, offset_y_v;
         int content_size_v, viewport_pos_v, viewport_size_v;
         nc_color border_color_v, arrow_color_v, slot_color_v, bar_color_v;
         bool scroll_to_last_v;
-        bool dragging = false;
-        inclusive_rectangle<point> scrollbar_area;
 };
 
 struct multiline_list_entry {
@@ -949,9 +942,7 @@ struct multiline_list_entry {
  * are registered
  * 4. Call print_entries() to display all of the folded text that fits and a scrollbar in
  * the window
- * 5. Call handle_navigation() to handle scrolling and selection of the text, including
- * arrow keys, page up/down, home/end, mousewheel scrolling, scrolling based on mouse position,
- * and click-and-drag of the scrollbar
+ * 5. Call handle_navigation() to handle scrolling and selection of the text
  * 6. Call fold_entries() when the window is resized
  * See dialogue_win.cpp for example usage
  **/
@@ -960,13 +951,9 @@ class multiline_list
         bool has_prefix;
         int entry_position;
         int offset_position;
-        int mouseover_position;
-        std::chrono::time_point<std::chrono::steady_clock> mouseover_delay_end;
-        size_t mouseover_accel_counter = 1;
         std::vector<multiline_list_entry> entries;
         std::vector<int> entry_sizes;
         int total_length;
-        std::map<size_t, inclusive_rectangle<point>> entry_map;
 
         std::unique_ptr<scrollbar> list_sb;
         catacurses::window &w;
@@ -1019,8 +1006,6 @@ class multiline_list
  * keys used for that purpose.
  * Call draw when drawing related UI stuff.  draw calls werase/wnoutrefresh for its
  * window internally.
- * Has some built-in default navigation options, including mousewheel scrolling
- * when the mouse is over the window (tiles only) and a click-and-drag scrollbar
  * (technically works in curses, but is smoother in tiles).
  **/
 enum scrolling_key_scheme : int {

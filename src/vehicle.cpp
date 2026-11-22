@@ -5674,7 +5674,7 @@ void vehicle::make_active( item_location &loc )
     }
     // System insures that there is only one part in this vector.
     vehicle_part *cargo_part = cargo_parts.front();
-    active_items.add( target, cargo_part->mount );
+    active_items.add( target, cargo_part->mount, cargo_part->mount_z );
 }
 
 int vehicle::add_charges( int part, const item &itm )
@@ -5749,7 +5749,7 @@ std::optional<vehicle_stack::iterator> vehicle::add_item( int part, const item &
     }
 
     const vehicle_stack::iterator new_pos = p.items.insert( itm_copy );
-    active_items.add(*new_pos, p.mount);
+    active_items.add(*new_pos, p.mount, p.mount_z);
 
     p.invalidate_cargo_passage_cache();
     invalidate_mass();
@@ -5798,7 +5798,7 @@ item& vehicle::add_item_new(int part, const item& itm) {
     item itm_copy = itm;
 
     const vehicle_stack::iterator new_pos = p.items.insert(itm_copy);
-    active_items.add(*new_pos, p.mount);
+    active_items.add(*new_pos, p.mount, p.mount_z);
 
     p.invalidate_cargo_passage_cache();
     invalidate_mass();
@@ -6097,7 +6097,7 @@ void vehicle::refresh_active_item_cache()
         auto it = vp.part().items.begin();
         auto end = vp.part().items.end();
         for( ; it != end; ++it ) {
-            active_items.add(*it, vp.mount());
+            active_items.add(*it, vp.mount(), vp.mount_z());
         }
     }
 }

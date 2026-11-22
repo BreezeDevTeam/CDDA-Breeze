@@ -283,14 +283,9 @@ query_popup::result query_popup::query_once()
         for( const query_popup::query_option &opt : options ) {
             ctxt.register_action( opt.action );
         }
-        // Mouse movement and button
-        ctxt.register_action( "SELECT" );
-        ctxt.register_action( "MOUSE_MOVE" );
     }
     if( anykey ) {
         ctxt.register_action( "ANY_INPUT" );
-        // Mouse movement, button, and wheel
-        ctxt.register_action( "COORDINATE" );
     }
     if( cancel ) {
         ctxt.register_action( "QUIT" );
@@ -303,30 +298,7 @@ query_popup::result query_popup::query_once()
         res.action = ctxt.handle_input();
         res.evt = ctxt.get_raw_input();
 
-        // If we're tracking mouse movement
-        if( !options.empty() && ( res.action == "MOUSE_MOVE" || res.action == "SELECT" ) ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( win );
-            for( size_t i = 0; i < buttons.size(); i++ ) {
-                if( coord.has_value() && buttons[i].contains( coord.value() ) ) {
-                    if( i != cur ) {
-                        // Mouse-over new button, switch selection
-                        cur = i;
-                        ui_manager::redraw();
-                    }
-                    if( res.action == "SELECT" ) {
-                        // Left-click to confirm selection
-                        res.action = "CONFIRM";
-                    }
-                }
-            }
-        }
-    } while(
-        // Always ignore mouse movement
-        ( res.evt.type == input_event_t::mouse &&
-          res.evt.get_first_input() == static_cast<int>( MouseInput::Move ) ) ||
-        // Ignore window losing focus in SDL
-        ( res.evt.type == input_event_t::keyboard_char && res.evt.sequence.empty() )
-    );
+    } while( res.evt.type == input_event_t::keyboard_char && res.evt.sequence.empty() );
 
     if( cancel && res.action == "QUIT" ) {
         res.wait_input = false;

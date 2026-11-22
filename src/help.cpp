@@ -160,9 +160,6 @@ void help::display_help() const
     ctxt.register_cardinal();
     ctxt.register_action( "QUIT" );
     ctxt.register_action( "CONFIRM" );
-    // for mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
     // for the menu shortcuts
     ctxt.register_action( "ANY_INPUT" );
 
@@ -187,24 +184,6 @@ void help::display_help() const
         sel = -1;
         action = ctxt.handle_input();
         std::string sInput = ctxt.get_raw_input().text;
-
-        // Mouse selection
-        if( action == "MOUSE_MOVE" || action == "SELECT" ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( w_help );
-            if( !!coord ) {
-                int cnt = run_for_point_in<int, point>( opt_map, *coord,
-                [&sel]( const std::pair<int, inclusive_rectangle<point>> &p ) {
-                    sel = p.first;
-                } );
-                if( cnt > 0 && action == "SELECT" ) {
-                    auto iter = hotkeys.find( sel );
-                    if( iter != hotkeys.end() && !iter->second.empty() ) {
-                        sInput = iter->second.front();
-                        action = "CONFIRM";
-                    }
-                }
-            }
-        }
 
         for( const auto &hotkey_entry : hotkeys ) {
             auto help_text_it = help_texts.find( hotkey_entry.first );

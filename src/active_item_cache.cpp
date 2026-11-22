@@ -49,7 +49,7 @@ void active_item_cache::remove( const item *it )
     }
 }
 
-bool active_item_cache::add(item& it, point location, item* parent,
+bool active_item_cache::add(item& it, point location, int z, item* parent,
     std::vector<item_pocket const*> const& pocket_chain)
 {
     std::vector<item_pocket const*> pockets = pocket_chain;
@@ -57,14 +57,14 @@ bool active_item_cache::add(item& it, point location, item* parent,
     for (item_pocket* pk : it.get_all_standard_pockets()) {
         pockets.emplace_back(pk);
         for (item* pkit : pk->all_items_top()) {
-            ret |= add(*pkit, location, &it, pockets);
+            ret |= add(*pkit, location, z, &it, pockets);
         }
     }
     if (it.processing_speed() == item::NO_PROCESSING) {
         return ret;
     }
     std::list<item_reference>& target_list = active_items[it.processing_speed()];
-    item_reference ref{ location, it.get_safe_reference(), parent, pocket_chain };
+    item_reference ref{ location, z, it.get_safe_reference(), parent, pocket_chain };
     if( it.can_revive() ) {
         special_items[special_item_type::corpse].emplace_back(ref);
     }

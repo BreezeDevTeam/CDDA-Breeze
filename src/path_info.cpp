@@ -446,59 +446,6 @@ std::string PATH_INFO::credits()
                                  datadir_value + "credits/" + "en.credits" );
 }
 
-std::string PATH_INFO::title( const holiday current_holiday )
-{
-    std::string theme_basepath = datadir_value + "title/";
-    std::string theme_extension = ".title";
-    std::string theme_fallback = theme_basepath + "en.title";
-
-    if( !get_option<bool>( "ENABLE_ASCII_TITLE" ) ) {
-        return _( "Cataclysm: Dark Days Ahead" );
-    }
-
-    if( x_in_y( get_option<int>( "ALT_TITLE" ), 100 ) ) {
-        theme_extension = ".alt1";
-        theme_fallback = datadir_value + "title/" + "en.alt1";
-    }
-
-    if( !get_option<bool>( "SEASONAL_TITLE" ) ) {
-        return find_translated_file( theme_basepath, theme_extension, theme_fallback );
-    }
-
-    switch( current_holiday ) {
-        case holiday::new_year:
-            theme_extension = ".new_year";
-            theme_fallback = datadir_value + "title/" + "en.new_year";
-            break;
-        case holiday::easter:
-            theme_extension = ".easter";
-            theme_fallback = datadir_value + "title/" + "en.easter";
-            break;
-        case holiday::independence_day:
-            theme_extension = ".independence_day";
-            theme_fallback = datadir_value + "title/" + "en.independence_day";
-            break;
-        case holiday::halloween:
-            theme_extension = ".halloween";
-            theme_fallback = datadir_value + "title/" + "en.halloween";
-            break;
-        case holiday::thanksgiving:
-            theme_extension = ".thanksgiving";
-            theme_fallback = datadir_value + "title/" + "en.thanksgiving";
-            break;
-        case holiday::christmas:
-            theme_extension = ".christmas";
-            theme_fallback = datadir_value + "title/" + "en.christmas";
-            break;
-        case holiday::mid_autumn:
-        case holiday::none:
-        case holiday::num_holiday:
-        default:
-            break;
-    }
-    return find_translated_file( theme_basepath, theme_extension, theme_fallback );
-}
-
 cata_path PATH_INFO::names()
 {
     return find_translated_file( datadir_path_value / "names", ".json",

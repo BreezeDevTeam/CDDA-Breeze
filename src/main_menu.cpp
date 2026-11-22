@@ -1,6 +1,7 @@
 #include "main_menu.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -80,311 +81,670 @@ void main_menu::on_error()
     sfx::play_variant_sound( "menu_error", "default", 100 );
 }
 
-//CJK characters have a width of 2, etc
-static int utf8_width_notags( const char *s )
+namespace
 {
-    int len = strlen( s );
-    const char *ptr = s;
-    int w = 0;
-    bool inside_tag = false;
+
+constexpr int bc_frame_ms = 33;
+constexpr int bc_max_box_subs = 5;
+
+std::chrono::steady_clock::time_point bc_epoch = std::chrono::steady_clock::now();
+
+double bc_now()
+{
+    return std::chrono::duration<double>( std::chrono::steady_clock::now() - bc_epoch ).count();
+}
+
+bool bc_on_parent = true;
+int bc_sub_scroll = 0;
+int bc_visible_subs = bc_max_box_subs;
+int bc_box_w = 40;
+int bc_box_h = 15;
+double bc_move_at = -100.0;
+
+struct bc_sub_entry {
+    std::string label;
+    std::string key;
+    nc_color color;
+};
+
+std::vector<bc_sub_entry> bc_subs;
+
+void bc_put( const catacurses::window &w, const point &p, const std::string &glyph, nc_color col )
+{
+    if( p.x < 0 || p.y < 0 || p.x >= getmaxx( w ) || p.y >= getmaxy( w ) ) {
+        return;
+    }
+    mvwputch( w, p, col, glyph );
+}
+
+void bc_text( const catacurses::window &w, const point &p, const std::string &text, nc_color col )
+{
+    if( text.empty() || p.x < 0 || p.y < 0 || p.x >= getmaxx( w ) || p.y >= getmaxy( w ) ) {
+        return;
+    }
+    mvwprintz( w, p, col, text );
+}
+
+int bc_text_end( const catacurses::window &w, const point &p, const std::string &text,
+                 nc_color col )
+{
+    bc_text( w, p, text, col );
+    return p.x + utf8_width( text );
+}
+
+void bc_text_band( const catacurses::window &w, const point &p, const std::string &text,
+                   nc_color col, nc_color band_col, int band_lo, int band_hi )
+{
+    std::string runs[3];
+    int x = p.x;
+    const char *ptr = text.c_str();
+    int len = static_cast<int>( text.size() );
     while( len > 0 ) {
-        uint32_t ch = UTF8_getch( &ptr, &len );
+        const char *start = ptr;
+        const uint32_t ch = UTF8_getch( &ptr, &len );
         if( ch == UNKNOWN_UNICODE ) {
             continue;
         }
-        if( ch == '<' ) {
-            inside_tag = true;
-        } else if( ch == '>' ) {
-            inside_tag = false;
+        const int cw = mk_wcwidth( ch );
+        if( cw < 0 ) {
             continue;
         }
-        if( inside_tag ) {
-            continue;
-        }
-        w += mk_wcwidth( ch );
+        const int bucket = x + cw <= band_lo ? 0 : ( x >= band_hi ? 2 : 1 );
+        runs[bucket].append( start, ptr - start );
+        x += cw;
     }
-    return w;
+    int cx = p.x;
+    for( int i = 0; i < 3; i++ ) {
+        if( runs[i].empty() ) {
+            continue;
+        }
+        bc_text( w, point( cx, p.y ), runs[i], i == 1 ? band_col : col );
+        cx += utf8_width( runs[i] );
+    }
 }
 
-std::vector<int> main_menu::print_menu_items( const catacurses::window &w_in,
-        const std::vector<std::string> &vItems,
-        size_t iSel, point offset, int spacing, bool main )
+std::string bc_tail( const std::string &s, int max_width )
 {
-    const point win_offset( getbegx( w_in ), getbegy( w_in ) );
-    std::vector<int> ret;
-    std::string text;
-    for( size_t i = 0; i < vItems.size(); ++i ) {
-        if( i > 0 ) {
-            text += std::string( spacing, ' ' );
-        }
-        ret.push_back( utf8_width_notags( text.c_str() ) );
-
-        std::string temp = shortcut_text( iSel == i ? hilite( c_yellow ) : c_yellow, vItems[i] );
-        text += string_format( "[%s]", colorize( temp, iSel == i ? hilite( c_white ) : c_white ) );
+    if( utf8_width( s ) <= max_width ) {
+        return s;
     }
-
-    int text_width = utf8_width_notags( text.c_str() );
-    if( text_width > getmaxx( w_in ) ) {
-        offset.y -= std::ceil( text_width / getmaxx( w_in ) );
-    }
-
-    std::vector<std::string> menu_txt = foldstring( text, getmaxx( w_in ), ']' );
-
-    int y_off = 0;
-    int sel_opt = 0;
-    for( const std::string &txt : menu_txt ) {
-        trim_and_print( w_in, offset + point( 0, y_off ), getmaxx( w_in ), c_white, txt );
-        if( !main ) {
-            y_off++;
+    const char *ptr = s.c_str();
+    int left = static_cast<int>( s.size() );
+    int width = utf8_width( s );
+    while( left > 0 && width > max_width ) {
+        const uint32_t ch = UTF8_getch( &ptr, &left );
+        if( ch == UNKNOWN_UNICODE ) {
             continue;
         }
-        std::vector<std::string> tmp_chars = utf8_display_split( remove_color_tags( txt ) );
-        for( int x = 0; static_cast<size_t>( x ) < tmp_chars.size(); x++ ) {
-            if( tmp_chars[x] == "[" ) {
-                for( int x2 = x; static_cast<size_t>( x2 ) < tmp_chars.size(); x2++ ) {
-                    if( tmp_chars[x2] == "]" ) {
-                        inclusive_rectangle<point> rec( win_offset + offset + point( x, y_off ),
-                                                        win_offset + offset + point( x2, y_off ) );
-                        main_menu_button_map.emplace_back( rec, sel_opt++ );
-                        break;
-                    }
-                }
-            }
+        const int cw = mk_wcwidth( ch );
+        if( cw > 0 ) {
+            width -= cw;
         }
-        y_off++;
     }
-
-    return ret;
+    return std::string( ptr );
 }
+
+std::string bc_upper( const std::string &s )
+{
+    std::string res = s;
+    for( char &c : res ) {
+        if( c >= 'a' && c <= 'z' ) {
+            c = static_cast<char>( c - 'a' + 'A' );
+        }
+    }
+    return res;
+}
+
+std::string bc_hotkey( const std::vector< std::vector<std::string> > &hotkeys, size_t idx )
+{
+    if( idx >= hotkeys.size() || hotkeys[idx].empty() ) {
+        return "";
+    }
+    return bc_upper( hotkeys[idx].front() );
+}
+
+void bc_draw_wind( const catacurses::window &w, double t )
+{
+    const int width = getmaxx( w );
+    const int height = getmaxy( w );
+    const int count = std::max( 12, width * height / 95 );
+    for( int i = 0; i < count; i++ ) {
+        const uint32_t h = ( static_cast<uint32_t>( i ) * 2654435761u + 12345u ) & 0xffffffu;
+        const int layer = static_cast<int>( ( h >> 11 ) % 3 );
+        const double speed = layer == 0 ? 3.0 : ( layer == 1 ? 6.5 : 11.0 );
+        const int len = 2 + static_cast<int>( ( h >> 8 ) % 5 );
+        const int base_y = static_cast<int>( ( h >> 3 ) % static_cast<uint32_t>( height ) );
+        const double phase = static_cast<double>( ( h >> 5 ) % 1000 ) / 1000.0 * 6.2831853;
+        const double x0 = std::fmod( static_cast<double>( ( h >> 13 ) % static_cast<uint32_t>( width ) )
+                                     + t * speed, width + len ) - len;
+        const double amp = layer == 0 ? 0.5 : ( layer == 1 ? 1.1 : 1.8 );
+        const int y = base_y + static_cast<int>( std::lround(
+                          amp * std::sin( t * 0.5 + phase + x0 * 0.05 ) ) );
+        if( y < 0 || y >= height ) {
+            continue;
+        }
+        const nc_color col = layer == 0 ? c_dark_gray : ( layer == 1 ? c_cyan : c_light_cyan );
+        for( int k = 0; k < len; k++ ) {
+            const int x = static_cast<int>( x0 ) + k;
+            if( x < 0 || x >= width ) {
+                continue;
+            }
+            bc_put( w, point( x, y ), k + 1 < len ? "─" : "·", col );
+        }
+    }
+}
+
+const std::vector<std::string> &bc_logo_art( bool big )
+{
+    static const std::vector<std::string> big_art = {
+        "██████╗ ██████╗ ███████╗███████╗███████╗███████╗",
+        "██╔══██╗██╔══██╗██╔════╝██╔════╝╚══███╔╝██╔════╝",
+        "██████╔╝██████╔╝█████╗  █████╗    ███╔╝ █████╗  ",
+        "██╔══██╗██╔══██╗██╔══╝  ██╔══╝   ███╔╝  ██╔══╝  ",
+        "██████╔╝██║  ██║███████╗███████╗███████╗███████╗",
+        "╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝╚══════╝"
+    };
+    static const std::vector<std::string> small_art = {
+        "█▀▀▀▄ █▀▀▀▄ █▀▀▀▀ █▀▀▀▀ ▀▀▀▀█ █▀▀▀▀",
+        "█▄▄▄▀ █▄▄▄▀ █▄▄▄  █▄▄▄    ▄▀  █▄▄▄ ",
+        "█   █ █ █   █     █     ▄▀    █    ",
+        "█▄▄▄▀ █  ▀▄ █▄▄▄▄ █▄▄▄▄ █▄▄▄▄ █▄▄▄▄"
+    };
+    return big ? big_art : small_art;
+}
+
+nc_color bc_gradient( double v, double glow )
+{
+    static const nc_color ramp[] = { c_white, c_light_cyan, c_light_cyan, c_cyan, c_cyan, c_light_blue };
+    if( glow > 0.70 ) {
+        return c_white;
+    }
+    if( glow > 0.40 ) {
+        return c_light_cyan;
+    }
+    const int idx = clamp( static_cast<int>( v * 6.0 ), 0, 5 );
+    return ramp[idx];
+}
+
+void bc_draw_logo( const catacurses::window &w, const point &origin,
+                   const std::vector<std::string> &art, double t )
+{
+    const int rows = static_cast<int>( art.size() );
+    int cols = 0;
+    for( const std::string &line : art ) {
+        cols = std::max( cols, utf8_width( line ) );
+    }
+    const double sweep = std::fmod( t * 0.20, 1.45 ) - 0.25;
+    const double sigma = std::max( 3.0, cols * 0.14 );
+    for( int j = 0; j < rows; j++ ) {
+        int x = 0;
+        const char *ptr = art[j].c_str();
+        int len = static_cast<int>( art[j].size() );
+        while( len > 0 ) {
+            const uint32_t ch = UTF8_getch( &ptr, &len );
+            if( ch == UNKNOWN_UNICODE ) {
+                continue;
+            }
+            const int cw = mk_wcwidth( ch );
+            if( cw <= 0 ) {
+                continue;
+            }
+            if( ch != ' ' ) {
+                const double glow = std::exp( -( ( x - sweep * cols ) * ( x - sweep * cols ) )
+                                              / ( 2.0 * sigma * sigma ) );
+                const double v = 0.62 * ( rows > 1 ? static_cast<double>( j ) / ( rows - 1 ) : 0.0 )
+                                 + 0.38 * ( cols > 1 ? static_cast<double>( x ) / ( cols - 1 ) : 0.0 );
+                bc_put( w, origin + point( x, j ), utf32_to_utf8( ch ), bc_gradient( v, glow ) );
+            }
+            x += cw;
+        }
+    }
+}
+
+void bc_draw_ribbon( const catacurses::window &w, const point &origin, int width, double t )
+{
+    for( int i = 0; i < width; i++ ) {
+        const double ph = i * 0.42 - t * 2.6;
+        const double v = 0.5 + 0.5 * std::sin( ph ) * std::sin( ph * 0.33 + t * 0.9 );
+        const int level = clamp( static_cast<int>( v * 8.0 ), 0, 7 );
+        bc_put( w, origin + point( i, 0 ), utf32_to_utf8( 0x2581 + level ),
+                ( i / 3 ) % 2 == 0 ? c_cyan : c_light_cyan );
+    }
+}
+
+void bc_frame( const catacurses::window &w, const point &o, int box_w, int box_h,
+               const std::string &title, const std::string &right_title )
+{
+    for( int y = 1; y < box_h - 1; y++ ) {
+        for( int x = 1; x < box_w - 1; x++ ) {
+            bc_put( w, o + point( x, y ), " ", c_black );
+        }
+    }
+    for( int x = 1; x < box_w - 1; x++ ) {
+        bc_put( w, o + point( x, 0 ), "─", c_dark_gray );
+        bc_put( w, o + point( x, box_h - 1 ), "─", c_dark_gray );
+    }
+    for( int y = 1; y < box_h - 1; y++ ) {
+        bc_put( w, o + point( 0, y ), "│", c_dark_gray );
+        bc_put( w, o + point( box_w - 1, y ), "│", c_dark_gray );
+    }
+    bc_put( w, o, "╭", c_dark_gray );
+    bc_put( w, o + point( box_w - 1, 0 ), "╮", c_dark_gray );
+    bc_put( w, o + point( 0, box_h - 1 ), "╰", c_dark_gray );
+    bc_put( w, o + point( box_w - 1, box_h - 1 ), "╯", c_dark_gray );
+
+    if( !title.empty() ) {
+        const int tw = utf8_width( title );
+        for( int i = 0; i < tw + 2; i++ ) {
+            bc_put( w, o + point( 2 + i, 0 ), " ", c_black );
+        }
+        bc_text( w, o + point( 3, 0 ), title, c_light_cyan );
+    }
+    if( !right_title.empty() ) {
+        const int rw = utf8_width( right_title );
+        const int rx = box_w - 3 - rw;
+        if( rx > 2 + ( title.empty() ? 0 : utf8_width( title ) + 2 ) ) {
+            for( int i = 0; i < rw + 2; i++ ) {
+                bc_put( w, o + point( rx - 1 + i, 0 ), " ", c_black );
+            }
+            bc_text( w, o + point( rx, 0 ), right_title, c_dark_gray );
+        }
+    }
+}
+
+struct bc_move_band {
+    int lo;
+    int hi;
+};
+
+bc_move_band bc_band_for( double since, int box_w )
+{
+    if( since < 0.0 || since >= 0.30 ) {
+        return { -1000, -1000 };
+    }
+    const int head = -5 + static_cast<int>( since / 0.30 * ( box_w + 10 ) );
+    return { head - 5, head };
+}
+
+struct bc_stats {
+    int worlds = 0;
+    int saves = 0;
+};
+
+bc_stats bc_world_stats()
+{
+    static bc_stats cached;
+    static double cached_at = -1000.0;
+    const double now = bc_now();
+    if( now - cached_at < 1.0 ) {
+        return cached;
+    }
+    cached_at = now;
+    cached = bc_stats();
+    const std::vector<std::string> names = world_generator->all_worldnames();
+    cached.worlds = static_cast<int>( names.size() );
+    for( const std::string &name : names ) {
+        if( const WORLD *wrld = world_generator->get_world( name ) ) {
+            cached.saves += static_cast<int>( wrld->world_saves.size() );
+        }
+    }
+    return cached;
+}
+
+std::string bc_clock_text()
+{
+    std::time_t stamp = std::time( nullptr );
+    std::tm local_time = std::tm();
+#if defined(_WIN32)
+    if( localtime_s( &local_time, &stamp ) != 0 ) {
+        return "";
+    }
+#else
+    if( localtime_r( &stamp, &local_time ) == nullptr ) {
+        return "";
+    }
+#endif
+    return string_format( "%02d:%02d", local_time.tm_hour, local_time.tm_min );
+}
+
+} // namespace
 
 void main_menu::display_sub_menu( int sel, const point &bottom_left, int sel_line )
 {
+    (void)bottom_left;
+    (void)sel_line;
+    bc_subs.clear();
     main_menu_sub_button_map.clear();
-    std::vector<std::string> sub_opts;
-    int xlen = 0;
-    main_menu_opts sel_o = static_cast<main_menu_opts>( sel );
-    switch( sel_o ) {
-        case main_menu_opts::CREDITS:
-            display_text( mmenu_credits, _( "Credits" ), sel_line );
-            return;
+
+    switch( static_cast<main_menu_opts>( sel ) ) {
         case main_menu_opts::SPECIAL:
             for( int i = 1; i < static_cast<int>( special_game_type::NUM_SPECIAL_GAME_TYPES ); i++ ) {
-                std::string spec_name = special_game_name( static_cast<special_game_type>( i ) );
-                nc_color clr = i == sel2 ? hilite( c_yellow ) : c_yellow;
-                sub_opts.push_back( shortcut_text( clr, spec_name ) );
-                int len = utf8_width( shortcut_text( clr, spec_name ), true );
-                if( len > xlen ) {
-                    xlen = len;
-                }
+                bc_subs.push_back( { special_game_name( static_cast<special_game_type>( i ) ), "",
+                                     c_light_gray } );
             }
             break;
         case main_menu_opts::SETTINGS:
-            for( int i = 0; static_cast<size_t>( i ) < vSettingsSubItems.size(); ++i ) {
-                nc_color clr = i == sel2 ? hilite( c_yellow ) : c_yellow;
-                sub_opts.push_back( shortcut_text( clr, vSettingsSubItems[i] ) );
-                int len = utf8_width( shortcut_text( clr, vSettingsSubItems[i] ), true );
-                if( len > xlen ) {
-                    xlen = len;
-                }
+            for( size_t i = 0; i < vSettingsSubItems.size(); ++i ) {
+                bc_subs.push_back( { remove_color_tags( shortcut_text( c_white, vSettingsSubItems[i] ) ),
+                                     bc_hotkey( vSettingsHotkeys, i ), c_light_gray } );
             }
             break;
         case main_menu_opts::NEWCHAR:
-            for( int i = 0; static_cast<size_t>( i ) < vNewGameSubItems.size(); i++ ) {
-                nc_color clr = i == sel2 ? hilite( c_yellow ) : c_yellow;
-                sub_opts.push_back( shortcut_text( clr, vNewGameSubItems[i] ) );
-                int len = utf8_width( shortcut_text( clr, vNewGameSubItems[i] ), true );
-                if( len > xlen ) {
-                    xlen = len;
-                }
+            for( size_t i = 0; i < vNewGameSubItems.size(); ++i ) {
+                bc_subs.push_back( { remove_color_tags( shortcut_text( c_white, vNewGameSubItems[i] ) ),
+                                     bc_hotkey( vNewGameHotkeys, i ), c_light_gray } );
             }
             break;
         case main_menu_opts::LOADCHAR:
         case main_menu_opts::WORLD: {
-            const bool extra_opt = sel == getopt( main_menu_opts::WORLD );
-            if( extra_opt ) {
-                sub_opts.emplace_back( colorize( _( "Create World" ), sel2 == 0 ? hilite( c_yellow ) : c_yellow ) );
-                xlen = utf8_width( sub_opts.back(), true );
+            if( sel == getopt( main_menu_opts::WORLD ) ) {
+                bc_subs.push_back( { _( "Create World" ), "", c_light_gray } );
             }
-            std::vector<std::string> all_worldnames = world_generator->all_worldnames();
-            for( int i = 0; static_cast<size_t>( i ) < all_worldnames.size(); i++ ) {
-                int savegames_count = world_generator->get_world( all_worldnames[i] )->world_saves.size();
-                nc_color clr = c_white;
-                if( all_worldnames[i] == "TUTORIAL" || all_worldnames[i] == "DEFENSE" ) {
-                    clr = c_light_cyan;
+            const std::vector<std::string> all_worldnames = world_generator->all_worldnames();
+            for( const std::string &world_name : all_worldnames ) {
+                const WORLD *wrld = world_generator->get_world( world_name );
+                const int saves = wrld ? static_cast<int>( wrld->world_saves.size() ) : 0;
+                const bool tutorial = world_name == "TUTORIAL" || world_name == "DEFENSE";
+                std::string shown_name = world_name;
+                if( utf8_width( shown_name ) > 22 ) {
+                    shown_name = utf8_truncate( shown_name, 21 ) + "…";
                 }
-                sub_opts.push_back( colorize( string_format( "%s (%d)", all_worldnames[i], savegames_count ),
-                                              ( sel2 == i + ( extra_opt ? 1 : 0 ) ) ? hilite( clr ) : clr ) );
-                int len = utf8_width( sub_opts.back(), true );
-                if( len > xlen ) {
-                    xlen = len;
-                }
+                bc_subs.push_back( { string_format( "%s (%d)", shown_name, saves ), "",
+                                     tutorial ? c_light_cyan : c_light_gray } );
             }
+            break;
         }
-        break;
+        case main_menu_opts::CREDITS:
         case main_menu_opts::HELP:
         case main_menu_opts::QUIT:
         default:
-            return;
+            break;
     }
 
-    if( sub_opts.empty() ) {
-        return;
+    if( sel2 >= static_cast<int>( bc_subs.size() ) ) {
+        sel2 = std::max( 0, static_cast<int>( bc_subs.size() ) - 1 );
     }
-
-    point top_left( bottom_left + point( 0, -( sub_opts.size() + 1 ) ) );
-
-    // If sel2 somehow outgrew the options vector, clamp it back.
-    sel2 = std::min<int>( sel2, sub_opts.size() );
-
-    int height = sub_opts.size();
-    if( top_left.y < 0 ) {
-        // Options don't fit screen. Decrease height till they do.
-        height += top_left.y;
-        top_left.y = 0;
-
-        // Calculate an offset from which to draw the options
-        if( sel2 - 1 < sub_opt_off ) {
-            // Trying to go below the showed options, decrease our offset
-            sub_opt_off = sel2;
-        } else if( sel2 + 1 > sub_opt_off + height ) {
-            // We are going over the list the other way around - increase offset
-            sub_opt_off = sel2 - height + 1;
-        }
-    } else {
-        // Options fit the screen, no offset required.
-        sub_opt_off = 0;
-    }
-
-    catacurses::window w_sub = catacurses::newwin( height + 2, xlen + 4, top_left );
-    werase( w_sub );
-    draw_border( w_sub, c_white );
-
-    // Print as many options as decided previously, starting from the index sub_opt_offset
-    for( int y = 0; y < height; y++ ) {
-        int opt_index = sub_opt_off + y;
-        bool is_selection = sel2 == opt_index;
-        std::string opt = ( is_selection ? "» " : "  " ) + sub_opts[opt_index];
-        int padding = ( xlen + 2 ) - utf8_width( opt, true );
-        opt.append( padding, ' ' );
-        nc_color clr = is_selection ? hilite( c_white ) : c_white;
-        trim_and_print( w_sub, point( 1, y + 1 ), xlen + 2, clr, opt );
-        inclusive_rectangle<point> rec( top_left + point( 1, y  + 1 ),
-                                        top_left + point( xlen + 2, y + 1 ) );
-        main_menu_sub_button_map.emplace_back( rec, std::pair<int, int> { sel, y } );
-    }
-    if( static_cast<size_t>( height ) != sub_opts.size() ) {
-        draw_scrollbar( w_sub, sel2, height, sub_opts.size(), point_south, c_white,
-                        false );
-    }
-    wnoutrefresh( w_sub );
 }
 
 void main_menu::print_menu( const catacurses::window &w_open, int iSel, const point &offset,
                             int sel_line )
 {
+    (void)offset;
+    (void)sel_line;
     main_menu_button_map.clear();
+    main_menu_sub_button_map.clear();
 
-    // Clear Lines
     werase( w_open );
 
-    // Define window size
-    int window_width = getmaxx( w_open );
-    int window_height = getmaxy( w_open );
+    const int width = getmaxx( w_open );
+    const int height = getmaxy( w_open );
+    const double t = bc_now();
 
-    // Draw horizontal line
-    for( int i = 1; i < window_width - 1; ++i ) {
-        mvwputch( w_open, point( i, window_height - 4 ), c_white, LINE_OXOX );
+    bc_draw_wind( w_open, t );
+
+    const int n_items = static_cast<int>( vMenuItems.size() );
+    display_sub_menu( iSel, point_zero, 0 );
+    const int n_subs = static_cast<int>( bc_subs.size() );
+    const bc_stats stats = bc_world_stats();
+
+    const bool show_logo = height >= 22;
+    const bool show_big_logo = height >= 30;
+    const bool show_ribbon = height >= 26;
+    const std::vector<std::string> &logo = bc_logo_art( show_big_logo );
+    const int logo_h = show_logo ? static_cast<int>( logo.size() ) : 0;
+    const int ribbon_h = show_ribbon ? 1 : 0;
+    const int hero_h = logo_h > 0 ? logo_h + ribbon_h + 1 : 0;
+
+    bc_box_w = std::min( 40, std::max( 24, width - 6 ) );
+    bc_box_w = std::min( bc_box_w, width - 2 );
+    bc_box_h = std::min( n_items + bc_max_box_subs + 2,
+                         std::max( n_items + 2, height - 3 - hero_h ) );
+    bc_visible_subs = std::max( 1, bc_box_h - n_items - 2 );
+
+    const int content_h = hero_h + bc_box_h + 1;
+    const int top = std::max( 1, 1 + ( height - 2 - content_h ) / 2 );
+
+    const std::string stats_txt = string_format( "● %d 世界 · %d 存档", stats.worlds,
+                                  stats.saves );
+    std::string bars;
+    for( int i = 0; i < 4; i++ ) {
+        const double ph = i * 1.7 - t * 2.6;
+        const double v = 0.5 + 0.5 * std::sin( ph ) * std::sin( ph * 0.33 + t * 0.9 );
+        bars += utf32_to_utf8( 0x2581 + clamp( static_cast<int>( v * 8.0 ), 0, 7 ) );
+    }
+    const std::string clock_txt = bc_clock_text();
+    const std::string tail = ( clock_txt.empty() ? "" : clock_txt + "  ▏  " ) + bars + " ";
+    const int tail_w = utf8_width( tail );
+    const bool show_tail = width - tail_w - 2 > 40;
+
+    std::string world_path = PATH_INFO::savedir();
+    while( !world_path.empty() && world_path.back() == '/' ) {
+        world_path.pop_back();
+    }
+    if( world_path.empty() ) {
+        world_path = "save";
+    }
+    if( !world_generator->last_world_name.empty() ) {
+        world_path += "/" + world_generator->last_world_name;
+    }
+    const int path_budget = std::max( 6, width - 14 - utf8_width( stats_txt )
+                                      - ( show_tail ? tail_w + 2 : 0 ) );
+    const int path_content = std::max( 4, path_budget - 2 );
+    bool path_trimmed = false;
+    while( utf8_width( world_path ) > path_content ) {
+        const size_t slash = world_path.find( '/' );
+        if( slash == std::string::npos ) {
+            break;
+        }
+        world_path.erase( 0, slash + 1 );
+        path_trimmed = true;
+    }
+    if( utf8_width( world_path ) > path_content ) {
+        world_path = bc_tail( world_path, path_content );
+        path_trimmed = true;
+    }
+    if( path_trimmed ) {
+        world_path = "…/" + world_path;
     }
 
-    if( iSel == getopt( main_menu_opts::NEWCHAR ) ) {
-        center_print( w_open, window_height - 2, c_yellow, vNewGameHints[sel2] );
-    } 
+    for( int x = 0; x < width; x++ ) {
+        bc_put( w_open, point( x, 0 ), " ", c_black );
+    }
+    bc_put( w_open, point( 0, 0 ), "▌", c_light_cyan );
+    int head_x = bc_text_end( w_open, point( 1, 0 ), " BREEZE ", c_white );
+    bc_put( w_open, point( head_x, 0 ), "▏", c_dark_gray );
+    head_x = bc_text_end( w_open, point( head_x + 2, 0 ), world_path, c_light_gray );
+    bc_put( w_open, point( head_x + 1, 0 ), "▏", c_dark_gray );
+    head_x = bc_text_end( w_open, point( head_x + 3, 0 ), stats_txt, c_cyan );
+    if( show_tail && head_x + 2 < width - tail_w ) {
+        bc_text( w_open, point( width - tail_w - 1, 0 ), tail, c_light_cyan );
+    }
 
-    center_print( w_open, window_height - 1, c_light_cyan, string_format( _( "Tip of the day: %s" ),
-                  vdaytip ) );
+    if( show_logo ) {
+        int logo_w = 0;
+        for( const std::string &line : logo ) {
+            logo_w = std::max( logo_w, utf8_width( line ) );
+        }
+        const point logo_at( std::max( 0, ( width - logo_w ) / 2 ), top );
+        for( int j = 0; j < logo_h; j++ ) {
+            for( int x = 0; x < logo_w; x++ ) {
+                bc_put( w_open, logo_at + point( x, j ), " ", c_black );
+            }
+        }
+        bc_draw_logo( w_open, logo_at, logo, t );
+        if( show_ribbon ) {
+            bc_draw_ribbon( w_open, logo_at + point( 0, logo_h ), logo_w, t );
+        }
+    }
 
-    int iLine = 0;
-    const int iOffsetX = ( window_width - FULL_SCREEN_WIDTH ) / 2;
+    const point box_at( ( width - bc_box_w ) / 2, top + hero_h );
+    const std::string right_title = string_format(
+                                        "%d/%d  %s", iSel + 1, n_items,
+                                        remove_color_tags( shortcut_text( c_white, vMenuItems[iSel] ) ) );
+    bc_frame( w_open, box_at, bc_box_w, bc_box_h, "菜单", right_title );
 
-    if( get_option<bool>( "SEASONAL_TITLE" ) ) {
-        switch( current_holiday ) {
-            case holiday::new_year:
-            case holiday::easter:
-                break;
-            case holiday::halloween:
-                fold_and_print_from( w_open, point_zero, 30, 0, c_white, halloween_spider() );
-                fold_and_print_from( w_open, point( getmaxx( w_open ) - 25, offset.y - 8 ),
-                                     25, 0, c_white, halloween_graves() );
-                break;
-            case holiday::thanksgiving:
-            case holiday::christmas:
-            case holiday::mid_autumn:
-            case holiday::none:
-            case holiday::num_holiday:
+    const auto item_has_subs = [&]( int idx ) {
+        switch( static_cast<main_menu_opts>( idx ) ) {
+            case main_menu_opts::CREDITS:
+            case main_menu_opts::HELP:
+            case main_menu_opts::QUIT:
+                return false;
+            case main_menu_opts::LOADCHAR:
+                return stats.worlds > 0;
             default:
+                return true;
+        }
+    };
+
+    const double since_move = t - bc_move_at;
+    int row = 1;
+    for( int i = 0; i < n_items && row < bc_box_h - 1; i++ ) {
+        const bool active = i == iSel;
+        const bool cursor = active && bc_on_parent;
+        const bool has_sub = item_has_subs( i );
+        const std::string key = bc_hotkey( vMenuHotkeys, i );
+        const int key_w = utf8_width( key );
+        const int key_x = bc_box_w - 2 - key_w;
+        std::string label = remove_color_tags( shortcut_text( c_white, vMenuItems[i] ) );
+        const int label_cap = std::max( 4, key_x - 3 - 2 );
+        if( utf8_width( label ) > label_cap ) {
+            label = utf8_truncate( label, label_cap );
+        }
+
+        const point line_at = box_at + point( 0, row );
+        if( cursor ) {
+            for( int x = 1; x < bc_box_w - 1; x++ ) {
+                bc_put( w_open, line_at + point( x, 0 ), " ", c_black_cyan );
+            }
+            bc_put( w_open, line_at + point( 1, 0 ), "▍", c_white_cyan );
+            const bc_move_band band = bc_band_for( since_move, bc_box_w );
+            bc_text_band( w_open, line_at + point( 3, 0 ), label, c_black_cyan, c_white_cyan,
+                          box_at.x + band.lo, box_at.x + band.hi );
+            if( has_sub ) {
+                bc_put( w_open, line_at + point( 3 + utf8_width( label ) + 1, 0 ), "▾",
+                        c_black_cyan );
+            }
+            if( key_w > 0 ) {
+                bc_text( w_open, line_at + point( key_x, 0 ), key, c_black_cyan );
+            }
+        } else {
+            if( active ) {
+                bc_put( w_open, line_at + point( 1, 0 ), "▍", c_cyan );
+            }
+            bc_text( w_open, line_at + point( 3, 0 ), label, active ? c_light_cyan : c_light_gray );
+            if( has_sub ) {
+                bc_put( w_open, line_at + point( 3 + utf8_width( label ) + 1, 0 ),
+                        active && n_subs > 0 ? "▾" : "▸", active ? c_cyan : c_dark_gray );
+            }
+            if( key_w > 0 ) {
+                bc_text( w_open, line_at + point( key_x, 0 ), key, active ? c_cyan : c_dark_gray );
+            }
+        }
+        row++;
+
+        if( !active || n_subs == 0 ) {
+            continue;
+        }
+        const int max_scroll = std::max( 0, n_subs - bc_visible_subs );
+        bc_sub_scroll = clamp( bc_sub_scroll, 0, max_scroll );
+        if( sel2 < bc_sub_scroll ) {
+            bc_sub_scroll = sel2;
+        } else if( sel2 >= bc_sub_scroll + bc_visible_subs ) {
+            bc_sub_scroll = sel2 - bc_visible_subs + 1;
+        }
+        for( int k = 0; k < bc_visible_subs && row < bc_box_h - 1; k++ ) {
+            const int idx = bc_sub_scroll + k;
+            if( idx >= n_subs ) {
                 break;
+            }
+            const bc_sub_entry &sub = bc_subs[idx];
+            const bool sub_cursor = !bc_on_parent && idx == sel2;
+            const point sub_at = box_at + point( 0, row );
+            const int sub_key_w = utf8_width( sub.key );
+            const int sub_key_x = bc_box_w - 2 - sub_key_w;
+            std::string sub_label = sub.label;
+            const int sub_cap = std::max( 4, sub_key_x - 5 - 2 );
+            if( utf8_width( sub_label ) > sub_cap ) {
+                sub_label = utf8_truncate( sub_label, sub_cap );
+            }
+
+            bc_put( w_open, sub_at + point( 2, 0 ),
+                    idx + 1 == n_subs ? "└" : "├", c_dark_gray );
+            bc_put( w_open, sub_at + point( 3, 0 ), "─", c_dark_gray );
+
+            if( sub_cursor ) {
+                for( int x = 4; x < bc_box_w - 1; x++ ) {
+                    bc_put( w_open, sub_at + point( x, 0 ), " ", c_black_cyan );
+                }
+                bc_put( w_open, sub_at + point( 4, 0 ), "▍", c_white_cyan );
+                const bc_move_band sub_band = bc_band_for( since_move, bc_box_w );
+                bc_text_band( w_open, sub_at + point( 5, 0 ), sub_label, c_black_cyan,
+                              c_white_cyan, box_at.x + sub_band.lo, box_at.x + sub_band.hi );
+                if( sub_key_w > 0 ) {
+                    bc_text( w_open, sub_at + point( sub_key_x, 0 ), sub.key, c_black_cyan );
+                }
+            } else {
+                const bool prearmed = bc_on_parent && idx == sel2;
+                bc_text( w_open, sub_at + point( 5, 0 ), sub_label,
+                         prearmed ? c_cyan : sub.color );
+                if( sub_key_w > 0 ) {
+                    bc_text( w_open, sub_at + point( sub_key_x, 0 ), sub.key, c_dark_gray );
+                }
+            }
+            row++;
         }
     }
 
-    if( mmenu_title.size() > 1 ) {
-        for( const std::string &i_title : mmenu_title ) {
-            nc_color cur_color = c_white;
-            nc_color base_color = c_white;
-            print_colored_text( w_open, point( iOffsetX, iLine++ ), cur_color, base_color, i_title );
-        }
-    } else {
-        center_print( w_open, iLine++, c_light_cyan, mmenu_title[0] );
+    const int hint_y = top + hero_h + bc_box_h;
+    if( hint_y < height - 1 ) {
+        const std::string hint = "↑↓ 移动    ←→ 切换    ↵ 确认";
+        bc_text( w_open, point( std::max( 0, ( width - utf8_width( hint ) ) / 2 ), hint_y ),
+                 hint, c_dark_gray );
     }
 
-    iLine++;
-    center_print( w_open, iLine, c_light_blue, string_format( _( "Version: %s" ),
-                  getVersionString() ) );
-
-    int menu_length = 0;
-    for( size_t i = 0; i < vMenuItems.size(); ++i ) {
-        menu_length += utf8_width_notags( vMenuItems[i].c_str() ) + 2;
-        if( !vMenuHotkeys[i].empty() ) {
-            menu_length += utf8_width( vMenuHotkeys[i][0] );
+    if( width >= 96 && height >= 28 ) {
+        const int tip_w = std::min( 40, box_at.x - 6 );
+        if( tip_w >= 16 ) {
+            std::string blurb = vdaytip;
+            std::string blurb_title = "提示";
+            if( iSel == getopt( main_menu_opts::NEWCHAR ) && sel2 >= 0 &&
+                static_cast<size_t>( sel2 ) < vNewGameHints.size() ) {
+                blurb = vNewGameHints[sel2];
+                blurb_title = "说明";
+            }
+            const std::vector<std::string> lines = foldstring( blurb, tip_w );
+            const int shown = std::min<int>( 3, lines.size() );
+            const int tip_y = hint_y - shown;
+            if( tip_y > 2 && box_at.x > 12 ) {
+                bc_text( w_open, point( 2, tip_y - 1 ), blurb_title, c_cyan );
+                for( int k = 0; k < shown; k++ ) {
+                    bc_put( w_open, point( 2, tip_y + k ), "│", c_dark_gray );
+                    bc_text( w_open, point( 4, tip_y + k ), lines[k], c_dark_gray );
+                }
+            }
         }
     }
-    const int free_space = std::max( 0, window_width - menu_length - offset.x );
-    const int spacing = free_space / ( static_cast<int>( vMenuItems.size() ) + 1 );
-    const int width_of_spacing = spacing * ( vMenuItems.size() + 1 );
-    const int adj_offset = std::max( 0, ( free_space - width_of_spacing ) / 2 );
-    const int final_offset = offset.x + adj_offset + spacing;
 
-    std::vector<int> offsets =
-        print_menu_items( w_open, vMenuItems, iSel, point( final_offset, offset.y ), spacing, true );
+    const int sy = height - 1;
+    for( int x = 0; x < width; x++ ) {
+        bc_put( w_open, point( x, sy ), " ", c_black );
+    }
+    bc_text( w_open, point( 1, sy ), " NORMAL ", c_black_cyan );
+    int sx = 9;
+    bc_put( w_open, point( sx, sy ), "▏", c_dark_gray );
+    sx = bc_text_end( w_open, point( sx + 2, sy ),
+                      string_format( " %s ", getVersionString() ), c_white );
+    bc_put( w_open, point( sx + 1, sy ), "▏", c_dark_gray );
+    sx = bc_text_end( w_open, point( sx + 2, sy ), " 主菜单 ", c_light_gray );
+
+    const std::string right_info = string_format( "UTF-8  ▏  世界 %d  ▏  存档 %d ",
+                                  stats.worlds, stats.saves );
+    const int right_w = utf8_width( right_info );
+    if( width - right_w - 1 > sx ) {
+        bc_text( w_open, point( width - right_w - 1, sy ), right_info, c_cyan );
+    }
 
     wnoutrefresh( w_open );
-
-    const point p_offset( catacurses::getbegx( w_open ), catacurses::getbegy( w_open ) );
-
-    display_sub_menu( iSel, p_offset + point( offsets[iSel], offset.y - 2 ), sel_line );
-}
-
-std::vector<std::string> main_menu::load_file( const std::string &path,
-        const std::string &alt_text ) const
-{
-    std::vector<std::string> result;
-    read_from_file_optional( path, [&result]( std::istream & fin ) {
-        std::string line;
-        while( std::getline( fin, line ) ) {
-            if( !line.empty() && line[0] == '#' ) {
-                continue;
-            }
-            result.push_back( line );
-        }
-    } );
-    if( result.empty() ) {
-        result.push_back( alt_text );
-    }
-    return result;
-}
-
-holiday main_menu::get_holiday_from_time()
-{
-    return ::get_holiday_from_time( 0, true );
 }
 
 void main_menu::init_windows()
@@ -393,32 +753,15 @@ void main_menu::init_windows()
         return;
     }
 
-    // main window should also expand to use available display space.
-    // expanding to evenly use up half of extra space, for now.
-    extra_w = ( ( TERMX - FULL_SCREEN_WIDTH ) / 2 ) - 1;
-    int extra_h = ( ( TERMY - FULL_SCREEN_HEIGHT ) / 2 ) - 1;
-    extra_w = ( extra_w > 0 ? extra_w : 0 );
-    extra_h = ( extra_h > 0 ? extra_h : 0 );
-    const int total_w = FULL_SCREEN_WIDTH + extra_w;
-    const int total_h = FULL_SCREEN_HEIGHT + extra_h;
-
-    // position of window within main display
-    const point p0( ( TERMX - total_w ) / 2, ( TERMY - total_h ) / 2 );
-
-    w_open = catacurses::newwin( total_h, total_w, p0 );
-
-    menu_offset.y = total_h - 3;
-    // note: if iMenuOffset is changed,
-    // please update MOTD and credits to indicate how long they can be.
+    w_open = catacurses::newwin( TERMY, TERMX, point_zero );
+    menu_offset = point_zero;
+    extra_w = 0;
 
     LAST_TERM = point( TERMX, TERMY );
 }
 
 void main_menu::init_strings()
 {
-    // ASCII Art
-    mmenu_title = load_file( PATH_INFO::title( current_holiday ), _( "Cataclysm: Dark Days Ahead" ) );
-
     // Credits
     mmenu_credits.clear();
     read_from_file_optional( PATH_INFO::credits(), [&]( std::istream & stream ) {
@@ -531,6 +874,7 @@ void main_menu::display_text( const std::string &text, const std::string &title,
     int height = b_height - 2;
     const auto vFolded = foldstring( text, width );
     int iLines = vFolded.size();
+    selected = clamp( selected, 0, std::max( 0, iLines - height ) );
 
     fold_and_print_from( w_text, point_zero, width, selected, c_light_gray, text );
 
@@ -554,9 +898,6 @@ void main_menu::load_char_templates()
 
 bool main_menu::opening_screen()
 {
-    // set holiday based on local system time
-    current_holiday = get_holiday_from_time();
-
     if( music::get_music_id() != music::music_id::title ) {
         music::deactivate_music_id_all();
     } else {
@@ -578,9 +919,6 @@ bool main_menu::opening_screen()
     ctxt.register_action( "CONFIRM" );
     ctxt.register_action( "QUIT" );
 
-    // for mouse selection
-    ctxt.register_action( "SELECT" );
-    ctxt.register_action( "MOUSE_MOVE" );
     ctxt.register_action( "SCROLL_UP" );
     ctxt.register_action( "SCROLL_DOWN" );
 
@@ -594,6 +932,9 @@ bool main_menu::opening_screen()
 
     int sel_line = 0;
     size_t last_world_pos = 0;
+    bc_on_parent = true;
+    bc_sub_scroll = 0;
+    bc_move_at = -100.0;
 
     // Make [Load Game] the default cursor position if there's game save available
     if( !world_generator->all_worldnames().empty() ) {
@@ -632,8 +973,13 @@ bool main_menu::opening_screen()
 
     while( !start ) {
         ui_manager::redraw();
-        std::string action = ctxt.handle_input();
+        const bool animate_menu = get_option<bool>( "ANIMATIONS" );
+        std::string action = ctxt.handle_input( animate_menu ? bc_frame_ms : -1 );
+        if( action == "TIMEOUT" ) {
+            continue;
+        }
         input_event sInput = ctxt.get_raw_input();
+        const int sel1_at_input = sel1;
 
         // check automatic menu shortcuts
         for( int i = 0; static_cast<size_t>( i ) < vMenuHotkeys.size(); ++i ) {
@@ -642,6 +988,9 @@ bool main_menu::opening_screen()
                     sel1 = i;
                     sel2 = i == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
                     sel_line = 0;
+                    bc_on_parent = true;
+                    bc_sub_scroll = 0;
+                    bc_move_at = bc_now();
                     if( i == getopt( main_menu_opts::HELP ) ) {
                         action = "CONFIRM";
                     } else if( i == getopt( main_menu_opts::QUIT ) ) {
@@ -655,6 +1004,7 @@ bool main_menu::opening_screen()
                 for( const std::string &hotkey : vSettingsHotkeys[i] ) {
                     if( sInput.text == hotkey ) {
                         sel2 = i;
+                        bc_on_parent = false;
                         action = "CONFIRM";
                     }
                 }
@@ -665,46 +1015,19 @@ bool main_menu::opening_screen()
                 for( const std::string &hotkey : vNewGameHotkeys[i] ) {
                     if( sInput.text == hotkey ) {
                         sel2 = i;
+                        bc_on_parent = false;
                         action = "CONFIRM";
                     }
                 }
             }
         }
 
-        // handle mouse click
-        if( action == "SELECT" || action == "MOUSE_MOVE" ) {
-            std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );
-            for( const auto &it : main_menu_button_map ) {
-                if( coord.has_value() && it.first.contains( coord.value() ) ) {
-                    if( sel1 != it.second ) {
-                        sel1 = it.second;
-                        sel2 = sel1 == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
-                        sel_line = 0;
-                        on_move();
-                    }
-                    if( action == "SELECT" &&
-                        ( sel1 == getopt( main_menu_opts::HELP ) || sel1 == getopt( main_menu_opts::QUIT ) ) ) {
-                        action = "CONFIRM";
-                    }
-                    ui_manager::redraw();
-                    break;
-                }
-            }
-            for( const auto &it : main_menu_sub_button_map ) {
-                if( coord.has_value() && it.first.contains( coord.value() ) ) {
-                    if( sel1 != it.second.first || sel2 != it.second.second ) {
-                        on_move();
-                    }
-                    sel1 = it.second.first;
-                    sel2 = it.second.second;
-                    sel_line = 0;
-                    if( action == "SELECT" ) {
-                        action = "CONFIRM";
-                    }
-                    ui_manager::redraw();
-                    break;
-                }
-            }
+        if( sel1 != sel1_at_input && ( action == "LEFT" || action == "RIGHT" ||
+                                       action == "UP" || action == "DOWN" ||
+                                       action == "PREV_TAB" || action == "NEXT_TAB" ||
+                                       action == "PAGE_UP" || action == "PAGE_DOWN" ||
+                                       action == "SCROLL_UP" || action == "SCROLL_DOWN" ) ) {
+            action.clear();
         }
 
         // also check special keys
@@ -714,74 +1037,57 @@ bool main_menu::opening_screen()
             }
         } else if( action == "LEFT" || action == "PREV_TAB" ) {
             sel_line = 0;
-            if( sel1 > 0 ) {
-                sel1--;
-            } else {
-                sel1 = max_menu_opts;
-            }
+            sel1 = sel1 > 0 ? sel1 - 1 : max_menu_opts;
             sel2 = sel1 == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
+            bc_on_parent = true;
+            bc_sub_scroll = 0;
+            bc_move_at = bc_now();
             on_move();
         } else if( action == "RIGHT" || action == "NEXT_TAB" ) {
             sel_line = 0;
-            if( sel1 < max_menu_opts ) {
-                sel1++;
-            } else {
-                sel1 = 0;
-            }
+            sel1 = sel1 < max_menu_opts ? sel1 + 1 : 0;
             sel2 = sel1 == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
+            bc_on_parent = true;
+            bc_sub_scroll = 0;
+            bc_move_at = bc_now();
             on_move();
-        } else if( action == "UP" || action == "DOWN" ||
-                   action == "PAGE_UP" || action == "PAGE_DOWN" ||
-                   action == "SCROLL_UP" || action == "SCROLL_DOWN" ) {
-            int max_item_count = 0;
-            int min_item_val = 0;
-            main_menu_opts opt = static_cast<main_menu_opts>( sel1 );
-            switch( opt ) {
-                case main_menu_opts::CREDITS:
-                    if( action == "UP" || action == "PAGE_UP" || action == "SCROLL_UP" ) {
-                        if( sel_line > 0 ) {
-                            sel_line--;
-                        }
-                    } else if( action == "DOWN" || action == "PAGE_DOWN" || action == "SCROLL_DOWN" ) {
-                        int effective_height = sel_line + FULL_SCREEN_HEIGHT - 2;
-                        if( ( opt == main_menu_opts::CREDITS && effective_height < mmenu_credits_len )){
-                            sel_line++;
-                        }
-                    }
-                    break;
-                case main_menu_opts::LOADCHAR:
-                    max_item_count = world_generator->all_worldnames().size();
-                    break;
-                case main_menu_opts::WORLD:
-                    // extra 1 = "Create New World"
-                    max_item_count = world_generator->all_worldnames().size() + 1;
-                    break;
-                case main_menu_opts::NEWCHAR:
-                    max_item_count = vNewGameSubItems.size();
-                    break;
-                case main_menu_opts::SETTINGS:
-                    max_item_count = vSettingsSubItems.size();
-                    break;
-                case main_menu_opts::SPECIAL:
-                    max_item_count = static_cast<int>( special_game_type::NUM_SPECIAL_GAME_TYPES ) - 1;
-                    break;
-                case main_menu_opts::HELP:
-                case main_menu_opts::QUIT:
-                default:
-                    break;
-            }
-            if( max_item_count > 0 ) {
-                if( action == "UP" || action == "PAGE_UP" || action == "SCROLL_UP" ) {
-                    sel2--;
-                    if( sel2 < min_item_val ) {
-                        sel2 = max_item_count - 1;
-                    }
-                } else if( action == "DOWN" || action == "PAGE_DOWN" || action == "SCROLL_DOWN" ) {
+        } else if( action == "UP" || action == "DOWN" ) {
+            const int sub_count = static_cast<int>( bc_subs.size() );
+            if( action == "DOWN" ) {
+                if( bc_on_parent && sub_count > 0 ) {
+                    bc_on_parent = false;
+                    sel2 = 0;
+                } else if( !bc_on_parent && sel2 + 1 < sub_count ) {
                     sel2++;
-                    if( sel2 >= max_item_count ) {
-                        sel2 = min_item_val;
-                    }
+                } else {
+                    sel1 = sel1 < max_menu_opts ? sel1 + 1 : 0;
+                    sel2 = sel1 == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
+                    bc_on_parent = true;
+                    bc_sub_scroll = 0;
                 }
+            } else {
+                if( !bc_on_parent && sel2 > 0 ) {
+                    sel2--;
+                } else if( !bc_on_parent ) {
+                    bc_on_parent = true;
+                } else {
+                    sel1 = sel1 > 0 ? sel1 - 1 : max_menu_opts;
+                    sel2 = sel1 == getopt( main_menu_opts::LOADCHAR ) ? last_world_pos : 0;
+                    bc_sub_scroll = 0;
+                }
+            }
+            bc_move_at = bc_now();
+            on_move();
+        } else if( action == "PAGE_UP" || action == "PAGE_DOWN" ||
+                   action == "SCROLL_UP" || action == "SCROLL_DOWN" ) {
+            const int sub_count = static_cast<int>( bc_subs.size() );
+            if( sub_count > 0 ) {
+                const bool up = action == "PAGE_UP" || action == "SCROLL_UP";
+                const bool page = action == "PAGE_UP" || action == "PAGE_DOWN";
+                const int step = page ? std::max( 1, bc_visible_subs ) : 1;
+                sel2 = clamp( up ? sel2 - step : sel2 + step, 0, sub_count - 1 );
+                bc_on_parent = false;
+                bc_move_at = bc_now();
                 on_move();
             }
         } else if( action == "CONFIRM" ) {
@@ -857,9 +1163,31 @@ bool main_menu::opening_screen()
                 case main_menu_opts::NEWCHAR:
                     start = new_character_tab();
                     break;
-                case main_menu_opts::CREDITS:
-                default:
+                case main_menu_opts::CREDITS: {
+                    int pos = 0;
+                    ui_adaptor credits_ui;
+                    credits_ui.on_redraw( [&]( const ui_adaptor & ) {
+                        display_text( mmenu_credits, _( "Credits" ), pos );
+                    } );
+                    while( true ) {
+                        ui_manager::redraw();
+                        const std::string credits_action = ctxt.handle_input();
+                        if( credits_action == "UP" || credits_action == "SCROLL_UP" ) {
+                            pos--;
+                        } else if( credits_action == "DOWN" || credits_action == "SCROLL_DOWN" ) {
+                            pos++;
+                        } else if( credits_action == "PAGE_UP" ) {
+                            pos -= 10;
+                        } else if( credits_action == "PAGE_DOWN" ) {
+                            pos += 10;
+                        } else if( credits_action == "CONFIRM" || credits_action == "QUIT" ||
+                                   credits_action == "LEFT" || credits_action == "RIGHT" ) {
+                            break;
+                        }
+                        pos = clamp( pos, 0, std::max( 0, mmenu_credits_len - 1 ) );
+                    }
                     break;
+                }
             }
         }
     }
@@ -1187,49 +1515,4 @@ void main_menu::world_tab( const std::string &worldname )
         default:
             break;
     }
-}
-
-std::string main_menu::halloween_spider()
-{
-    static const std::string spider =
-        "\\ \\ \\/ / / / / / / /\n"
-        " \\ \\/\\/ / / / / / /\n"
-        "\\ \\/__\\/ / / / / /\n"
-        " \\/____\\/ / / / /\n"
-        "\\/______\\/ / / /\n"
-        "/________\\/ / /\n"
-        "__________\\/ /\n"
-        "___________\\/\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "        |\n"
-        "  , .   |  . ,\n" // NOLINT(cata-text-style)
-        "  { | ,--, | }\n" // NOLINT(cata-text-style)
-        "   \\\\{~~~~}//\n"
-        "  /_/ {<color_c_red>..</color>} \\_\\\n"
-        "  { {      } }\n"
-        "  , ,      , ."; // NOLINT(cata-text-style)
-
-    return spider;
-}
-
-std::string main_menu::halloween_graves()
-{
-    static const std::string graves =
-        "                    _\n"
-        "        -q       __(\")_\n"
-        "         (\\      \\_  _/\n"
-        " .-.   .-''\"'.     |/\n" // NOLINT(cata-text-style)
-        "|RIP|  | RIP |   .-.\n"
-        "|   |  |     |  |RIP|\n"
-        ";   ;  |     | ,'---',"; // NOLINT(cata-text-style)
-
-    return graves;
 }
