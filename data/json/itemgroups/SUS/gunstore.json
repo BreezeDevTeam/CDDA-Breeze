@@ -43,10 +43,14 @@
     "type": "item_group",
     "//": "SUS item groups are collections that contain a reasonable realistic distribution of items that might spawn in a given storage furniture.",
     "//2": "This group is for the contents of gunstore delivery crates",
+    "//3": "Delivery crates carry live stock: boxed ammo (full boxes via each caliber's own count), loose pistol and rifle ammo in near-full quantities, magazines and reloading supplies.",
     "subtype": "distribution",
     "entries": [
       { "group": "guns_common_display", "prob": 80 },
-      { "group": "mags_common_gunstore", "prob": 80 },
+      { "group": "ammo_common_collection", "prob": 70, "count": [ 1, 3 ] },
+      { "group": "ammo_pistol_common", "prob": 60, "charges-min": 20, "charges-max": 40 },
+      { "group": "ammo_rifle_common", "prob": 50, "charges-min": 20, "charges-max": 30 },
+      { "group": "mags_common", "prob": 80 },
       { "group": "gunmod_common", "prob": 15 },
       { "group": "book_gunmags", "prob": 60 },
       { "group": "SUS_gunstore_gear", "prob": 60 },
@@ -91,9 +95,9 @@
     "//2": "This group is for the contents of gunstore displaycases",
     "subtype": "distribution",
     "entries": [
-      { "group": "guns_rifle_rare_display", "prob": 80 },
-      { "group": "guns_pistol_rare_display", "prob": 40 },
-      { "group": "guns_shotgun_rare_display", "prob": 5 }
+      { "group": "guns_pistol_common_display", "prob": 90 },
+      { "group": "guns_rifle_common_display", "prob": 30 },
+      { "group": "guns_shotgun_common_display", "prob": 3 }
     ]
   },
   {
